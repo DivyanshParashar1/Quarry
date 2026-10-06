@@ -237,12 +237,15 @@ export function fillLatexTemplate(template: string, input: RenderInput): string 
       return `\\section{${escapeLatex(s.title)}}\n\\resumeSubHeadingListStart\n  \\resumeItemListStart\n${items}\n  \\resumeItemListEnd\n\\resumeSubHeadingListEnd`;
     })
     .join('\n\n');
-  return template
+  const filled = template
     .replace(/%%NAME%%/g, escapeLatex(input.name || 'Candidate'))
     .replace(/%%CONTACT%%/g, escapeLatex(input.contact || ''))
     .replace(/%%SUMMARY%%/g, summary)
     .replace(/%%SKILLS%%/g, skills)
     .replace(/%%SECTIONS%%/g, sections);
+  // Any surviving %%...%% token means the template referenced a placeholder we
+  // don't know about; comment it out so it can't blow up pdflatex silently.
+  return filled.replace(/%%[A-Z_]+%%/g, (m) => `% unresolved placeholder: ${m}`);
 }
 
 async function renderPdf(args: {
