@@ -18,6 +18,8 @@ export const pluginManifestSchema = z
     permissions: z.object({
       domains: z.array(hostname),
       llm: z.boolean().optional(),
+      /** MX lookups (no SMTP). */
+      dns: z.boolean().optional(),
       browser: z.boolean().optional(),
       gmail: z.array(z.enum(['read', 'send'])).optional(),
     }),

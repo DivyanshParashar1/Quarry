@@ -2,14 +2,20 @@ import { PluginError, type Embedder, type LLMClient, type Logger } from '@jobfor
 import {
   pluginManifestSchema,
   stageMethods,
+  type ActorPlugin,
   type AnyPlugin,
+  type DnsResolver,
+  type EnricherPlugin,
+  type GmailHandle,
   type MatcherPlugin,
+  type TrackerPlugin,
   type PluginContext,
   type PluginManifest,
   type SourcePlugin,
   type Stage,
 } from '@jobforge/plugin-sdk';
 import { createScopedHttp } from './http.js';
+import { scopeGmail } from './capabilities.js';
 import type { Clock, DomainRateLimiter } from './rate-limiter.js';
 
 export interface LoadedPlugin<P extends AnyPlugin = AnyPlugin> {
@@ -76,6 +82,26 @@ export class PluginRegistry {
     return p as LoadedPlugin<SourcePlugin>;
   }
 
+  enricher(id: string): LoadedPlugin<EnricherPlugin> {
+    return this.ofStage<EnricherPlugin>(id, 'enricher');
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  actor(id: string): LoadedPlugin<ActorPlugin<any, any, any, any>> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.ofStage<ActorPlugin<any, any, any, any>>(id, 'actor');
+  }
+
+  tracker(id: string): LoadedPlugin<TrackerPlugin> {
+    return this.ofStage<TrackerPlugin>(id, 'tracker');
+  }
+
+  private ofStage<P extends AnyPlugin>(id: string, stage: Stage): LoadedPlugin<P> {
+    const p = this.get(id);
+    if (p.manifest.stage !== stage) throw new PluginError(`${id} is not a ${stage} plugin`);
+    return p as LoadedPlugin<P>;
+  }
+
   matcher(id: string): LoadedPlugin<MatcherPlugin> {
     const p = this.get(id);
     if (p.manifest.stage !== 'matcher') throw new PluginError(`${id} is not a matcher plugin`);
@@ -98,6 +124,10 @@ export interface ContextDeps {
   /** Handed only to plugins whose manifest declares permissions.llm. */
   llm?: LLMClient;
   embed?: Embedder;
+  /** Handed only to plugins declaring permissions.dns. */
+  dns?: DnsResolver;
+  /** Full client; narrowed to the manifest's gmail scopes before a plugin sees it. */
+  gmail?: GmailHandle;
 }
 
 /** Build the capability-scoped context a plugin runs with. Nothing else from the core leaks in. */
@@ -105,7 +135,12 @@ export function buildContext<C>(loaded: LoadedPlugin, deps: ContextDeps): Plugin
   const log = deps.log.child({ plugin: loaded.manifest.id });
   const wantsLlm = loaded.manifest.permissions.llm === true;
   if (wantsLlm && !deps.llm) throw new PluginError(`${loaded.manifest.id} needs an LLM client but none is configured`);
+  const wantsDns = loaded.manifest.permissions.dns === true;
+  if (wantsDns && !deps.dns) throw new PluginError(`${loaded.manifest.id} needs DNS but no resolver was provided`);
+  const gmail = scopeGmail(deps.gmail, loaded.manifest);
   return {
+    ...(wantsDns && deps.dns ? { dns: deps.dns } : {}),
+    ...(gmail ? { gmail } : {}),
     ...(wantsLlm && deps.llm ? { llm: deps.llm } : {}),
     ...(deps.embed ? { embed: deps.embed } : {}),
     config: loaded.config as C,

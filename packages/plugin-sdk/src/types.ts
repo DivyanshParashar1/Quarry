@@ -4,6 +4,8 @@ import type { Embedder, LLMClient, Logger, Profile } from '@jobforge/shared';
 export type { Embedder, LLMClient, LLMRequest, LLMResponse, LLMTask, Profile, ProfileFact, Preferences } from '@jobforge/shared';
 export { factSchema, preferencesSchema } from '@jobforge/shared';
 import type { PluginManifest } from './manifest.js';
+import type { DnsResolver, GmailHandle } from './capabilities.js';
+import type { Company, Enrichment } from './outreach.js';
 
 // ---------------------------------------------------------------------------
 // Context (PLAN.md §4.2). Constructed by the core only; plugins receive it.
@@ -29,9 +31,6 @@ export interface ScopedHttp {
 export interface BrowserHandle {
   readonly kind: 'browser';
 }
-export interface GmailHandle {
-  readonly kind: 'gmail';
-}
 
 export interface PluginContext<C> {
   config: C;
@@ -40,7 +39,10 @@ export interface PluginContext<C> {
   llm?: LLMClient;
   embed?: Embedder;
   browser?: BrowserHandle;
+  /** Scoped to the manifest's `permissions.gmail`. */
   gmail?: GmailHandle;
+  /** Present only when the manifest declares `permissions.dns`. */
+  dns?: DnsResolver;
   log: Logger;
   signal: AbortSignal;
   dryRun: boolean;
@@ -84,13 +86,6 @@ export type RawPosting = z.infer<typeof rawPostingSchema>;
 // Domain shapes used by later stages. Minimal for now; grown per phase.
 // ---------------------------------------------------------------------------
 
-export interface Company {
-  id: string;
-  name: string;
-  domain: string | null;
-  tags: string[];
-}
-
 export interface Job {
   id: string;
   companyId: string;
@@ -106,8 +101,6 @@ export interface Job {
   /** Normalized description embedding, when the embed step has run. */
   embedding: number[] | null;
 }
-
-export type Enrichment = Record<string, unknown>;
 
 export interface MatchResult {
   jobId: string;
@@ -131,6 +124,7 @@ export interface TrackEvent {
   data: Record<string, unknown>;
 }
 
+
 declare const approvedBrand: unique symbol;
 /** Constructed by the core from an approved `review_items` row. Plugins cannot create one. */
 export interface ApprovedDraft<T = ActionDraft> {
@@ -151,7 +145,8 @@ export interface SourcePlugin<C = unknown> extends BasePlugin {
   fetch(ctx: PluginContext<C>, target: SourceTarget): AsyncIterable<RawPosting>;
 }
 export interface EnricherPlugin<C = unknown> extends BasePlugin {
-  enrich(ctx: PluginContext<C>, job: Job, company: Company): Promise<Enrichment>;
+  /** `job` is null when enriching a company outside any particular job. */
+  enrich(ctx: PluginContext<C>, job: Job | null, company: Company): Promise<Enrichment>;
 }
 export interface MatcherPlugin<C = unknown> extends BasePlugin {
   score(ctx: PluginContext<C>, jobs: Job[], profile: Profile): Promise<MatchResult[]>;
@@ -159,9 +154,12 @@ export interface MatcherPlugin<C = unknown> extends BasePlugin {
 export interface TailorPlugin<C = unknown> extends BasePlugin {
   tailor(ctx: PluginContext<C>, job: Job, profile: Profile): Promise<TailoredArtifacts>;
 }
-export interface ActorPlugin<C = unknown> extends BasePlugin {
-  prepare(ctx: PluginContext<C>, input: ActionInput): Promise<ActionDraft>;
-  execute(ctx: PluginContext<C>, draft: ApprovedDraft, idempotencyKey: string): Promise<ActionResult>;
+/** I = what prepare() takes, D = the draft it proposes, R = what execute() reports. */
+export interface ActorPlugin<C = unknown, I = ActionInput, D = ActionDraft, R = ActionResult> extends BasePlugin {
+  /** Proposes a draft. Must not cause any external side effect. */
+  prepare(ctx: PluginContext<C>, input: I): Promise<D>;
+  /** Only ever called by the core, with a draft built from an approved review item. */
+  execute(ctx: PluginContext<C>, draft: ApprovedDraft<D>, idempotencyKey: string): Promise<R>;
 }
 export interface TrackerPlugin<C = unknown> extends BasePlugin {
   poll(ctx: PluginContext<C>, since: Date): AsyncIterable<TrackEvent>;
@@ -172,7 +170,8 @@ export type AnyPlugin =
   | EnricherPlugin
   | MatcherPlugin
   | TailorPlugin
-  | ActorPlugin
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  | ActorPlugin<any, any, any, any>
   | TrackerPlugin;
 
 /** The method each stage must implement; the loader checks for it. */

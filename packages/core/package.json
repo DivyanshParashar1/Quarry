@@ -13,6 +13,7 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@googleapis/gmail": "^22.0.1",
     "@jobforge/db": "workspace:*",
     "@jobforge/embeddings": "workspace:*",
     "@jobforge/plugin-sdk": "workspace:*",

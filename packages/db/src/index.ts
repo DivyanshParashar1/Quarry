@@ -8,3 +8,5 @@ export * from './match-repo.js';
 export * from './llm-repo.js';
 /** Re-exported so callers build raw SQL with the same drizzle-orm instance as the schema. */
 export { sql } from 'drizzle-orm';
+export * from './contacts-repo.js';
+export * from './outreach-repo.js';

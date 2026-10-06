@@ -8,6 +8,7 @@ import {
   integer,
   real,
   boolean,
+  type AnyPgColumn,
   index,
   vector,
   uniqueIndex,
@@ -41,6 +42,12 @@ export const companies = pgTable(
     tags: text('tags').array().notNull().default(sql`'{}'::text[]`),
     location: text('location'),
     notes: text('notes'),
+    // Phase 3: where and how this company receives email (filled by the contacts enricher).
+    emailDomain: text('email_domain'),
+    mxHosts: text('mx_hosts').array(),
+    mxCheckedAt: timestamp('mx_checked_at', { withTimezone: true }),
+    emailPattern: text('email_pattern'),
+    emailPatternConfidence: real('email_pattern_confidence'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -261,3 +268,150 @@ export const llmCalls = pgTable(
     taskIdx: index('llm_calls_task_idx').on(t.task),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Phase 3: contacts, review queue, actions, outreach threads
+// ---------------------------------------------------------------------------
+
+export const contactStatusEnum = pgEnum('contact_status', ['active', 'bounced', 'do_not_contact']);
+
+export const contacts = pgTable(
+  'contacts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    companyId: uuid('company_id')
+      .notNull()
+      .references(() => companies.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    role: text('role'),
+    email: text('email'),
+    /** 0..1. 1 = user-supplied or proven by a reply; inferred addresses are lower. */
+    emailConfidence: real('email_confidence'),
+    /** manual | pattern:<pattern> | provider:<plugin id> */
+    emailSource: text('email_source'),
+    linkedinUrl: text('linkedin_url'),
+    /** Who added the contact: manual | <plugin id>. */
+    source: text('source').notNull().default('manual'),
+    status: contactStatusEnum('status').notNull().default('active'),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    companyNameUniq: uniqueIndex('contacts_company_name_uniq').on(t.companyId, sql`lower(${t.name})`),
+    emailIdx: index('contacts_email_idx').on(sql`lower(${t.email})`),
+  }),
+);
+
+export const reviewKindEnum = pgEnum('review_kind', ['application', 'outreach', 'followup']);
+export const reviewStatusEnum = pgEnum('review_status', [
+  'pending',
+  'approved',
+  'rejected',
+  'executed',
+  'failed',
+  'cancelled',
+]);
+
+/**
+ * The human approval queue. Nothing with an external side effect runs without
+ * an `approved` row here; the core builds the ApprovedDraft from it.
+ */
+export const reviewItems = pgTable(
+  'review_items',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    kind: reviewKindEnum('kind').notNull(),
+    status: reviewStatusEnum('status').notNull().default('pending'),
+    /** The actor that will execute it. */
+    pluginId: text('plugin_id').notNull(),
+    jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'set null' }),
+    contactId: uuid('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
+    companyId: uuid('company_id').references(() => companies.id, { onDelete: 'set null' }),
+    /** Follow-ups point at the outreach thread they continue. */
+    threadId: uuid('thread_id').references((): AnyPgColumn => outreachThreads.id, { onDelete: 'set null' }),
+    draft: jsonb('draft').notNull(),
+    /** As the actor prepared it, before human edits. */
+    originalDraft: jsonb('original_draft').notNull(),
+    /** Explicit per-item override of the "2 people per company per week" cap. */
+    overrideCompanyCap: boolean('override_company_cap').notNull().default(false),
+    /** Not sent before this time (follow-ups). */
+    notBefore: timestamp('not_before', { withTimezone: true }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    decisionNote: text('decision_note'),
+    editedAt: timestamp('edited_at', { withTimezone: true }),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index('review_items_status_idx').on(t.status, t.createdAt),
+    contactIdx: index('review_items_contact_idx').on(t.contactId),
+  }),
+);
+
+export const actionStatusEnum = pgEnum('action_status', ['started', 'succeeded', 'failed']);
+
+/** One row per execute() attempt. The idempotency key makes a completed side effect unrepeatable. */
+export const actions = pgTable(
+  'actions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    reviewItemId: uuid('review_item_id')
+      .notNull()
+      .references(() => reviewItems.id, { onDelete: 'cascade' }),
+    pluginId: text('plugin_id').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    status: actionStatusEnum('status').notNull(),
+    dryRun: boolean('dry_run').notNull(),
+    result: jsonb('result'),
+    error: text('error'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    executedAt: timestamp('executed_at', { withTimezone: true }),
+  },
+  (t) => ({
+    keyUniq: uniqueIndex('actions_idempotency_key_uniq').on(t.idempotencyKey),
+    reviewIdx: index('actions_review_item_idx').on(t.reviewItemId),
+    executedIdx: index('actions_executed_idx').on(t.executedAt),
+  }),
+);
+
+export const threadStateEnum = pgEnum('thread_state', ['sent', 'replied', 'bounced', 'closed']);
+
+export const outreachThreads = pgTable(
+  'outreach_threads',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    contactId: uuid('contact_id')
+      .notNull()
+      .references(() => contacts.id, { onDelete: 'cascade' }),
+    companyId: uuid('company_id').references(() => companies.id, { onDelete: 'set null' }),
+    jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'set null' }),
+    /** The review item of the first email. */
+    reviewItemId: uuid('review_item_id').references((): AnyPgColumn => reviewItems.id, { onDelete: 'set null' }),
+    gmailThreadId: text('gmail_thread_id').notNull(),
+    subject: text('subject').notNull(),
+    /** RFC 5322 Message-IDs we sent, oldest first (for In-Reply-To / References). */
+    messageIds: text('message_ids').array().notNull().default(sql`'{}'::text[]`),
+    state: threadStateEnum('state').notNull().default('sent'),
+    sentAt: timestamp('sent_at', { withTimezone: true }).notNull(),
+    lastSentAt: timestamp('last_sent_at', { withTimezone: true }).notNull(),
+    followupsSent: integer('followups_sent').notNull().default(0),
+    nextFollowupAt: timestamp('next_followup_at', { withTimezone: true }),
+    repliedAt: timestamp('replied_at', { withTimezone: true }),
+    bouncedAt: timestamp('bounced_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    gmailThreadUniq: uniqueIndex('outreach_threads_gmail_thread_uniq').on(t.gmailThreadId),
+    stateIdx: index('outreach_threads_state_idx').on(t.state, t.nextFollowupAt),
+  }),
+);
+
+/** Small key/value store for scheduler state (e.g. the next allowed send time). Never secrets. */
+export const appState = pgTable('app_state', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

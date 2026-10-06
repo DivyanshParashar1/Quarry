@@ -7,3 +7,5 @@ export * from './queue.js';
 export * from './profile-loader.js';
 export * from './embed-runner.js';
 export * from './match-runner.js';
+export * from './capabilities.js';
+export * from './gmail.js';
