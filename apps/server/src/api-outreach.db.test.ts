@@ -153,12 +153,12 @@ describe.skipIf(!adminUrl)('outreach API (postgres)', () => {
 
   it('edits a profile fact in facts.yaml and reloads the profile', async () => {
     const before = (await getActiveProfile(t.db))!.version;
-    const r = await app.inject({ method: 'PUT', url: '/api/profile/facts/proj-ledger', headers: H, payload: JSON.stringify({ kind: 'project', content: 'Built a ledger' }) });
+    const r = await app.inject({ method: 'PATCH', url: '/api/profile/facts/proj-ledger', headers: H, payload: JSON.stringify({ kind: 'project', content: 'Built a ledger' }) });
     expect(r.statusCode).toBe(201);
     expect(r.json().profileVersion).not.toBe(before);
     expect(readFileSync(join(profileDir, 'facts.yaml'), 'utf8')).toContain('# facts');
     expect((await getActiveProfile(t.db))!.facts.map((f) => f.id)).toEqual(['proj-ledger', 'skill-go']);
-    const bad = await app.inject({ method: 'PUT', url: '/api/profile/facts/new-x', headers: H, payload: JSON.stringify({ content: 'no kind' }) });
+    const bad = await app.inject({ method: 'PATCH', url: '/api/profile/facts/new-x', headers: H, payload: JSON.stringify({ content: 'no kind' }) });
     expect(bad.statusCode).toBe(400);
   });
 });
