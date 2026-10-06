@@ -415,3 +415,47 @@ export const appState = pgTable('app_state', {
   value: jsonb('value').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ---------------------------------------------------------------------------
+// Phase 4: tailored resumes
+// ---------------------------------------------------------------------------
+
+export const resumeStatusEnum = pgEnum('resume_status', ['rendered', 'validation_failed', 'render_failed']);
+
+/**
+ * A grounded resume variant for one job. Bullets cite the profile fact ids they
+ * came from; the validator rejects any claim not present in the source fact.
+ * `pdfPath` is null when Typst wasn't available (or render failed) but the
+ * bullets + validation report still live here so the user can see why.
+ */
+export const resumeVariants = pgTable(
+  'resume_variants',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    jobId: uuid('job_id')
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    profileVersion: text('profile_version').notNull(),
+    pluginId: text('plugin_id').notNull(),
+    templateId: text('template_id').notNull(),
+    /** Facts the LLM selected, in display order. */
+    factIds: text('fact_ids').array().notNull().default(sql`'{}'::text[]`),
+    /** Rendered bullets: [{ factId, text, section }, ...] (jsonb for forward compat). */
+    bullets: jsonb('bullets').notNull(),
+    /** Headline fields (summary, headline, selected skills) the LLM wrote. */
+    header: jsonb('header').notNull(),
+    /** [{ factId, text, status: ok|warning|error, issues: string[] }, ...]. */
+    validationReport: jsonb('validation_report').notNull(),
+    status: resumeStatusEnum('status').notNull(),
+    /** Absolute PDF path on disk (served through the API). Null when render failed or Typst missing. */
+    pdfPath: text('pdf_path'),
+    pdfBytes: integer('pdf_bytes'),
+    provider: text('provider'),
+    model: text('model'),
+    error: text('error'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    jobIdx: index('resume_variants_job_idx').on(t.jobId, t.createdAt),
+  }),
+);
