@@ -23,7 +23,9 @@ const EnvSchema = z.object({
 
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
-  GMAIL_REDIRECT_URI: z.string().url().optional(),
+  GMAIL_REDIRECT_URI: z.string().url().default('http://127.0.0.1:53682/oauth2callback'),
+  /** Written by `jf gmail auth`. Never logged. */
+  GMAIL_REFRESH_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

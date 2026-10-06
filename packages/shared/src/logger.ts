@@ -9,7 +9,16 @@ export function createLogger(opts: Partial<LoggerOptions> = {}): Logger {
     level,
     timestamp: pino.stdTimeFunctions.isoTime,
     redact: {
-      paths: ['*.password', '*.apiKey', '*.token', 'headers.authorization'],
+      paths: [
+        '*.password',
+        '*.apiKey',
+        '*.token',
+        '*.refreshToken',
+        '*.refresh_token',
+        '*.access_token',
+        '*.clientSecret',
+        'headers.authorization',
+      ],
       censor: '[redacted]',
     },
     ...(isDev

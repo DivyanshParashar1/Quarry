@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pino from 'pino';
+import { parseAppConfig } from '@jobforge/shared';
 import { getActiveProfile, listRankedJobs, listSourceTargets, recordLlmCall } from '@jobforge/db';
 import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
 import { DomainRateLimiter, embedPending, loadProfile, runMatch, runSourceTarget } from '@jobforge/core';
@@ -69,7 +70,7 @@ describe.skipIf(!adminUrl)('jf match end to end (postgres)', () => {
     expect((await embedPending({ db: t.db, embedder: createHashEmbedder(), log })).jobs).toBe(12);
 
     const llm = createLLMClient({ providers: { 'claude-code': provider }, defaultProvider: 'claude-code', onCall: (r) => recordLlmCall(t.db, r) });
-    const registry = createRegistry({ llm: { tasks: {} }, embeddings: { model: '' }, plugins: { 'matcher-default': { minSimilarity: 0.1, batchSize: 5 } } });
+    const registry = createRegistry(parseAppConfig({ plugins: { 'matcher-default': { minSimilarity: 0.1, batchSize: 5 } } }));
     const s = await runMatch({ db: t.db, registry, log, llm, limiter: new DomainRateLimiter(), dryRun: true });
     expect(s.candidates).toBe(12);
     expect(s.filtered).toBe(1); // Dentist

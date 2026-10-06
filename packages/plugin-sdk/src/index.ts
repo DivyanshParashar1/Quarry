@@ -16,7 +16,7 @@ export function defineMatcherPlugin<C>(plugin: MatcherPlugin<C>): MatcherPlugin<
   return plugin;
 }
 
-export function defineEnricherPlugin<C>(plugin: EnricherPlugin<C>): EnricherPlugin<C> {
+export function defineEnricherPlugin<C, E>(plugin: EnricherPlugin<C, E>): EnricherPlugin<C, E> {
   return plugin;
 }
 

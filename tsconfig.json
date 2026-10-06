@@ -44,6 +44,15 @@
     },
     {
       "path": "./plugins/source-ashby"
+    },
+    {
+      "path": "./plugins/tracker-gmail"
+    },
+    {
+      "path": "./plugins/actor-gmail-outreach"
+    },
+    {
+      "path": "./plugins/enricher-contacts-pattern"
     }
   ]
 }

@@ -3,7 +3,7 @@
 //   pnpm --filter @jobforge/llm smoke -- --provider openrouter [--model openai/gpt-4o-mini]
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
-import { createLogger, loadEnv, LLM_PROVIDERS, type LLMProviderName } from '@jobforge/shared';
+import { createLogger, loadEnv, LLM_PROVIDERS, parseAppConfig, type LLMProviderName } from '@jobforge/shared';
 import { checkClaudeCli, createLLMFromConfig } from '../src/index.js';
 
 const { values } = parseArgs({
@@ -22,7 +22,7 @@ if (provider === 'claude-code') {
 
 const client = createLLMFromConfig(
   { ...env, LLM_PROVIDER: provider },
-  { llm: { tasks: values.model ? { extract: { model: values.model } } : {} }, embeddings: { model: '' }, plugins: {} },
+  parseAppConfig({ llm: { tasks: values.model ? { extract: { model: values.model } } : {} } }),
   { log: createLogger({ level: 'debug' }), onCall: (rec) => console.log('llm_calls row:', rec) },
 );
 

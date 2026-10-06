@@ -144,9 +144,9 @@ interface BasePlugin {
 export interface SourcePlugin<C = unknown> extends BasePlugin {
   fetch(ctx: PluginContext<C>, target: SourceTarget): AsyncIterable<RawPosting>;
 }
-export interface EnricherPlugin<C = unknown> extends BasePlugin {
+export interface EnricherPlugin<C = unknown, E = Enrichment> extends BasePlugin {
   /** `job` is null when enriching a company outside any particular job. */
-  enrich(ctx: PluginContext<C>, job: Job | null, company: Company): Promise<Enrichment>;
+  enrich(ctx: PluginContext<C>, job: Job | null, company: Company): Promise<E>;
 }
 export interface MatcherPlugin<C = unknown> extends BasePlugin {
   score(ctx: PluginContext<C>, jobs: Job[], profile: Profile): Promise<MatchResult[]>;

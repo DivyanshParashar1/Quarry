@@ -39,6 +39,25 @@ export const appConfigSchema = z
       })
       .strict()
       .default({}),
+    /** Outreach safety policy. Defaults follow PLAN.md §9; raise caps deliberately. */
+    outreach: z
+      .object({
+        /** Max real emails per rolling 24h (first emails + follow-ups). */
+        dailyCap: z.number().int().min(0).max(200).default(20),
+        /** Max distinct people emailed at one company per rolling 7 days, unless a review item overrides it. */
+        perCompanyPerWeek: z.number().int().min(1).default(2),
+        /** Random gap between two real sends, in minutes [min, max]. */
+        spacingMinutes: z
+          .tuple([z.number().min(0), z.number().min(0)])
+          .default([4, 11])
+          .refine(([a, b]) => a <= b, 'min must be <= max'),
+        /** Days to wait before follow-up 1, 2, ... (length caps the number of follow-ups). */
+        followupDays: z.array(z.number().positive()).max(5).default([5, 7]),
+        /** Hard ceiling on follow-ups per thread (PLAN.md §8: up to 2). */
+        maxFollowups: z.number().int().min(0).max(5).default(2),
+      })
+      .strict()
+      .default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })
