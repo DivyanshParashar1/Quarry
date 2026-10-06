@@ -233,8 +233,11 @@ export function fillLatexTemplate(template: string, input: RenderInput): string 
     : '';
   const sections = input.sections
     .map((s) => {
+      // Jake's \resumeSubHeadingListStart expects \resumeSubheading entries
+      // (company / dates / title / location) that we don't have at this
+      // granularity, so emit a plain item list instead.
       const items = s.bullets.map((b) => `  \\resumeItem{${escapeLatex(b)}}`).join('\n');
-      return `\\section{${escapeLatex(s.title)}}\n\\resumeSubHeadingListStart\n  \\resumeItemListStart\n${items}\n  \\resumeItemListEnd\n\\resumeSubHeadingListEnd`;
+      return `\\section{${escapeLatex(s.title)}}\n\\resumeItemListStart\n${items}\n\\resumeItemListEnd`;
     })
     .join('\n\n');
   const filled = template

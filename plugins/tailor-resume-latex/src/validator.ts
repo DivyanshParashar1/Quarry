@@ -105,7 +105,11 @@ export function extractProperTerms(s: string): string[] {
 
 export function extractNumbers(s: string): string[] {
   const out: string[] = [];
-  for (const m of s.matchAll(/\b\d[\d.,]*(?:\s?[kKmMbB]|\s?%|\s?x)?/g)) out.push(m[0].replace(/\s/g, '').toLowerCase());
+  for (const m of s.matchAll(/\b\d[\d.,]*(?:\s?[kKmMbB]|\s?%|\s?x)?/g)) {
+    // Trim trailing punctuation the greedy `[\d.,]*` sucked in, e.g. "8.17." from a sentence end.
+    const normalized = m[0].replace(/\s/g, '').toLowerCase().replace(/[.,]+$/, '');
+    if (normalized) out.push(normalized);
+  }
   return out;
 }
 
