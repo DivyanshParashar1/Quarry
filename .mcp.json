@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "jobforge": {
+      "command": "node",
+      "args": ["--import", "tsx/esm", "apps/mcp/src/index.ts"],
+      "env": { "JOBFORGE_API_URL": "http://127.0.0.1:3000" }
+    }
+  }
+}
