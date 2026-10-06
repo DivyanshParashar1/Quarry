@@ -2,7 +2,7 @@ import type { AppConfig, Env, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
 import { createLLMFromConfig } from '@jobforge/llm';
 import { createLocalEmbedder } from '@jobforge/embeddings';
-import { createDnsResolver, createGmailClient, DomainRateLimiter, type OutreachDeps } from '@jobforge/core';
+import { createDnsResolver, createGmailClient, DomainRateLimiter, type OutreachDeps, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
 import { createRegistry } from './plugins.js';
 
@@ -51,5 +51,20 @@ export async function outreachDeps(
     dns: createDnsResolver(),
     ...(o.llm ? { llm: createLLM(o.env, o.config, o.db, o.log) } : {}),
     ...(gmail ? { gmail } : {}),
+  };
+}
+
+/** Tailor deps for the CLI: shares the LLM client with the rest of the pipeline. */
+export function tailorDeps(
+  o: { env: Env; config: AppConfig; db: DB; log: Logger; live?: boolean },
+): TailorRunDeps {
+  return {
+    db: o.db,
+    registry: createRegistry(o.config),
+    log: o.log,
+    limiter: new DomainRateLimiter(),
+    dryRun: !(o.live || o.env.MODE === 'live'),
+    llm: createLLM(o.env, o.config, o.db, o.log),
+    contact: o.config.resume,
   };
 }

@@ -38,6 +38,7 @@ describe.skipIf(!adminUrl)('jf match end to end (postgres)', () => {
       location_fit: 5,
       eligibility: 9,
       score: /engineer/i.test(m[2]!) ? 81 : 40,
+      confidence: 0.85,
       reasons: `Scored ${m[2]}`,
       concerns: [],
     })),

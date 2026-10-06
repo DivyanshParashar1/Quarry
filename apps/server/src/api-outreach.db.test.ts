@@ -48,6 +48,7 @@ describe.skipIf(!adminUrl)('outreach API (postgres)', () => {
           subject: 'Backend role at Acme',
           body: 'Hi Jane,\n\nI noticed the Backend Engineer opening and have been building Go services for three years. Open to a 15-minute chat?',
           fact_ids: ['skill-go'],
+          confidence: 0.9,
         })),
       },
       defaultProvider: 'claude-code',

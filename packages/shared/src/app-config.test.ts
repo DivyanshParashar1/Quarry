@@ -9,6 +9,14 @@ describe('config.yaml', () => {
       embeddings: { model: 'Xenova/bge-small-en-v1.5' },
       outreach: { dailyCap: 20, perCompanyPerWeek: 2, spacingMinutes: [4, 11], followupDays: [5, 7], maxFollowups: 2 },
       resume: { name: '', contact: '', headline: '' },
+      autopilot: {
+        enabled: false,
+        minMatchScore: 70,
+        confidenceFloor: { match: 0.75, tailor: 0.75, outreach: 0.8 },
+        minEmailConfidence: 0.6,
+        maxAutoApprovesPerDay: 10,
+        candidateBatch: 20,
+      },
       plugins: {},
     });
   });

@@ -1,7 +1,7 @@
 import type { AppConfig, Env, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
 import { createLLMFromConfig } from '@jobforge/llm';
-import { createDnsResolver, createGmailClient, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
+import { createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
 
 export async function createGmail(env: Env, limiter: DomainRateLimiter): Promise<GmailHandle | undefined> {
@@ -57,4 +57,23 @@ export function lazyTailorDeps(o: {
       llm: createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }),
       contact: o.config.resume,
     });
+}
+
+/** Autopilot deps: wraps the lazy outreach + tailor deps so the LLM/Gmail clients stay shared. */
+export function lazyAutopilotDeps(o: {
+  env: Env;
+  config: AppConfig;
+  db: DB;
+  log: Logger;
+  outreachDeps: () => Promise<OutreachDeps>;
+  tailorDeps: () => Promise<TailorRunDeps>;
+}): () => Promise<AutopilotRunDeps> {
+  return async () => ({
+    db: o.db,
+    log: o.log,
+    policy: o.config.autopilot,
+    outreachPolicy: o.config.outreach,
+    outreachDeps: await o.outreachDeps(),
+    tailorDeps: await o.tailorDeps(),
+  });
 }

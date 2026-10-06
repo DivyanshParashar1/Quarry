@@ -80,9 +80,9 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
-      '@jobforge/tailor-resume-typst':
+      '@jobforge/tailor-resume-latex':
         specifier: workspace:*
-        version: link:../../plugins/tailor-resume-typst
+        version: link:../../plugins/tailor-resume-latex
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
@@ -157,9 +157,9 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
-      '@jobforge/tailor-resume-typst':
+      '@jobforge/tailor-resume-latex':
         specifier: workspace:*
-        version: link:../../plugins/tailor-resume-typst
+        version: link:../../plugins/tailor-resume-latex
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
@@ -265,9 +265,9 @@ importers:
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../llm
-      '@jobforge/tailor-resume-typst':
+      '@jobforge/tailor-resume-latex':
         specifier: workspace:*
-        version: link:../../plugins/tailor-resume-typst
+        version: link:../../plugins/tailor-resume-latex
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
@@ -472,7 +472,7 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
-  plugins/tailor-resume-typst:
+  plugins/tailor-resume-latex:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*

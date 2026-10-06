@@ -67,6 +67,30 @@ export const appConfigSchema = z
       })
       .strict()
       .default({}),
+    /** Autopilot: LLM-in-the-loop runner. Only confused items (below the floors) escalate to review. */
+    autopilot: z
+      .object({
+        enabled: z.boolean().default(false),
+        /** Min overall match score; below this the autopilot ignores the job. */
+        minMatchScore: z.number().int().min(0).max(100).default(70),
+        /** Per-stage self-reported confidence floors; failing any one escalates (pending in review). */
+        confidenceFloor: z
+          .object({
+            match: z.number().min(0).max(1).default(0.75),
+            tailor: z.number().min(0).max(1).default(0.75),
+            outreach: z.number().min(0).max(1).default(0.8),
+          })
+          .strict()
+          .default({}),
+        /** Min contact.email_confidence before the autopilot will auto-approve to that address. */
+        minEmailConfidence: z.number().min(0).max(1).default(0.6),
+        /** Max review items the autopilot may auto-approve per rolling 24h. */
+        maxAutoApprovesPerDay: z.number().int().min(0).max(100).default(10),
+        /** How many top-ranked candidates to walk per run. */
+        candidateBatch: z.number().int().min(1).max(100).default(20),
+      })
+      .strict()
+      .default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })

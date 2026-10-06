@@ -216,6 +216,18 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
   );
 
   server.registerTool(
+    'run_autopilot',
+    {
+      title: 'Run autopilot',
+      description:
+        'LLM-in-the-loop: walk top-ranked jobs, tailor + draft, auto-approve high-confidence ones. Low-confidence items are left pending in the review queue for the human. Honors the server\'s dryRun mode: only MODE=live actually sends.',
+      inputSchema: { limit: z.number().int().min(1).max(100).optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    (a) => run(() => api.send('POST', '/api/autopilot/run', { ...(a.limit ? { limit: a.limit } : {}) })),
+  );
+
+  server.registerTool(
     'tailor_resume',
     {
       title: 'Tailor resume for a job',

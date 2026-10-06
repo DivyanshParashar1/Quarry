@@ -15,13 +15,14 @@ import {
   type AtsType,
 } from '@jobforge/db';
 import {
-  checkTypst,
+  checkLatex,
   DomainRateLimiter,
   embedPending,
   enqueueSourceFetches,
   loadProfile,
   QUEUES,
   registerSourceWorker,
+  runAutopilot,
   runMatch,
   runTailor,
   SOURCE_PLUGIN_FOR_ATS,
@@ -33,7 +34,7 @@ import { checkClaudeCli } from '@jobforge/llm';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
 import { fmtDate, table } from './format.js';
 import { createRegistry } from './plugins.js';
-import { createEmbedder, createGmail, createLLM } from './runtime.js';
+import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
 
@@ -57,8 +58,14 @@ Usage:
       Score open jobs against the active profile: hard filters, similarity
       prefilter, then the LLM rubric. Already-scored jobs are skipped unless --rescore.
   jf tailor <jobId>
-      Produce a grounded, one-page tailored resume PDF. Every bullet traces to a
-      profile fact; invented numbers/terms are dropped. Requires \`typst\` on PATH.
+      Produce a grounded, one-page tailored resume PDF (Jake's resume LaTeX template).
+      Every bullet traces to a profile fact; invented numbers/terms are dropped.
+      Requires \`latexmk\` (TeX Live) on PATH.
+  jf autopilot [--limit <n>] [--live]
+      LLM-in-the-loop: walk top-ranked jobs, tailor + draft, auto-approve the
+      high-confidence ones. Low-confidence items are left pending in the review
+      queue. Dry run by default; --live writes decisions and lets the send loop
+      pick them up (per MODE=live).
   jf llm check
       Show the provider/model per task and check the provider is reachable (no model call).
 
@@ -229,6 +236,8 @@ async function main(argv: string[]): Promise<number> {
       if (!sub) throw new UsageError('missing <jobId>');
       return await tailorCommand(sub, env, config, db, log);
     }
+
+    if (cmd === 'autopilot') return await autopilotCommand(values, env, config, db, log);
 
     if (cmd === 'llm' && sub === 'check') return await llmCheck(env, config, db, log);
 
@@ -424,10 +433,10 @@ async function fetchCommand(
 
 async function tailorCommand(jobArg: string, env: Env, config: AppConfig, db: Db, log: Log): Promise<number> {
   const jobId = await resolveIdPrefix(db, 'jobs', jobArg);
-  const check = await checkTypst();
+  const check = await checkLatex();
   if (!check.ok) {
     process.stderr.write(
-      `warning: ${check.error}. Install typst (https://github.com/typst/typst) or set TYPST_BIN; `
+      `warning: ${check.error}. Install TeX Live (which provides latexmk + pdflatex) or set LATEX_BIN; `
         + 'bullets and validation report will still be saved.\n',
     );
   } else if (check.version) {
@@ -458,6 +467,33 @@ async function tailorCommand(jobArg: string, env: Env, config: AppConfig, db: Db
     console.log(`\nnote: ${r.variant.error}`);
   }
   return r.variant.status === 'rendered' ? 0 : 1;
+}
+
+async function autopilotCommand(
+  values: { limit?: string | undefined; live?: boolean | undefined },
+  env: Env,
+  config: AppConfig,
+  db: Db,
+  log: Log,
+): Promise<number> {
+  const live = !!values.live || env.MODE === 'live';
+  const outDeps = await outreachDeps({ env, config, db, log, live, gmail: true, llm: true });
+  const t = tailorDeps({ env, config, db, log, live });
+  const summary = await runAutopilot(
+    { db, log, policy: config.autopilot, outreachPolicy: config.outreach, outreachDeps: outDeps, tailorDeps: t },
+    { ...(values.limit ? { limit: Number(values.limit) } : {}) },
+  );
+  console.log(
+    `autopilot: ${summary.considered} considered · ${summary.approved} auto-approved · ${summary.escalated} escalated to review · ${summary.skipped} skipped`,
+  );
+  for (const d of summary.decisions) {
+    const confidence = d.overall !== null ? ` conf=${d.overall.toFixed(2)}` : '';
+    const marker = d.stage === 'approved' ? '✓' : d.stage === 'skipped' ? '-' : '!';
+    console.log(
+      `  ${marker} ${d.jobId.slice(0, 8)} ${d.company.slice(0, 20).padEnd(20)} ${d.jobTitle.slice(0, 40).padEnd(40)} ${d.reason}${d.note ? `: ${d.note}` : ''}${confidence}`,
+    );
+  }
+  return summary.escalated || summary.approved ? 0 : 1;
 }
 
 class UsageError extends Error {}

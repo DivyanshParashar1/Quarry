@@ -7,7 +7,7 @@ import matcherDefault from '@jobforge/matcher-default';
 import contactsPattern from '@jobforge/enricher-contacts-pattern';
 import gmailOutreach from '@jobforge/actor-gmail-outreach';
 import gmailTracker from '@jobforge/tracker-gmail';
-import tailorResume from '@jobforge/tailor-resume-typst';
+import tailorResume from '@jobforge/tailor-resume-latex';
 
 /** Plugins installed in this build, configured from config.yaml `plugins.<id>`. */
 export function createRegistry(config?: AppConfig): PluginRegistry {

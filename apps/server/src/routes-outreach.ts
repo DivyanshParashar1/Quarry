@@ -33,7 +33,9 @@ import {
   enrichContacts,
   loadProfile,
   rejectReviewItem,
+  runAutopilot,
   runTailor,
+  type AutopilotRunDeps,
   type OutreachDeps,
   type TailorRunDeps,
 } from '@jobforge/core';
@@ -43,8 +45,10 @@ export interface OutreachRouteOptions {
   policy: AppConfig['outreach'];
   /** Built lazily on first use: drafting needs the LLM, enrichment needs DNS. */
   outreachDeps?: () => Promise<OutreachDeps>;
-  /** Built lazily on first tailor call (needs the LLM + Typst). */
+  /** Built lazily on first tailor call (needs the LLM + LaTeX). */
   tailorDeps?: () => Promise<TailorRunDeps>;
+  /** Built lazily; shares the LLM / Gmail with outreach. */
+  autopilotDeps?: () => Promise<AutopilotRunDeps>;
   /** Enqueue source fetches (the server's pg-boss); absent in tests that don't need it. */
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
@@ -244,6 +248,14 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     const { id } = idParams.parse(req.params);
     const v = await getResumeVariant(db, id);
     return v ?? reply.status(404).send({ error: 'not_found' });
+  });
+
+  // --- autopilot -------------------------------------------------------------
+  app.post('/api/autopilot/run', async (req, reply) => {
+    if (!o.autopilotDeps) return reply.status(503).send({ error: 'unavailable', message: 'autopilot is not configured on this server' });
+    const b = z.object({ limit: z.number().int().min(1).max(100).optional() }).strict().parse(req.body ?? {});
+    const deps = await o.autopilotDeps();
+    return runAutopilot(deps, b.limit !== undefined ? { limit: b.limit } : {});
   });
 
   app.get('/api/resume-variants/:id/pdf', async (req, reply) => {

@@ -4,10 +4,10 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, startBoss } from '@jobforge/core';
+import { DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
-import { createGmail, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
+import { createGmail, lazyAutopilotDeps, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -25,7 +25,21 @@ export async function bootstrap() {
   });
   const outreachDeps = lazyOutreachDeps({ env, config, db, log, registry, limiter, gmail });
   const tailorDeps = lazyTailorDeps({ env, config, db, log, registry, limiter });
+  const autopilotDeps = lazyAutopilotDeps({ env, config, db, log, outreachDeps, tailorDeps });
   const loops = await registerOutreachWorkers(boss, outreachDeps, { live: env.MODE === 'live', gmailConnected: !!gmail, log });
+  if (config.autopilot.enabled && env.MODE === 'live') {
+    // Hourly autopilot run; pg-boss handles exactly-once scheduling across restarts.
+    await boss.schedule('autopilot.hourly', '0 * * * *');
+    await boss.work('autopilot.hourly', async () => {
+      try {
+        const summary = await runAutopilot(await autopilotDeps());
+        log.info({ summary: { considered: summary.considered, approved: summary.approved, escalated: summary.escalated, skipped: summary.skipped } }, 'autopilot.hourly run finished');
+      } catch (err) {
+        log.error({ err: err instanceof Error ? err.message : String(err) }, 'autopilot.hourly run failed');
+      }
+    });
+    log.info('autopilot scheduled hourly');
+  }
 
   const facts = findUp('profile/facts.yaml');
   const api = await buildApi({
@@ -35,6 +49,7 @@ export async function bootstrap() {
     policy: config.outreach,
     outreachDeps,
     tailorDeps,
+    autopilotDeps,
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     ...(facts ? { profileDir: dirname(facts) } : {}),
   });

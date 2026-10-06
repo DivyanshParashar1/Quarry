@@ -44,11 +44,11 @@ describe.skipIf(!adminUrl)('dashboard API (postgres)', () => {
     await add('d', 'Frontend Engineer', 'Pune');
 
     const { version } = await loadProfileData(t.db, [], preferencesSchema.parse({ roles: ['Backend Engineer'] }));
-    const base = { similarity: 0.7, rubric: {}, provider: 'fake', model: 'm' };
+    const base = { similarity: 0.7, rubric: {}, provider: 'fake', model: 'm', confidence: 0.9 };
     await saveMatchResults(t.db, version, 'matcher-default', [
       { ...base, jobId: ids.a!, method: 'llm', score: 88, rubric: { stack_fit: 9, concerns: [] }, reasons: 'Great Go fit' },
       { ...base, jobId: ids.b!, method: 'llm', score: 61, reasons: 'Some overlap' },
-      { ...base, jobId: ids.c!, method: 'filtered', score: 0, similarity: null, provider: null, model: null, reasons: 'Excluded' },
+      { ...base, jobId: ids.c!, method: 'filtered', score: 0, similarity: null, provider: null, model: null, confidence: null, reasons: 'Excluded' },
     ]);
   });
   afterAll(async () => {

@@ -48,7 +48,7 @@ describe('jobforge MCP server', () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
-      ['add_company', 'add_contact', 'approve', 'draft_outreach', 'edit_draft', 'find_emails', 'get_job', 'list_jobs', 'list_resume_variants', 'pipeline_status', 'profile_get', 'profile_update_fact', 'reject', 'review_queue', 'run_source', 'tailor_resume'].sort(),
+      ['add_company', 'add_contact', 'approve', 'draft_outreach', 'edit_draft', 'find_emails', 'get_job', 'list_jobs', 'list_resume_variants', 'pipeline_status', 'profile_get', 'profile_update_fact', 'reject', 'review_queue', 'run_autopilot', 'run_source', 'tailor_resume'].sort(),
     );
     const approve = tools.find((t) => t.name === 'approve')!;
     expect(approve.annotations).toMatchObject({ destructiveHint: true, readOnlyHint: false });
