@@ -58,6 +58,15 @@ export const appConfigSchema = z
       })
       .strict()
       .default({}),
+    /** Headline shown on tailored resumes (name, contact line, headline). Never auto-invented. */
+    resume: z
+      .object({
+        name: z.string().default(''),
+        contact: z.string().default(''),
+        headline: z.string().default(''),
+      })
+      .strict()
+      .default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })

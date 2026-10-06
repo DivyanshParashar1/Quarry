@@ -8,6 +8,7 @@ describe('config.yaml', () => {
       llm: { tasks: {} },
       embeddings: { model: 'Xenova/bge-small-en-v1.5' },
       outreach: { dailyCap: 20, perCompanyPerWeek: 2, spacingMinutes: [4, 11], followupDays: [5, 7], maxFollowups: 2 },
+      resume: { name: '', contact: '', headline: '' },
       plugins: {},
     });
   });

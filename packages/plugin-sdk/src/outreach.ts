@@ -47,6 +47,8 @@ export interface OutreachActionInput {
   company: Company;
   contact: ContactRef & { email: string };
   profile: Profile;
+  /** Pre-resolved attachments the core wants on the outbound email (e.g. tailored resume). */
+  attachments?: EmailAttachment[];
   /** For follow-ups: the thread so far. */
   previous?: {
     subject: string;
@@ -58,6 +60,19 @@ export interface OutreachActionInput {
   };
 }
 
+/** Files attached to an outbound email. The core resolves these at draft time. */
+export const attachmentSchema = z
+  .object({
+    filename: z.string().trim().min(1).max(200),
+    contentType: z.string().trim().min(1).max(100),
+    /** Absolute path on disk; actors read it at send time. */
+    path: z.string().trim().min(1),
+    /** For UI/traceability (e.g. the resume_variants row this attachment came from). */
+    resumeVariantId: z.string().uuid().nullable().default(null),
+  })
+  .strict();
+export type EmailAttachment = z.infer<typeof attachmentSchema>;
+
 export const emailDraftSchema = z
   .object({
     to: z.string().email(),
@@ -66,6 +81,8 @@ export const emailDraftSchema = z
     body: z.string().trim().min(1).max(10_000),
     /** Profile facts the draft relies on (grounding trail). */
     factIds: z.array(z.string()).default([]),
+    /** Attachments picked up by the actor at send time (e.g. the tailored resume PDF). */
+    attachments: z.array(attachmentSchema).max(5).default([]),
     /** Follow-ups reply into the original thread. */
     gmailThreadId: z.string().nullable().default(null),
     inReplyTo: z.string().nullable().default(null),
@@ -81,6 +98,8 @@ export const emailDraftPatchSchema = z
     toName: z.string().optional(),
     subject: z.string().trim().min(1).max(200).optional(),
     body: z.string().trim().min(1).max(10_000).optional(),
+    /** Replace the attachment list (empty array removes attachments). */
+    attachments: z.array(attachmentSchema).max(5).optional(),
   })
   .strict();
 export type EmailDraftPatch = z.infer<typeof emailDraftPatchSchema>;

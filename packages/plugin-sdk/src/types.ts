@@ -114,7 +114,10 @@ export interface MatchResult {
   provider: string | null;
   model: string | null;
 }
-export type TailoredArtifacts = Record<string, unknown>;
+import type { TailoredResume } from './tailor.js';
+/** What a tailor plugin returns (PLAN.md §7). See `TailoredResume`. */
+export type TailoredArtifacts = TailoredResume;
+
 export type ActionInput = Record<string, unknown>;
 export type ActionDraft = Record<string, unknown>;
 export type ActionResult = Record<string, unknown>;
