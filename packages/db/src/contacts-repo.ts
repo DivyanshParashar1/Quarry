@@ -143,3 +143,15 @@ export async function setContactStatus(db: DB, contactId: string, status: Contac
     .set({ status, ...(status === 'bounced' ? { emailConfidence: 0 } : {}), updatedAt: new Date() })
     .where(eq(contacts.id, contactId));
 }
+
+/** A reply proves the address works. */
+export async function confirmContactEmail(db: DB, contactId: string): Promise<void> {
+  await db
+    .update(contacts)
+    .set({
+      emailConfidence: 1,
+      emailSource: sql`case when ${contacts.emailSource} = 'manual' then 'manual' else 'reply' end`,
+      updatedAt: new Date(),
+    })
+    .where(eq(contacts.id, contactId));
+}

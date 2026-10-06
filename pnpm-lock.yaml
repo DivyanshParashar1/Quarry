@@ -220,9 +220,18 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@jobforge/actor-gmail-outreach':
+        specifier: workspace:*
+        version: link:../../plugins/actor-gmail-outreach
+      '@jobforge/enricher-contacts-pattern':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-contacts-pattern
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../llm
+      '@jobforge/tracker-gmail':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-gmail
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -319,6 +328,25 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  plugins/actor-gmail-outreach:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@jobforge/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
   plugins/enricher-contacts-pattern:
     dependencies:
       '@jobforge/plugin-sdk':
@@ -390,6 +418,22 @@ importers:
         version: 5.9.3
 
   plugins/source-lever:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/tracker-gmail:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*

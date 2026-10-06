@@ -10,3 +10,4 @@ export * from './match-runner.js';
 export * from './capabilities.js';
 export * from './gmail.js';
 export * from './contacts-runner.js';
+export * from './outreach.js';

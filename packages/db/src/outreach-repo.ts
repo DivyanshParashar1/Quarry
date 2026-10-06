@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { DB } from './client.js';
-import { actions, appState, companies, contacts, jobs, outreachThreads, reviewItems } from './schema.js';
+import { actions, appState, companies, contacts, events, jobs, outreachThreads, reviewItems } from './schema.js';
 
 export type ReviewItemRow = typeof reviewItems.$inferSelect;
 export type ReviewStatus = ReviewItemRow['status'];
@@ -163,11 +163,11 @@ export async function restartAction(db: DB, id: string): Promise<void> {
 export async function finishAction(
   db: DB,
   id: string,
-  r: { status: 'succeeded' | 'failed'; result?: unknown; error?: string },
+  r: { status: 'succeeded' | 'failed'; result?: unknown; error?: string; at?: Date },
 ): Promise<void> {
   await db
     .update(actions)
-    .set({ status: r.status, result: r.result ?? null, error: r.error?.slice(0, 4000) ?? null, executedAt: new Date() })
+    .set({ status: r.status, result: r.result ?? null, error: r.error?.slice(0, 4000) ?? null, executedAt: r.at ?? new Date() })
     .where(eq(actions.id, id));
 }
 
@@ -348,4 +348,70 @@ export async function setState(db: DB, key: string, value: unknown): Promise<voi
     .insert(appState)
     .values({ key, value })
     .onConflictDoUpdate({ target: appState.key, set: { value: sql`excluded.value`, updatedAt: new Date() } });
+}
+
+/**
+ * A crude cross-process lock in app_state: acquired when the key is free,
+ * expired, or already held by `owner`. Keeps two send loops from racing.
+ */
+export async function tryLease(db: DB, key: string, owner: string, ttlMs: number): Promise<boolean> {
+  const until = new Date(Date.now() + ttlMs).toISOString();
+  const rows = await db.execute(sql`
+    insert into ${appState} (key, value, updated_at)
+    values (${key}, jsonb_build_object('owner', ${owner}::text, 'until', ${until}::text), now())
+    on conflict (key) do update set value = excluded.value, updated_at = now()
+    where (${appState.value}->>'until')::timestamptz < now() or ${appState.value}->>'owner' = ${owner}
+    returning key`);
+  return rows.length > 0;
+}
+
+export async function releaseLease(db: DB, key: string, owner: string): Promise<void> {
+  await db.execute(sql`delete from ${appState} where key = ${key} and ${appState.value}->>'owner' = ${owner}`);
+}
+
+/** Executed items in a thread (first email + follow-ups), newest first. */
+export async function executedItemsForThread(db: DB, threadId: string, firstReviewItemId: string | null): Promise<ReviewItemRow[]> {
+  return db
+    .select()
+    .from(reviewItems)
+    .where(
+      and(
+        eq(reviewItems.status, 'executed'),
+        firstReviewItemId ? or(eq(reviewItems.threadId, threadId), eq(reviewItems.id, firstReviewItemId)) : eq(reviewItems.threadId, threadId),
+      ),
+    )
+    .orderBy(desc(reviewItems.updatedAt));
+}
+
+/** Active (pending/approved) first-email items for a contact, to avoid duplicate drafts. */
+export async function openOutreachForContact(db: DB, contactId: string): Promise<ReviewItemRow[]> {
+  return db
+    .select()
+    .from(reviewItems)
+    .where(and(eq(reviewItems.contactId, contactId), eq(reviewItems.kind, 'outreach'), inArray(reviewItems.status, ['pending', 'approved'])));
+}
+
+export async function threadsForContact(db: DB, contactId: string): Promise<ThreadRow[]> {
+  return db.select().from(outreachThreads).where(eq(outreachThreads.contactId, contactId)).orderBy(desc(outreachThreads.sentAt));
+}
+
+/** Most recent sent thread to an address (to place a bounce that arrived outside its thread). */
+export async function latestSentThreadToEmail(db: DB, email: string): Promise<ThreadRow | null> {
+  const [r] = await db
+    .select({ t: outreachThreads })
+    .from(outreachThreads)
+    .innerJoin(contacts, eq(contacts.id, outreachThreads.contactId))
+    .where(and(eq(outreachThreads.state, 'sent'), sql`lower(${contacts.email}) = lower(${email})`))
+    .orderBy(desc(outreachThreads.lastSentAt))
+    .limit(1);
+  return r?.t ?? null;
+}
+
+/** How many times an event happened for a subject (e.g. failed send attempts for a review item). */
+export async function countEvents(db: DB, kind: string, subjectId: string): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(events)
+    .where(and(eq(events.kind, kind), eq(events.subjectId, subjectId)));
+  return r!.n;
 }

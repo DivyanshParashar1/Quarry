@@ -28,12 +28,12 @@ export function createDnsResolver(opts: { timeoutMs?: number; ttlMs?: number; re
 
 /**
  * Narrow a full Gmail client to what the manifest declares. A plugin that
- * didn't ask for `send` gets no send method at all.
+ * didn't ask for `send` gets no send method at all. Returns undefined when
+ * Gmail isn't connected; callers that need it check first (requireGmail).
  */
 export function scopeGmail(full: GmailHandle | undefined, manifest: PluginManifest): GmailHandle | undefined {
   const scopes = manifest.permissions.gmail ?? [];
-  if (!scopes.length) return undefined;
-  if (!full) throw new PluginError(`${manifest.id} needs Gmail but it is not connected; run \`jf gmail auth\``);
+  if (!scopes.length || !full) return undefined;
   const h: GmailHandle = { address: full.address };
   if (scopes.includes('send')) {
     if (!full.send) throw new PluginError('Gmail client cannot send');
@@ -45,4 +45,9 @@ export function scopeGmail(full: GmailHandle | undefined, manifest: PluginManife
     h.getMessage = full.getMessage.bind(full);
   }
   return Object.freeze(h);
+}
+
+export function requireGmail<T extends GmailHandle>(gmail: T | undefined): T {
+  if (!gmail) throw new PluginError('Gmail is not connected; run `jf gmail auth`');
+  return gmail;
 }

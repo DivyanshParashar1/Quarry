@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { fakeGmail } from '@jobforge/plugin-sdk/testing';
 import type { PluginManifest, TrackerPlugin } from '@jobforge/plugin-sdk';
-import { createDnsResolver, scopeGmail } from './capabilities.js';
+import { createDnsResolver, requireGmail, scopeGmail } from './capabilities.js';
 import { buildContext, loadPlugin } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
 import { silentLogger } from './test-utils.js';
@@ -29,8 +29,9 @@ describe('scopeGmail', () => {
     expect(scopeGmail(full, manifest({ domains: [] }))).toBeUndefined();
   });
 
-  it('fails clearly when Gmail is not connected', () => {
-    expect(() => scopeGmail(undefined, manifest({ domains: [], gmail: ['read'] }))).toThrow(/jf gmail auth/);
+  it('is absent when Gmail is not connected; requireGmail says how to fix it', () => {
+    expect(scopeGmail(undefined, manifest({ domains: [], gmail: ['read'] }))).toBeUndefined();
+    expect(() => requireGmail(undefined)).toThrow(/jf gmail auth/);
   });
 
   it('buildContext only injects dns/gmail for declared permissions', () => {
