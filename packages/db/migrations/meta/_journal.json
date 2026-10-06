@@ -15,6 +15,13 @@
       "when": 1791276038675,
       "tag": "0001_bitter_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791298412732,
+      "tag": "0002_dazzling_patch",
+      "breakpoints": true
     }
   ]
 }

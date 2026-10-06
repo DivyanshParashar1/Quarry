@@ -4,3 +4,5 @@ packages:
   - "plugins/*"
 allowBuilds:
   esbuild: true
+  onnxruntime-node: false
+  protobufjs: false

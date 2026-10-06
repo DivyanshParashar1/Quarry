@@ -10,6 +10,13 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettier,
   {
+    // Plain JS scripts (e.g. test fixtures) run under Node.
+    files: ['**/*.{js,mjs,cjs}'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', setTimeout: 'readonly', Buffer: 'readonly' },
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/consistent-type-imports': 'warn',

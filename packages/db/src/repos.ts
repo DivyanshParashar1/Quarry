@@ -154,6 +154,9 @@ export async function recordPosting(
         set: {
           lastSeenAt: seenAt,
           closedAt: null,
+          // A changed description invalidates the embedding; the embed step recomputes it.
+          embedding: sql`case when excluded.description_md is not null
+            and excluded.description_md is distinct from ${jobs.descriptionMd} then null else ${jobs.embedding} end`,
           descriptionMd: sql`coalesce(excluded.description_md, ${jobs.descriptionMd})`,
           applyUrl: sql`coalesce(${jobs.applyUrl}, excluded.apply_url)`,
           remotePolicy: sql`coalesce(${jobs.remotePolicy}, excluded.remote_policy)`,

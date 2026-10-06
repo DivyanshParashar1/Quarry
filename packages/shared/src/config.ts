@@ -18,6 +18,9 @@ const EnvSchema = z.object({
   OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
   OPENROUTER_DEFAULT_MODEL: z.string().default('anthropic/claude-sonnet-4'),
 
+  OPENROUTER_CONCURRENCY: z.coerce.number().int().positive().default(4),
+  OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
   GMAIL_REDIRECT_URI: z.string().url().optional(),
