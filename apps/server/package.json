@@ -8,16 +8,21 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "dev": "node --env-file-if-exists=../../.env --import tsx/esm --watch src/index.ts",
-    "start": "node dist/index.js"
+    "start": "node --env-file-if-exists=../../.env --import tsx/esm src/index.ts"
   },
   "dependencies": {
+    "@fastify/static": "^10.1.5",
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
     "@jobforge/shared": "workspace:*",
+    "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
-    "@jobforge/source-lever": "workspace:*"
+    "@jobforge/source-lever": "workspace:*",
+    "fastify": "^5.12.5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
+    "pino": "^9.14.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }

@@ -18,7 +18,10 @@
     "db:migrate": "pnpm --filter @jobforge/db migrate",
     "db:generate": "pnpm --filter @jobforge/db generate",
     "db:studio": "pnpm --filter @jobforge/db studio",
-    "jf": "tsx apps/cli/src/index.ts"
+    "jf": "tsx apps/cli/src/index.ts",
+    "server": "pnpm --filter @jobforge/server start",
+    "web:dev": "pnpm --filter @jobforge/web dev",
+    "web:build": "pnpm --filter @jobforge/web build"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
