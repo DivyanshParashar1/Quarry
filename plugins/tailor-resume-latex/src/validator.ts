@@ -117,15 +117,21 @@ function normalizedIncludes(haystack: string, needle: string): boolean {
 }
 
 /**
- * A term is grounded if it (or every meaningful sub-token when split on
- * hyphens / slashes) is in the fact. Lets "Firestore-backed" pass when the
- * fact mentions "Firestore"; still catches a fully-invented "Firestore-Spanner".
+ * A term is grounded if it, or every "proper" sub-token (capitalized / acronym),
+ * is in the fact. Lowercase sub-parts of a hyphen compound are treated as
+ * free adjectives ("Firestore-backed" passes when the fact mentions "Firestore";
+ * "Google-Cloud" needs both; "Firestore-Spanner" is still caught if "Spanner"
+ * is absent).
  */
 function termIsGrounded(term: string, haystack: string): boolean {
   if (normalizedIncludes(haystack, term)) return true;
-  const parts = term.split(/[-/]/).filter((p) => p && !COMMON_STOPWORDS.has(p));
+  const parts = term.split(/[-/]/).filter(Boolean);
   if (parts.length < 2) return false;
-  return parts.every((p) => normalizedIncludes(haystack, p));
+  const needGrounding = parts.filter(
+    (p) => !COMMON_STOPWORDS.has(p) && (/^[A-Z0-9+.#]{2,}$/.test(p) || /^[A-Z]/.test(p)),
+  );
+  if (needGrounding.length === 0) return true;
+  return needGrounding.every((p) => normalizedIncludes(haystack, p));
 }
 
 function factHaystack(f: ProfileFact): string {
