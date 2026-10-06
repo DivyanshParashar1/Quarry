@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Markdown from 'react-markdown';
 import { ExternalLink, X } from 'lucide-react';
+import { OutreachPanel } from '@/components/OutreachPanel';
 import { ScoreBadge } from '@/components/ScoreBadge';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants, Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ const RUBRIC: [keyof NonNullable<Detail['match']>['rubric'], string][] = [
   ['eligibility', 'Eligibility'],
 ];
 
-export function JobDetail({ id, onClose }: { id: string; onClose: () => void }) {
+export function JobDetail({ id, onClose, onOpenReview }: { id: string; onClose: () => void; onOpenReview: () => void }) {
   const { data: job, error, isPending } = useQuery({ queryKey: ['job', id], queryFn: () => getJson<Detail>(`/api/jobs/${id}`) });
 
   if (isPending) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
@@ -101,6 +102,8 @@ export function JobDetail({ id, onClose }: { id: string; onClose: () => void }) 
           </>
         )}
       </Card>
+
+      <OutreachPanel jobId={job.id} onOpenReview={onOpenReview} />
 
       <section>
         <h3 className="mb-1 text-sm font-semibold">Description</h3>

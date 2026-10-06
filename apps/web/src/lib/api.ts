@@ -73,3 +73,89 @@ export async function getJson<T>(path: string): Promise<T> {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${path}`);
   return (await res.json()) as T;
 }
+
+/** Writes carry x-jobforge: 1; the server refuses state changes without it (CSRF guard). */
+export async function send<T>(path: string, method: 'POST' | 'PATCH' | 'PUT', body: unknown = {}): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: { 'content-type': 'application/json', accept: 'application/json', 'x-jobforge': '1' },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; issues?: string[] };
+  if (!res.ok) throw new ApiError(res.status, data.error ?? 'error', data.message ?? data.issues?.join('; ') ?? res.statusText);
+  return data;
+}
+
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export interface EmailDraft {
+  to: string;
+  toName: string;
+  subject: string;
+  body: string;
+  factIds: string[];
+  gmailThreadId: string | null;
+}
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'executed' | 'failed' | 'cancelled';
+
+export interface ReviewItem {
+  id: string;
+  kind: 'application' | 'outreach' | 'followup';
+  status: ReviewStatus;
+  draft: EmailDraft;
+  originalDraft: EmailDraft;
+  overrideCompanyCap: boolean;
+  decisionNote: string | null;
+  error: string | null;
+  editedAt: string | null;
+  createdAt: string;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactEmailConfidence: number | null;
+  companyName: string | null;
+  jobTitle: string | null;
+  jobId: string | null;
+}
+
+export interface Contact {
+  id: string;
+  companyId: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  emailConfidence: number | null;
+  emailSource: string | null;
+  status: 'active' | 'bounced' | 'do_not_contact';
+}
+
+export interface Thread {
+  id: string;
+  state: 'sent' | 'replied' | 'bounced' | 'closed';
+  subject: string;
+  sentAt: string;
+  followupsSent: number;
+  nextFollowupAt: string | null;
+  contactName: string;
+  contactEmail: string | null;
+}
+
+export interface JobOutreach {
+  company: { id: string; name: string; domain: string | null; emailDomain: string | null; emailPattern: string | null; emailPatternConfidence: number | null };
+  contacts: Contact[];
+  reviewItems: ReviewItem[];
+  threads: Thread[];
+}
+
+export interface Pipeline {
+  review: Record<ReviewStatus, number>;
+  threads: Record<Thread['state'], number>;
+}
