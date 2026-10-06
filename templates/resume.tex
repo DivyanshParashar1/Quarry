@@ -13,7 +13,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{latexsym}
-\usepackage[empty]{fullpage}
+% The \addtolength lines below do the margin work fullpage used to do;
+% dropping \usepackage[empty]{fullpage} avoids a BasicTeX miss on CTAN.
 \usepackage{titlesec}
 \usepackage{marvosym}
 \usepackage[usenames,dvipsnames]{color}
