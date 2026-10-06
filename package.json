@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "db:migrate": "pnpm --filter @jobforge/db migrate",
     "db:generate": "pnpm --filter @jobforge/db generate",
-    "db:studio": "pnpm --filter @jobforge/db studio"
+    "db:studio": "pnpm --filter @jobforge/db studio",
+    "jf": "tsx apps/cli/src/index.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

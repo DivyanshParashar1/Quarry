@@ -47,13 +47,28 @@ importers:
 
   apps/cli:
     dependencies:
+      '@jobforge/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@jobforge/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@jobforge/source-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/source-greenhouse
+      '@jobforge/source-lever':
+        specifier: workspace:*
+        version: link:../../plugins/source-lever
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
+      pino:
+        specifier: ^9.14.0
+        version: 9.14.0
       tsx:
         specifier: ^4.19.2
         version: 4.23.15
@@ -85,6 +100,12 @@ importers:
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@jobforge/source-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/source-greenhouse
+      '@jobforge/source-lever':
+        specifier: workspace:*
+        version: link:../../plugins/source-lever
     devDependencies:
       tsx:
         specifier: ^4.19.2

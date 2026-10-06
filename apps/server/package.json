@@ -7,13 +7,18 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --env-file-if-exists=../../.env --import tsx/esm --watch src/index.ts",
     "start": "node dist/index.js"
   },
   "dependencies": {
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
-    "@jobforge/shared": "workspace:*"
+    "@jobforge/shared": "workspace:*",
+    "@jobforge/source-greenhouse": "workspace:*",
+    "@jobforge/source-lever": "workspace:*"
   },
-  "devDependencies": { "tsx": "^4.19.2", "typescript": "^5.6.3" }
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
 }
