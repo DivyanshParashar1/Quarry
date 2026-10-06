@@ -1,4 +1,4 @@
-import type { AppConfig, Env, Logger } from '@jobforge/shared';
+import type { AppConfig, Env, LLMClient, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
 import { createLLMFromConfig } from '@jobforge/llm';
 import { createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
@@ -76,4 +76,11 @@ export function lazyAutopilotDeps(o: {
     outreachDeps: await o.outreachDeps(),
     tailorDeps: await o.tailorDeps(),
   });
+}
+
+/** LLM client built once, on first use (shared by /api/profile/fix and /import). */
+export function lazyLLM(o: { env: Env; config: AppConfig; db: DB; log: Logger }): () => Promise<LLMClient> {
+  let cached: LLMClient | null = null;
+  return async () =>
+    (cached ??= createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }));
 }

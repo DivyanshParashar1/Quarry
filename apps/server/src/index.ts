@@ -7,7 +7,7 @@ import { createDb } from '@jobforge/db';
 import { DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
-import { createGmail, lazyAutopilotDeps, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
+import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -50,6 +50,7 @@ export async function bootstrap() {
     outreachDeps,
     tailorDeps,
     autopilotDeps,
+    llm: lazyLLM({ env, config, db, log }),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     ...(facts ? { profileDir: dirname(facts) } : {}),
   });

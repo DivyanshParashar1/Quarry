@@ -1,8 +1,7 @@
 import { createReadStream, existsSync } from 'node:fs';
-import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { factSchema, upsertFactInFile, type AppConfig } from '@jobforge/shared';
+import type { AppConfig } from '@jobforge/shared';
 import {
   actionsForReviewItem,
   findCompanyByName,
@@ -31,7 +30,6 @@ import {
   draftOutreach,
   editDraft,
   enrichContacts,
-  loadProfile,
   rejectReviewItem,
   runAutopilot,
   runTailor,
@@ -207,17 +205,6 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     const targets = await listSourceTargets(db, { ...(b.atsType ? { atsTypes: [b.atsType] } : {}), ...(b.company ? { companyName: b.company } : {}) });
     const jobIds = await o.enqueueFetch(targets.map((t) => t.companySourceId));
     return reply.status(202).send({ queued: jobIds.length, boards: targets.map((t) => `${t.companyName} (${t.atsType}:${t.boardToken})`) });
-  });
-
-  // --- profile facts (MCP) ---------------------------------------------------
-  app.put('/api/profile/facts/:id', async (req, reply) => {
-    const { id } = z.object({ id: z.string().min(1).max(100) }).parse(req.params);
-    const patch = factSchema.omit({ id: true }).partial().parse(req.body ?? {});
-    const dir = o.profileDir;
-    if (!dir || !existsSync(join(dir, 'facts.yaml'))) return reply.status(503).send({ error: 'unavailable', message: 'profile directory not found' });
-    const r = upsertFactInFile(join(dir, 'facts.yaml'), { id, ...patch });
-    const loaded = await loadProfile(db, dir);
-    return reply.status(r.created ? 201 : 200).send({ fact: r.fact, created: r.created, profileVersion: loaded.version });
   });
 
   app.get('/api/contacts/:id', async (req, reply) => {

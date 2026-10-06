@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
+import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { z } from 'zod';
 import {
@@ -11,9 +12,10 @@ import {
   matchStats,
   type DB,
 } from '@jobforge/db';
-import { ConfigError, parseAppConfig, type AppConfig, type Logger } from '@jobforge/shared';
+import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
 import { OutreachError, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
+import { registerProfileRoutes } from './routes-profile.js';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -53,6 +55,8 @@ export interface ApiOptions {
   outreachDeps?: () => Promise<OutreachDeps>;
   tailorDeps?: () => Promise<TailorRunDeps>;
   autopilotDeps?: () => Promise<AutopilotRunDeps>;
+  /** LLM client built lazily for /api/profile/fix and /api/profile/import. */
+  llm?: () => Promise<LLMClient>;
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
 }
@@ -165,6 +169,15 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     const job = await getJobDetail(db, id, profile?.version ?? null);
     if (!job) return reply.status(404).send({ error: 'not_found' });
     return job;
+  });
+
+  // 10MB cap on PDF uploads; small since we only accept resumes.
+  await app.register(fastifyMultipart, { limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
+
+  registerProfileRoutes(app, {
+    db,
+    ...(opts.profileDir ? { profileDir: opts.profileDir } : {}),
+    ...(opts.llm ? { llm: opts.llm } : {}),
   });
 
   registerOutreachRoutes(app, {
