@@ -116,3 +116,22 @@ Dependencies: no new third-party packages; `typst` is required at runtime (not a
 - **DB.** `autopilotApprovesSince`, `transitionReviewItem` accepts `decidedBy` and `confidence`.
 
 Dependencies: no new third-party packages; `latexmk` (TeX Live) is required at runtime for PDF rendering. Tests pre-insert a rendered variant so they don't depend on a local LaTeX install.
+
+## [Phase 5] — Profile editor and LLM "fix" (web UI)
+
+- `packages/shared/profile-files.ts` — `deleteFactInFile` and `writePreferencesFile` round out the YAML writers that preserve top-level comments.
+- `apps/server/src/routes-profile.ts` — full profile REST surface:
+  - `GET /api/profile/full` returns facts + preferences.
+  - `POST /api/profile/facts` creates (body contains id); `PATCH /api/profile/facts/:id` updates; `DELETE /api/profile/facts/:id` removes. Every write re-runs `loadProfile` so the derived DB stays in sync in one request.
+  - `PUT /api/profile/preferences` overwrites `preferences.yaml` after schema validation.
+  - `POST /api/profile/fix` — one-shot LLM rewrite of any text snippet, with a guard-rail system prompt that forbids inventing facts.
+  - `POST /api/profile/import` — multipart PDF upload (10MB cap); `pdf-parse` extracts text, LLM returns up to 40 structured fact drafts the UI stages for per-row confirmation. Nothing is persisted until the user POSTs the fact.
+- `apps/server/src/runtime.ts` grows `lazyLLM`; `apps/server/src/api.ts` registers `@fastify/multipart` and mounts the profile routes.
+- `apps/web`
+  - `/profile` route with three tabs: Facts (grouped by kind, inline create/edit/delete, metrics as JSON), Preferences (lists + salary floor + exclusions + notes), Import (upload PDF → preview drafts → save selected).
+  - `FixableField` — Input/Textarea + sparkle button that calls `/api/profile/fix` and replaces the current value with the LLM's tightening pass. Reused throughout the profile editor.
+  - `ResumePanel` now renders a 24rem inline PDF iframe for the latest rendered variant.
+  - `send()` learns `DELETE`; new `upload()` helper for multipart.
+- The redundant `PUT /api/profile/facts/:id` previously living in `routes-outreach.ts` is removed; the MCP server already hits that endpoint via a method that `PATCH` now serves.
+
+Dependencies added (apps/server): `@fastify/multipart ^9`, `pdf-parse ^1.1.1`, `@types/pdf-parse ^1.1.4`. These are server-only and the only sensible path for user-uploaded PDFs; noting the three outside PLAN.md §2.
