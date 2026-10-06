@@ -291,3 +291,39 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     expect((await listContacts(t.db, { company: 'acme' })).length).toBe(5);
   });
 });
+
+describe.skipIf(!adminUrl)('outreach: cancel before send (postgres)', () => {
+  it('an approved item rejected before its tick is never sent', async () => {
+    const t = await createTestDb(adminUrl!);
+    try {
+      const gmail = fakeGmail('me@x.com');
+      const registry = new PluginRegistry();
+      const config = parseAppConfig({});
+      registry.register(actor, {});
+      const { id: companyId } = await upsertCompany(t.db, { name: 'Acme' });
+      const { contact } = await upsertContact(t.db, { companyId, name: 'Jane Doe', email: 'jane@acme.com' });
+      await loadProfileData(t.db, [], preferencesSchema.parse({}));
+      const deps: OutreachDeps = {
+        db: t.db,
+        registry,
+        log: silentLogger,
+        limiter: new DomainRateLimiter(),
+        dryRun: false,
+        gmail,
+        policy: config.outreach,
+        llm: createLLMClient({
+          providers: { 'claude-code': createFakeProvider(() => ({ subject: 'Hello there', body: 'Hi Jane, a short note about the backend role. Would a 15-minute chat work this week?', fact_ids: [] })) },
+          defaultProvider: 'claude-code',
+        }),
+      };
+      const item = await draftOutreach(deps, { contactId: contact.id });
+      await approveReviewItem(t.db, deps.policy, item.id);
+      await rejectReviewItem(t.db, item.id, 'changed my mind');
+      const r = await runSendTick(deps);
+      expect(r.outcomes).toEqual([]);
+      expect(gmail.messages).toHaveLength(0);
+    } finally {
+      await t.drop();
+    }
+  });
+});

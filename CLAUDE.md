@@ -22,7 +22,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 ## Repo map (quick)
 - `apps/server` — Fastify API + pg-boss workers
 - `apps/web` — React dashboard (Vite; built into `apps/web/dist`, served by the server)
-- `apps/mcp` — MCP server (Phase 3)
+- `apps/mcp` — MCP server (stdio; thin wrapper over the HTTP API)
 - `apps/cli` — `jf` CLI
 - `packages/core` — pipeline engine, plugin host, rate limiter, idempotency
 - `packages/db` — Drizzle schema, migrations, repositories
@@ -44,4 +44,6 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `pnpm jf profile load` / `pnpm jf embed` / `pnpm jf match [--rescore]` / `pnpm jf llm check`
 - `pnpm web:build && pnpm server` → dashboard at http://localhost:3000 (`pnpm web:dev` for Vite on :5173)
 - `pnpm --filter @jobforge/llm smoke -- --provider claude-code|openrouter` — real-provider smoke test (costs money; manual only)
+- Outreach: `pnpm jf gmail auth`, `jf contacts add|enrich`, `jf outreach draft`, `jf review list|approve`, `jf outreach send [--live]`, `jf outreach track` — see `docs/outreach.md`
+- MCP: `.mcp.json` registers `apps/mcp` (needs `pnpm server` running). Never allowlist the `approve` tool.
 - DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)

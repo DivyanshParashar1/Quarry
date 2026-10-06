@@ -307,7 +307,10 @@ export async function runSendTick(deps: OutreachDeps): Promise<SendTickResult> {
         out.held.push({ reviewItemId: item.id, reason });
         continue;
       }
-      const outcome = await executeOne(deps, item, false, now);
+      // Re-read right before sending: the user may have rejected or cancelled since the query.
+      const fresh = await getReviewItem(deps.db, item.id);
+      if (fresh?.status !== 'approved') continue;
+      const outcome = await executeOne(deps, fresh, false, now);
       out.outcomes.push(outcome);
       if (outcome.ok) {
         const [lo, hi] = deps.policy.spacingMinutes;
