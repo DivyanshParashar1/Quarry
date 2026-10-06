@@ -4,7 +4,6 @@ import { emailDraftSchema } from '@jobforge/plugin-sdk';
 import { fakeGmail } from '@jobforge/plugin-sdk/testing';
 import {
   claimAction,
-  finishAction,
   getContact,
   getReviewItem,
   getThread,
