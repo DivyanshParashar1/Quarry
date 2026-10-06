@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import type { Logger } from '@jobforge/shared';
+import type { Embedder, LLMClient, Logger, Profile } from '@jobforge/shared';
+
+export type { Embedder, LLMClient, LLMRequest, LLMResponse, LLMTask, Profile, ProfileFact, Preferences } from '@jobforge/shared';
+export { factSchema, preferencesSchema } from '@jobforge/shared';
 import type { PluginManifest } from './manifest.js';
 
 // ---------------------------------------------------------------------------
@@ -23,12 +26,6 @@ export interface ScopedHttp {
 
 // Placeholders for capabilities that land in later phases. Kept as opaque
 // interfaces so the context shape is stable now.
-export interface LLMClient {
-  readonly kind: 'llm';
-}
-export interface Embedder {
-  embed(texts: string[]): Promise<number[][]>;
-}
 export interface BrowserHandle {
   readonly kind: 'browser';
 }
@@ -39,6 +36,7 @@ export interface GmailHandle {
 export interface PluginContext<C> {
   config: C;
   http: ScopedHttp;
+  /** Present only when the manifest declares `permissions.llm`. */
   llm?: LLMClient;
   embed?: Embedder;
   browser?: BrowserHandle;
@@ -96,6 +94,7 @@ export interface Company {
 export interface Job {
   id: string;
   companyId: string;
+  company: string;
   title: string;
   normalizedTitle: string;
   locations: string[];
@@ -103,15 +102,24 @@ export interface Job {
   seniority: string | null;
   descriptionMd: string | null;
   applyUrl: string | null;
+  postedAt: Date | null;
+  /** Normalized description embedding, when the embed step has run. */
+  embedding: number[] | null;
 }
 
-export type Profile = Record<string, unknown>;
 export type Enrichment = Record<string, unknown>;
+
 export interface MatchResult {
   jobId: string;
+  /** 0..100 */
   score: number;
+  /** filtered = failed a hard filter; prefilter = cut by similarity; llm = scored by the rubric. */
+  method: 'filtered' | 'prefilter' | 'llm';
+  similarity: number | null;
   rubric: Record<string, unknown>;
   reasons: string;
+  provider: string | null;
+  model: string | null;
 }
 export type TailoredArtifacts = Record<string, unknown>;
 export type ActionInput = Record<string, unknown>;

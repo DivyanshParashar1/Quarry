@@ -38,6 +38,9 @@
     },
     {
       "path": "./plugins/source-lever"
+    },
+    {
+      "path": "./plugins/matcher-default"
     }
   ]
 }

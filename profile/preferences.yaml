@@ -1,9 +1,38 @@
-# Candidate preferences (loaded in Phase 2).
-# See PLAN.md section 7.
+# What you are looking for. Load with `pnpm jf profile load` (re-run after edits).
+# Hard filters (seniority, locations/remote_policy, graduation_year,
+# experience_years, exclusions) drop jobs before any LLM call; the rest feeds
+# the similarity prefilter and the LLM rubric. Empty lists mean "no filter".
+
+# Target roles, e.g. [Backend Engineer, Platform Engineer]
 roles: []
+
+# Acceptable levels: intern | junior | mid | senior | staff | principal | lead | manager | director | executive
+# Titles without a level marker ("Software Engineer") count as mid.
+seniority: []
+
+# Acceptable locations; case-insensitive substring match, e.g. [Bengaluru, Bangalore, India]
 locations: []
-remote_policy: []       # e.g. ['remote', 'hybrid']
+
+# Acceptable arrangements: remote | hybrid | onsite. A remote job passes the
+# location filter whenever `remote` is listed here.
+remote_policy: []
+
+# Technologies you want to work with (also used for similarity).
 stack: []
+
+# e.g. { amount: 2500000, currency: INR, period: year }. Used by the LLM rubric only.
 salary_floor: null
-exclusions: []
-batch_eligibility: []   # e.g. visa / work-auth filters
+
+# Years of professional experience. Jobs asking for much more are dropped.
+experience_years: null
+
+# Graduation year ("batch"). Jobs restricted to other batches are dropped.
+graduation_year: null
+
+exclusions:
+  companies: []
+  title_keywords: []        # e.g. [sales, recruiter]
+  description_keywords: []  # e.g. [security clearance]
+
+# Anything else the matcher should weigh, in plain words.
+notes: null

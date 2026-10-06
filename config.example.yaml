@@ -1,0 +1,23 @@
+# Copy to config.yaml (gitignored) to override defaults. Secrets stay in .env.
+
+llm:
+  # Per-task routing. LLM_PROVIDER in .env is the default provider; a task can
+  # switch provider and/or model. Without a provider, `model` applies to the default.
+  tasks:
+    match:
+      model: claude-haiku-4-5        # cheap model for batched scoring
+    # match: { provider: openrouter, model: google/gemini-2.5-flash }
+    tailor:
+      model: claude-sonnet-4-6
+
+embeddings:
+  model: Xenova/bge-small-en-v1.5
+  # cacheDir: ~/.cache/jobforge-models
+
+plugins:
+  matcher-default:
+    minSimilarity: 0.55   # cosine floor before a job is worth an LLM call
+    llmTopK: 150          # max jobs sent to the LLM per `jf match` run
+    batchSize: 12         # jobs per LLM call
+    descriptionChars: 3000
+    experienceSlackYears: 2

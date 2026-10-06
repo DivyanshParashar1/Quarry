@@ -38,10 +38,15 @@ export function fixtureHttp(routes: Record<string, FixtureRoute>, domains: reado
   };
 }
 
-export function testContext<C>(config: C, http: ScopedHttp): PluginContext<C> {
+export function testContext<C>(
+  config: C,
+  http: ScopedHttp = fixtureHttp({}, []),
+  extra: Pick<PluginContext<C>, 'llm' | 'embed'> = {},
+): PluginContext<C> {
   return {
     config,
     http,
+    ...extra,
     log: pino({ level: 'silent' }),
     signal: new AbortController().signal,
     dryRun: true,

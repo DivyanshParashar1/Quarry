@@ -14,12 +14,16 @@
   "dependencies": {
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
+    "@jobforge/embeddings": "workspace:*",
+    "@jobforge/llm": "workspace:*",
+    "@jobforge/matcher-default": "workspace:*",
     "@jobforge/shared": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@jobforge/plugin-sdk": "workspace:*",
     "pino": "^9.14.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

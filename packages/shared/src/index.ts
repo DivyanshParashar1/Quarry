@@ -4,3 +4,4 @@ export * from './errors.js';
 export * from './llm.js';
 export * from './profile.js';
 export * from './app-config.js';
+export * from './profile-files.js';

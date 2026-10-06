@@ -2,21 +2,35 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { createLogger, loadEnv } from '@jobforge/shared';
-import { countJobs, createDb, listJobs, listSourceTargets, type AtsType } from '@jobforge/db';
+import { createLogger, findUp, loadAppConfig, loadEnv, type AppConfig, type Env } from '@jobforge/shared';
+import {
+  countJobs,
+  createDb,
+  getActiveProfile,
+  listRankedJobs,
+  listSourceTargets,
+  llmUsageSummary,
+  matchStats,
+  type AtsType,
+} from '@jobforge/db';
 import {
   DomainRateLimiter,
+  embedPending,
   enqueueSourceFetches,
+  loadProfile,
   QUEUES,
   registerSourceWorker,
+  runMatch,
   SOURCE_PLUGIN_FOR_ATS,
   startBoss,
   waitForJobs,
   type SourceRunSummary,
 } from '@jobforge/core';
+import { checkClaudeCli } from '@jobforge/llm';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
 import { fmtDate, table } from './format.js';
 import { createRegistry } from './plugins.js';
+import { createEmbedder, createLLM } from './runtime.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -28,7 +42,17 @@ Usage:
   jf fetch [--plugin <id>] [--company <name>] [--concurrency <n>] [--verbose]
       Fetch every active board (or a subset) through the job queue.
   jf jobs list [--company <name>] [--q <title text>] [--limit <n>] [--all]
-      --all includes closed jobs.
+      Sorted by match score once \`jf match\` has run. --all includes closed jobs.
+  jf profile load [--dir <profile dir>]
+      Validate profile/facts.yaml + preferences.yaml and make them the active profile.
+  jf profile show
+  jf embed
+      Embed new/changed jobs, facts, and the profile (local model; downloads once).
+  jf match [--rescore] [--limit <n>] [--no-embed]
+      Score open jobs against the active profile: hard filters, similarity
+      prefilter, then the LLM rubric. Already-scored jobs are skipped unless --rescore.
+  jf llm check
+      Show the provider/model per task and check the provider is reachable (no model call).
 `;
 
 /** Load the nearest .env above cwd into process.env (existing vars win). */
@@ -55,6 +79,9 @@ async function main(argv: string[]): Promise<number> {
       limit: { type: 'string' },
       all: { type: 'boolean' },
       'skip-invalid': { type: 'boolean' },
+      dir: { type: 'string' },
+      rescore: { type: 'boolean' },
+      'no-embed': { type: 'boolean' },
       verbose: { type: 'boolean', short: 'v' },
       help: { type: 'boolean', short: 'h' },
     },
@@ -67,6 +94,7 @@ async function main(argv: string[]): Promise<number> {
 
   loadDotEnv();
   const env = loadEnv();
+  const config = loadAppConfig();
   const log = createLogger({ level: values.verbose ? 'debug' : 'warn' });
   const { db, close } = createDb(env.DATABASE_URL, 8);
 
@@ -102,24 +130,83 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
 
-    if (cmd === 'fetch') return await fetchCommand(values, db, env.DATABASE_URL, env.MODE, log);
+    if (cmd === 'fetch') return await fetchCommand(values, db, env.DATABASE_URL, env.MODE, log, config);
+
+    if (cmd === 'profile' && sub === 'load') {
+      const dir = resolve(values.dir ?? profileDir());
+      const r = await loadProfile(db, dir);
+      console.log(
+        `profile ${r.version} ${r.snapshotCreated ? 'loaded (new version)' : 'unchanged'} · facts: ` +
+          `${r.factsCreated} new, ${r.factsUpdated} updated, ${r.factsUnchanged} unchanged, ${r.factsRetired} retired`,
+      );
+      const p = await getActiveProfile(db);
+      if (p && !p.facts.length && !p.preferences.roles.length) {
+        console.log('Warning: profile has no facts and no roles; fill in profile/*.yaml before matching.');
+      } else if (r.snapshotCreated) console.log('Next: `jf match` scores jobs against this version.');
+      return 0;
+    }
+
+    if (cmd === 'profile' && sub === 'show') {
+      const p = await getActiveProfile(db);
+      if (!p) {
+        console.log('No profile loaded. Fill in profile/*.yaml and run `jf profile load`.');
+        return 1;
+      }
+      console.log(`version ${p.version} · ${p.facts.length} facts · embedded: ${p.embedding ? 'yes' : 'no'}\n`);
+      console.log(p.summary);
+      return 0;
+    }
+
+    if (cmd === 'embed') {
+      const s = await runEmbed(db, config, log);
+      console.log(`embedded ${s.jobs} jobs, ${s.facts} facts${s.profile ? ', and the profile' : ''}`);
+      return 0;
+    }
+
+    if (cmd === 'match') {
+      if (!values['no-embed']) {
+        const s = await runEmbed(db, config, log);
+        if (s.jobs || s.facts || s.profile) console.log(`embedded ${s.jobs} jobs, ${s.facts} facts${s.profile ? ', profile' : ''}`);
+      }
+      const llm = createLLM(env, config, db, log);
+      const route = llm.route('match');
+      console.log(`matching with ${route.provider.name}/${route.model} …`);
+      const before = await llmUsageSummary(db);
+      const started = Date.now();
+      const s = await runMatch(
+        { db, registry: createRegistry(config), log, llm, limiter: new DomainRateLimiter(), dryRun: env.MODE !== 'live' },
+        { ...(values.rescore ? { rescore: true } : {}), ...(values.limit ? { limit: Number(values.limit) } : {}) },
+      );
+      const after = await llmUsageSummary(db);
+      console.log(
+        `${s.candidates} candidates · ${s.llm} LLM-scored · ${s.prefilter} below prefilter · ${s.filtered} filtered · ` +
+          `${s.unscored} left for next run · ${after.calls - before.calls} LLM calls ` +
+          `(${after.failed - before.failed} failed, $${(after.costUsd - before.costUsd).toFixed(4)}) · ${((Date.now() - started) / 1000).toFixed(1)}s`,
+      );
+      return s.candidates && !s.llm && !s.prefilter && !s.filtered ? 1 : 0;
+    }
+
+    if (cmd === 'llm' && sub === 'check') return await llmCheck(env, config, db, log);
 
     if (cmd === 'jobs' && sub === 'list') {
-      const rows = await listJobs(db, {
+      const profile = await getActiveProfile(db);
+      const { rows } = await listRankedJobs(db, {
+        profileVersion: profile?.version ?? null,
         ...(values.company ? { company: values.company } : {}),
         ...(values.q ? { q: values.q } : {}),
         includeClosed: !!values.all,
+        sort: profile ? 'score' : 'posted',
         limit: values.limit ? Number(values.limit) : 50,
       });
       console.log(
         table(rows, [
+          ...(profile ? [{ header: 'SCORE', value: (r: (typeof rows)[number]) => scoreCell(r) }] : []),
           { header: 'COMPANY', value: (r) => r.company, max: 20 },
           { header: 'TITLE', value: (r) => r.title, max: 55 },
           { header: 'LOCATION', value: (r) => r.locations.join('; '), max: 30 },
           { header: 'REMOTE', value: (r) => r.remotePolicy ?? '' },
           { header: 'LEVEL', value: (r) => r.seniority ?? '' },
           { header: 'POSTED', value: (r) => fmtDate(r.postedAt) },
-          { header: 'SRC', value: (r) => String(r.sources) },
           ...(values.all ? [{ header: 'CLOSED', value: (r: (typeof rows)[number]) => fmtDate(r.closedAt) }] : []),
           { header: 'ID', value: (r) => r.id.slice(0, 8) },
         ]),
@@ -135,14 +222,71 @@ async function main(argv: string[]): Promise<number> {
   }
 }
 
+type Db = ReturnType<typeof createDb>['db'];
+type Log = ReturnType<typeof createLogger>;
+
+function profileDir(): string {
+  const facts = findUp(join('profile', 'facts.yaml'));
+  return facts ? dirname(facts) : 'profile';
+}
+
+function scoreCell(r: { score: number | null; method: string | null }): string {
+  if (r.method === null) return '-';
+  if (r.method === 'llm') return String(r.score);
+  return r.method === 'filtered' ? 'filt' : 'low';
+}
+
+async function runEmbed(db: Db, config: AppConfig, log: Log) {
+  const tty = process.stderr.isTTY;
+  if (tty) process.stderr.write('loading embedding model…');
+  const embedder = await createEmbedder(config);
+  const s = await embedPending(
+    { db, embedder, log },
+    { onProgress: (n) => tty && process.stderr.write(`\rembedding jobs: ${n}            `) },
+  );
+  if (tty) process.stderr.write('\r\x1b[K');
+  return s;
+}
+
+async function llmCheck(env: Env, config: AppConfig, db: Db, log: Log): Promise<number> {
+  const llm = createLLM(env, config, db, log);
+  const tasks = ['match', 'tailor', 'outreach', 'extract'] as const;
+  console.log(
+    table(
+      tasks.map((t) => ({ t, ...llm.route(t) })),
+      [
+        { header: 'TASK', value: (r) => r.t },
+        { header: 'PROVIDER', value: (r) => r.provider.name },
+        { header: 'MODEL', value: (r) => r.model },
+      ],
+    ),
+  );
+  const used = new Set(tasks.map((t) => llm.route(t).provider.name));
+  let ok = true;
+  if (used.has('claude-code')) {
+    const s = await checkClaudeCli(env.CLAUDE_CLI_PATH);
+    console.log(`\nclaude-code: ${s.ok ? `ok (${s.version}${s.loggedIn ? ', logged in' : ''})` : `PROBLEM: ${s.problem}`}`);
+    ok &&= s.ok;
+  }
+  if (used.has('openrouter')) console.log(`\nopenrouter: API key ${env.OPENROUTER_API_KEY ? 'set' : 'MISSING'}`);
+  const u = await llmUsageSummary(db, new Date(Date.now() - 24 * 3600_000));
+  console.log(`\nlast 24h: ${u.calls} calls (${u.failed} failed), ${u.promptTokens}+${u.completionTokens} tokens, $${u.costUsd.toFixed(4)}`);
+  if (ok) {
+    const stats = await matchStats(db, (await getActiveProfile(db))?.version ?? null);
+    console.log(`jobs: ${stats.openJobs} open, ${stats.embedded} embedded, ${stats.scored.llm} LLM-scored`);
+  }
+  return ok ? 0 : 1;
+}
+
 async function fetchCommand(
   values: { plugin?: string | undefined; company?: string | undefined; concurrency?: string | undefined },
-  db: ReturnType<typeof createDb>['db'],
+  db: Db,
   databaseUrl: string,
   mode: 'dev' | 'live',
-  log: ReturnType<typeof createLogger>,
+  log: Log,
+  config: AppConfig,
 ): Promise<number> {
-  const registry = createRegistry();
+  const registry = createRegistry(config);
   let atsTypes: AtsType[] | undefined;
   if (values.plugin) {
     registry.source(values.plugin); // throws on unknown id

@@ -1,8 +1,9 @@
-import { PluginError, type Logger } from '@jobforge/shared';
+import { PluginError, type Embedder, type LLMClient, type Logger } from '@jobforge/shared';
 import {
   pluginManifestSchema,
   stageMethods,
   type AnyPlugin,
+  type MatcherPlugin,
   type PluginContext,
   type PluginManifest,
   type SourcePlugin,
@@ -75,6 +76,12 @@ export class PluginRegistry {
     return p as LoadedPlugin<SourcePlugin>;
   }
 
+  matcher(id: string): LoadedPlugin<MatcherPlugin> {
+    const p = this.get(id);
+    if (p.manifest.stage !== 'matcher') throw new PluginError(`${id} is not a matcher plugin`);
+    return p as LoadedPlugin<MatcherPlugin>;
+  }
+
   list(): LoadedPlugin[] {
     return [...this.plugins.values()];
   }
@@ -88,12 +95,19 @@ export interface ContextDeps {
   fetch?: typeof globalThis.fetch;
   clock?: Clock;
   httpRetries?: number;
+  /** Handed only to plugins whose manifest declares permissions.llm. */
+  llm?: LLMClient;
+  embed?: Embedder;
 }
 
 /** Build the capability-scoped context a plugin runs with. Nothing else from the core leaks in. */
 export function buildContext<C>(loaded: LoadedPlugin, deps: ContextDeps): PluginContext<C> {
   const log = deps.log.child({ plugin: loaded.manifest.id });
+  const wantsLlm = loaded.manifest.permissions.llm === true;
+  if (wantsLlm && !deps.llm) throw new PluginError(`${loaded.manifest.id} needs an LLM client but none is configured`);
   return {
+    ...(wantsLlm && deps.llm ? { llm: deps.llm } : {}),
+    ...(deps.embed ? { embed: deps.embed } : {}),
     config: loaded.config as C,
     http: createScopedHttp({
       pluginId: loaded.manifest.id,

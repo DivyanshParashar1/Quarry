@@ -4,3 +4,6 @@ export * from './plugins.js';
 export * from './normalize.js';
 export * from './source-runner.js';
 export * from './queue.js';
+export * from './profile-loader.js';
+export * from './embed-runner.js';
+export * from './match-runner.js';
