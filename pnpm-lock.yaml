@@ -65,6 +65,9 @@ importers:
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@jobforge/source-ashby':
+        specifier: workspace:*
+        version: link:../../plugins/source-ashby
       '@jobforge/source-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/source-greenhouse
@@ -272,6 +275,22 @@ importers:
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-ashby:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

@@ -18,6 +18,7 @@ import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.j
 export const SOURCE_PLUGIN_FOR_ATS: Partial<Record<AtsType, string>> = {
   greenhouse: 'source-greenhouse',
   lever: 'source-lever',
+  ashby: 'source-ashby',
 };
 
 export interface SourceRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {

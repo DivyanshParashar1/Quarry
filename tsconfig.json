@@ -41,6 +41,9 @@
     },
     {
       "path": "./plugins/matcher-default"
+    },
+    {
+      "path": "./plugins/source-ashby"
     }
   ]
 }

@@ -18,6 +18,7 @@
     "@jobforge/llm": "workspace:*",
     "@jobforge/matcher-default": "workspace:*",
     "@jobforge/shared": "workspace:*",
+    "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
     "zod": "^3.23.8"

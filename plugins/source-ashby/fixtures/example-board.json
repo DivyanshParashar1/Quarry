@@ -1,0 +1,91 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "4f3c2a1e-8b9d-4c6e-9a1f-0e2d3c4b5a61",
+      "title": "Senior Backend Engineer",
+      "location": "Bengaluru, Karnataka, India",
+      "secondaryLocations": [
+        { "location": "Remote - India", "address": { "postalAddress": { "addressCountry": "India" } } }
+      ],
+      "department": "Engineering",
+      "team": "Payments Platform",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "Hybrid",
+      "descriptionHtml": "<h2>About the role</h2><p>You will design and run the services that move money for our customers.</p><h3>What you'll need</h3><ul><li>5+ years of backend experience</li><li>Go or Java, and PostgreSQL</li><li>Experience with Kafka &amp; event-driven systems</li></ul>",
+      "descriptionPlain": "About the role\nYou will design and run the services that move money for our customers.\nWhat you'll need\n5+ years of backend experience\nGo or Java, and PostgreSQL\nExperience with Kafka & event-driven systems",
+      "publishedAt": "2026-09-18T09:30:12.512+00:00",
+      "employmentType": "FullTime",
+      "address": {
+        "postalAddress": { "addressLocality": "Bengaluru", "addressRegion": "Karnataka", "addressCountry": "India" }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/example/4f3c2a1e-8b9d-4c6e-9a1f-0e2d3c4b5a61",
+      "applyUrl": "https://jobs.ashbyhq.com/example/4f3c2a1e-8b9d-4c6e-9a1f-0e2d3c4b5a61/application",
+      "shouldDisplayCompensationOnJobPostings": true,
+      "compensation": {
+        "compensationTierSummary": "₹45L – ₹65L",
+        "scrapeableCompensationSalarySummary": "₹4.5M - ₹6.5M",
+        "compensationTiers": [],
+        "summaryComponents": [
+          {
+            "compensationType": "Salary",
+            "interval": "1 YEAR",
+            "currencyCode": "INR",
+            "minValue": 4500000,
+            "maxValue": 6500000
+          }
+        ]
+      }
+    },
+    {
+      "id": "a7b8c9d0-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "title": "Product Designer",
+      "location": "Remote",
+      "secondaryLocations": [],
+      "department": "Design",
+      "team": null,
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "descriptionHtml": "<p>Own end-to-end design for our merchant dashboard.</p>",
+      "descriptionPlain": "Own end-to-end design for our merchant dashboard.",
+      "publishedAt": "2026-09-02T12:00:00.000+00:00",
+      "employmentType": "FullTime",
+      "address": null,
+      "jobUrl": "https://jobs.ashbyhq.com/example/a7b8c9d0-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "applyUrl": "https://jobs.ashbyhq.com/example/a7b8c9d0-1e2f-4a3b-8c4d-5e6f7a8b9c0d/application",
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+      "title": "Software Engineer, New Grad (2026 batch)",
+      "location": "Pune, Maharashtra, India",
+      "department": "Engineering",
+      "team": "Core",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "descriptionHtml": "<p>Join our core team straight out of college. Open to the 2026 batch.</p>",
+      "descriptionPlain": "Join our core team straight out of college. Open to the 2026 batch.",
+      "publishedAt": "2026-08-25T08:00:00.000+00:00",
+      "employmentType": "FullTime",
+      "jobUrl": "https://jobs.ashbyhq.com/example/0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+      "applyUrl": "https://jobs.ashbyhq.com/example/0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f/application"
+    },
+    {
+      "id": "9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a",
+      "title": "Internal Referral Only — Staff Engineer",
+      "location": "Bengaluru, Karnataka, India",
+      "department": "Engineering",
+      "isListed": false,
+      "isRemote": false,
+      "workplaceType": null,
+      "descriptionHtml": "<p>Unlisted posting.</p>",
+      "publishedAt": "2026-09-20T08:00:00.000+00:00",
+      "employmentType": "FullTime",
+      "jobUrl": "https://jobs.ashbyhq.com/example/9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a",
+      "applyUrl": "https://jobs.ashbyhq.com/example/9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a/application"
+    }
+  ]
+}
