@@ -207,9 +207,6 @@ importers:
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../shared
-      drizzle-orm:
-        specifier: ^0.36.4
-        version: 0.36.4(@opentelemetry/api@1.9.1)(@types/react@19.3.0)(pg@8.23.1)(postgres@3.4.9)(react@19.3.0)
       pg-boss:
         specifier: ^12.36.0
         version: 12.36.0(@opentelemetry/api@1.9.1)

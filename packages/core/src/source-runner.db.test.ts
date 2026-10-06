@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { sql } from 'drizzle-orm';
+import { sql } from '@jobforge/db';
 import { HttpError, type RawPosting, type SourcePlugin } from '@jobforge/plugin-sdk';
 import {
   countJobs,

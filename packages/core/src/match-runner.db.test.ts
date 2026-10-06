@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { sql } from 'drizzle-orm';
+import { sql } from '@jobforge/db';
 import { preferencesSchema, type MatcherPlugin } from '@jobforge/plugin-sdk';
 import {
   getActiveProfile,

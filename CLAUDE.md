@@ -21,7 +21,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 
 ## Repo map (quick)
 - `apps/server` — Fastify API + pg-boss workers
-- `apps/web` — React dashboard (Phase 2)
+- `apps/web` — React dashboard (Vite; built into `apps/web/dist`, served by the server)
 - `apps/mcp` — MCP server (Phase 3)
 - `apps/cli` — `jf` CLI
 - `packages/core` — pipeline engine, plugin host, rate limiter, idempotency
@@ -41,4 +41,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `pnpm typecheck`
 - `pnpm lint`
 - `pnpm jf companies import data/companies.seed.csv` / `pnpm jf fetch` / `pnpm jf jobs list`
+- `pnpm jf profile load` / `pnpm jf embed` / `pnpm jf match [--rescore]` / `pnpm jf llm check`
+- `pnpm web:build && pnpm server` → dashboard at http://localhost:3000 (`pnpm web:dev` for Vite on :5173)
+- `pnpm --filter @jobforge/llm smoke -- --provider claude-code|openrouter` — real-provider smoke test (costs money; manual only)
 - DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)
