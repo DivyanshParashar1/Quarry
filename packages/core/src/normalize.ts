@@ -15,7 +15,9 @@ export interface NormalizedJob {
 
 export function normalizePosting(raw: RawPosting, companyName: string): NormalizedJob {
   const title = collapse(decodeEntities(raw.title));
-  const locations = dedupe(raw.locations.map((l) => collapse(decodeEntities(l))).filter(Boolean));
+  const locations = dedupe(
+    raw.locations.map((l) => collapse(decodeEntities(l))).filter((l) => l && !PLACEHOLDER_LOCATION.test(l)),
+  );
   const remotePolicy = raw.remotePolicy ?? (locations.some((l) => /\bremote\b/i.test(l)) ? 'remote' : null);
   const normalizedTitle = normalizeTitle(title);
   return {
@@ -30,6 +32,8 @@ export function normalizePosting(raw: RawPosting, companyName: string): Normaliz
     fingerprint: fingerprint(companyName, normalizedTitle, locations[0] ?? (remotePolicy === 'remote' ? 'remote' : '')),
   };
 }
+
+const PLACEHOLDER_LOCATION = /^(n\/?a|tbd|tba|none|unknown|-+|\.)$/i;
 
 /** PLAN.md §7: hash(normalized company + normalized title + primary location). */
 export function fingerprint(company: string, normalizedTitle: string, primaryLocation: string): string {

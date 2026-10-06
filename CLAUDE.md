@@ -40,3 +40,5 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `pnpm test`
 - `pnpm typecheck`
 - `pnpm lint`
+- `pnpm jf companies import data/companies.seed.csv` / `pnpm jf fetch` / `pnpm jf jobs list`
+- DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)

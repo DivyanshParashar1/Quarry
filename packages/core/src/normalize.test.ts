@@ -70,7 +70,7 @@ describe('normalizePosting', () => {
     url: 'https://x.io/1',
     applyUrl: null,
     title: ' Senior  Engineer ',
-    locations: ['Remote - US', 'remote - us', ''],
+    locations: ['Remote - US', 'remote - us', '', 'N/A'],
     remotePolicy: null,
     department: null,
     descriptionHtml: '<p>Hi</p>',
