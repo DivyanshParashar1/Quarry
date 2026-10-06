@@ -15,12 +15,12 @@ import {
 } from '@jobforge/db';
 import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
 import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import tailorResume from '@jobforge/tailor-resume-typst';
+import tailorResume from '@jobforge/tailor-resume-latex';
 import { normalizePosting } from './normalize.js';
 import { loadProfileData } from './profile-loader.js';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
-import { checkTypst, runTailor, type TailorRunDeps } from './tailor-runner.js';
+import { checkLatex, runTailor, type TailorRunDeps } from './tailor-runner.js';
 import { silentLogger } from './test-utils.js';
 
 const adminUrl = testDbAdminUrl();
@@ -69,6 +69,7 @@ const GOOD_RESPONSE = {
       section: 'Experience',
     },
   ],
+  confidence: 0.9,
 };
 
 describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
@@ -123,7 +124,8 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
 
     const roundTrip = await getResumeVariant(t.db, r.variant.id);
     expect(roundTrip).toBeTruthy();
-    expect(roundTrip!.pluginId).toBe('tailor-resume-typst');
+    expect(roundTrip!.pluginId).toBe('tailor-resume-latex');
+    expect(roundTrip!.confidence).toBeGreaterThan(0);
     const bullets = roundTrip!.bullets as { factId: string; text: string; section: string }[];
     expect(bullets.map((b) => b.factId)).toEqual(['exp-acme', 'skill-go']);
   });
@@ -132,8 +134,8 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
     const r = await runTailor(deps, { jobId });
     const list = await listResumeVariantsForJob(t.db, jobId);
     expect(list.length).toBeGreaterThan(0);
-    const typst = await checkTypst();
-    if (typst.ok) {
+    const latex = await checkLatex();
+    if (latex.ok) {
       expect(r.variant.status).toBe('rendered');
       expect(r.variant.pdfPath).toBeTruthy();
       expect(existsSync(r.variant.pdfPath!)).toBe(true);
@@ -144,7 +146,7 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
     } else {
       expect(r.variant.status).toBe('render_failed');
       expect(r.variant.pdfPath).toBeNull();
-      expect(r.variant.error).toMatch(/typst/i);
+      expect(r.variant.error).toMatch(/latex/i);
     }
   });
 });

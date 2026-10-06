@@ -42,8 +42,8 @@ const fakeMatcher: MatcherPlugin = {
       .filter((j) => j.embedding)
       .map((j) =>
         /chef/i.test(j.title)
-          ? { jobId: j.id, method: 'filtered' as const, score: 0, similarity: null, rubric: {}, reasons: 'not a chef', provider: null, model: null }
-          : { jobId: j.id, method: 'llm' as const, score: res.data.score, similarity: 0.8, rubric: { stack_fit: 9 }, reasons: `fit for ${j.title}`, provider: res.provider, model: res.model },
+          ? { jobId: j.id, method: 'filtered' as const, score: 0, similarity: null, rubric: {}, reasons: 'not a chef', provider: null, model: null, confidence: null }
+          : { jobId: j.id, method: 'llm' as const, score: res.data.score, similarity: 0.8, rubric: { stack_fit: 9 }, reasons: `fit for ${j.title}`, provider: res.provider, model: res.model, confidence: 0.9 },
       );
   },
 };

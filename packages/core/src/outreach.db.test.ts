@@ -50,11 +50,12 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
   const provider = createFakeProvider((req) => {
     const first = /^(\S+)/.exec(req.prompt.split('\n')[1] ?? '')?.[1] ?? 'there';
     return /follow-up #/.test(req.prompt)
-      ? { subject: 'x', body: `Hi ${first}, a quick nudge on my note below in case it got buried. Happy to keep it to 15 minutes.`, fact_ids: [] }
+      ? { subject: 'x', body: `Hi ${first}, a quick nudge on my note below in case it got buried. Happy to keep it to 15 minutes.`, fact_ids: [], confidence: 0.9 }
       : {
           subject: 'Payments ledger role',
           body: `Hi ${first},\n\nI saw the Backend Engineer opening on your payments team. I built a Go ledger service handling 2M transactions a day. Would a 15-minute chat this week work?`,
           fact_ids: ['exp-ledger'],
+          confidence: 0.9,
         };
   });
 
@@ -312,7 +313,7 @@ describe.skipIf(!adminUrl)('outreach: cancel before send (postgres)', () => {
         gmail,
         policy: config.outreach,
         llm: createLLMClient({
-          providers: { 'claude-code': createFakeProvider(() => ({ subject: 'Hello there', body: 'Hi Jane, a short note about the backend role. Would a 15-minute chat work this week?', fact_ids: [] })) },
+          providers: { 'claude-code': createFakeProvider(() => ({ subject: 'Hello there', body: 'Hi Jane, a short note about the backend role. Would a 15-minute chat work this week?', fact_ids: [], confidence: 0.9 })) },
           defaultProvider: 'claude-code',
         }),
       };

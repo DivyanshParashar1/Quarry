@@ -12,3 +12,4 @@ export * from './gmail.js';
 export * from './contacts-runner.js';
 export * from './outreach.js';
 export * from './tailor-runner.js';
+export * from './autopilot.js';
