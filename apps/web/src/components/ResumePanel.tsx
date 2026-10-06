@@ -124,6 +124,13 @@ function VariantCard({ variant: v }: { variant: ResumeVariant }) {
         )}
       </div>
       {v.error && <p className="text-xs text-red-600">{v.error}</p>}
+      {v.pdfPath && (
+        <iframe
+          src={`/api/resume-variants/${v.id}/pdf#view=FitH&toolbar=0`}
+          title={`Tailored resume ${v.id.slice(0, 8)}`}
+          className="h-96 w-full rounded-md border border-border bg-white"
+        />
+      )}
       {v.header.summary && (
         <p className="text-sm italic text-muted-foreground">{v.header.summary}</p>
       )}

@@ -75,7 +75,7 @@ export async function getJson<T>(path: string): Promise<T> {
 }
 
 /** Writes carry x-jobforge: 1; the server refuses state changes without it (CSRF guard). */
-export async function send<T>(path: string, method: 'POST' | 'PATCH' | 'PUT', body: unknown = {}): Promise<T> {
+export async function send<T>(path: string, method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', body: unknown = {}): Promise<T> {
   const res = await fetch(path, {
     method,
     headers: { 'content-type': 'application/json', accept: 'application/json', 'x-jobforge': '1' },
@@ -94,6 +94,16 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
+}
+
+/** Multipart upload (same CSRF guard as `send`). */
+export async function upload<T>(path: string, file: File, field = 'file'): Promise<T> {
+  const form = new FormData();
+  form.append(field, file);
+  const res = await fetch(path, { method: 'POST', headers: { accept: 'application/json', 'x-jobforge': '1' }, body: form });
+  const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string };
+  if (!res.ok) throw new ApiError(res.status, data.error ?? 'error', data.message ?? res.statusText);
+  return data;
 }
 
 export interface EmailDraft {
@@ -158,6 +168,43 @@ export interface JobOutreach {
 export interface Pipeline {
   review: Record<ReviewStatus, number>;
   threads: Record<Thread['state'], number>;
+}
+
+export const FACT_KINDS = ['project', 'experience', 'education', 'skill', 'achievement'] as const;
+export type FactKind = (typeof FACT_KINDS)[number];
+
+export interface ProfileFact {
+  id: string;
+  kind: FactKind;
+  content: string;
+  metrics: Record<string, string | number | boolean>;
+  tags: string[];
+}
+
+export interface Preferences {
+  roles: string[];
+  seniority: string[];
+  locations: string[];
+  remote_policy: ('remote' | 'hybrid' | 'onsite')[];
+  stack: string[];
+  salary_floor: { amount: number; currency: string; period: 'year' | 'month' } | null;
+  experience_years: number | null;
+  graduation_year: number | null;
+  exclusions: { companies: string[]; title_keywords: string[]; description_keywords: string[] };
+  notes: string | null;
+}
+
+export interface FullProfile {
+  facts: ProfileFact[];
+  preferences: Preferences;
+}
+
+export interface FactDraft {
+  id: string;
+  kind: FactKind;
+  content: string;
+  metrics: Record<string, string | number | boolean>;
+  tags: string[];
 }
 
 export type ResumeStatus = 'rendered' | 'validation_failed' | 'render_failed';

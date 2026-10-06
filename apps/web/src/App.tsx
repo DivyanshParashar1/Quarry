@@ -3,6 +3,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-qu
 import { FilterBar } from '@/components/FilterBar';
 import { JobDetail } from '@/components/JobDetail';
 import { JobList } from '@/components/JobList';
+import { ProfilePage } from '@/components/ProfilePage';
 import { ReviewQueue } from '@/components/ReviewQueue';
 import { StatsBar } from '@/components/StatsBar';
 import { getJson, type JobsPage, type Pipeline, type Stats } from '@/lib/api';
@@ -20,12 +21,14 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-type Tab = 'jobs' | 'review';
+type Tab = 'jobs' | 'review' | 'profile';
 
 export function App() {
-  const [tab, setTab] = useState<Tab>(() =>
-    window.location.pathname === '/review' ? 'review' : 'jobs',
-  );
+  const [tab, setTab] = useState<Tab>(() => {
+    if (window.location.pathname === '/review') return 'review';
+    if (window.location.pathname === '/profile') return 'profile';
+    return 'jobs';
+  });
   const pipeline = useQuery({
     queryKey: ['pipeline'],
     queryFn: () => getJson<Pipeline>('/api/pipeline'),
@@ -39,11 +42,8 @@ export function App() {
   const debounced = useDebounced(filters, 250);
 
   useEffect(() => {
-    window.history.replaceState(
-      null,
-      '',
-      tab === 'review' ? '/review' : `/${filtersToSearch(filters, selected)}`,
-    );
+    const path = tab === 'review' ? '/review' : tab === 'profile' ? '/profile' : `/${filtersToSearch(filters, selected)}`;
+    window.history.replaceState(null, '', path);
   }, [filters, selected, tab]);
 
   const stats = useQuery({
@@ -71,7 +71,7 @@ export function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-base font-semibold tracking-tight">JobForge</h1>
           <nav className="flex gap-1 text-sm">
-            {(['jobs', 'review'] as const).map((t) => (
+            {(['jobs', 'review', 'profile'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -95,7 +95,11 @@ export function App() {
         </div>
         <StatsBar stats={stats.data} />
       </header>
-      {tab === 'review' ? (
+      {tab === 'profile' ? (
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <ProfilePage />
+        </main>
+      ) : tab === 'review' ? (
         <main className="min-h-0 flex-1 overflow-y-auto">
           <ReviewQueue />
         </main>
