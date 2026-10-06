@@ -160,6 +160,9 @@ importers:
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../shared
+      pino:
+        specifier: ^9.5.0
+        version: 9.14.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -176,6 +179,38 @@ importers:
       pino-pretty:
         specifier: ^11.3.0
         version: 11.3.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-greenhouse:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-lever:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76

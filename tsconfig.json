@@ -6,14 +6,38 @@
   },
   "include": [],
   "references": [
-    { "path": "./packages/shared" },
-    { "path": "./packages/db" },
-    { "path": "./packages/plugin-sdk" },
-    { "path": "./packages/core" },
-    { "path": "./packages/llm" },
-    { "path": "./packages/embeddings" },
-    { "path": "./apps/server" },
-    { "path": "./apps/mcp" },
-    { "path": "./apps/cli" }
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/db"
+    },
+    {
+      "path": "./packages/plugin-sdk"
+    },
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/llm"
+    },
+    {
+      "path": "./packages/embeddings"
+    },
+    {
+      "path": "./apps/server"
+    },
+    {
+      "path": "./apps/mcp"
+    },
+    {
+      "path": "./apps/cli"
+    },
+    {
+      "path": "./plugins/source-greenhouse"
+    },
+    {
+      "path": "./plugins/source-lever"
+    }
   ]
 }
