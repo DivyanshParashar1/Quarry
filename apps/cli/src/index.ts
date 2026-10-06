@@ -11,9 +11,11 @@ import {
   listSourceTargets,
   llmUsageSummary,
   matchStats,
+  resolveIdPrefix,
   type AtsType,
 } from '@jobforge/db';
 import {
+  checkTypst,
   DomainRateLimiter,
   embedPending,
   enqueueSourceFetches,
@@ -21,6 +23,7 @@ import {
   QUEUES,
   registerSourceWorker,
   runMatch,
+  runTailor,
   SOURCE_PLUGIN_FOR_ATS,
   startBoss,
   waitForJobs,
@@ -53,6 +56,9 @@ Usage:
   jf match [--rescore] [--limit <n>] [--no-embed]
       Score open jobs against the active profile: hard filters, similarity
       prefilter, then the LLM rubric. Already-scored jobs are skipped unless --rescore.
+  jf tailor <jobId>
+      Produce a grounded, one-page tailored resume PDF. Every bullet traces to a
+      profile fact; invented numbers/terms are dropped. Requires \`typst\` on PATH.
   jf llm check
       Show the provider/model per task and check the provider is reachable (no model call).
 
@@ -217,6 +223,11 @@ async function main(argv: string[]): Promise<number> {
           `(${after.failed - before.failed} failed, $${(after.costUsd - before.costUsd).toFixed(4)}) · ${((Date.now() - started) / 1000).toFixed(1)}s`,
       );
       return s.candidates && !s.llm && !s.prefilter && !s.filtered ? 1 : 0;
+    }
+
+    if (cmd === 'tailor') {
+      if (!sub) throw new UsageError('missing <jobId>');
+      return await tailorCommand(sub, env, config, db, log);
     }
 
     if (cmd === 'llm' && sub === 'check') return await llmCheck(env, config, db, log);
@@ -409,6 +420,44 @@ async function fetchCommand(
   } finally {
     await boss.stop({ graceful: true, timeout: 10_000 });
   }
+}
+
+async function tailorCommand(jobArg: string, env: Env, config: AppConfig, db: Db, log: Log): Promise<number> {
+  const jobId = await resolveIdPrefix(db, 'jobs', jobArg);
+  const check = await checkTypst();
+  if (!check.ok) {
+    process.stderr.write(
+      `warning: ${check.error}. Install typst (https://github.com/typst/typst) or set TYPST_BIN; `
+        + 'bullets and validation report will still be saved.\n',
+    );
+  } else if (check.version) {
+    process.stdout.write(`using ${check.version}\n`);
+  }
+  const llm = createLLM(env, config, db, log);
+  const route = llm.route('tailor');
+  console.log(`tailoring with ${route.provider.name}/${route.model} …`);
+  const r = await runTailor(
+    { db, registry: createRegistry(config), log, llm, limiter: new DomainRateLimiter(), dryRun: env.MODE !== 'live', contact: config.resume },
+    { jobId },
+  );
+  const kept = Array.isArray(r.variant.bullets) ? r.variant.bullets.length : 0;
+  const dropped = r.dropped.length;
+  console.log(
+    `variant ${r.variant.id.slice(0, 8)} · ${r.variant.status} · ${kept} bullets kept, ${dropped} dropped by validator`,
+  );
+  if (dropped) {
+    console.log('\nDropped bullets:');
+    for (const d of r.dropped) {
+      console.log(`  [${d.factId}] ${d.text}`);
+      for (const i of d.issues) console.log(`    - ${i.kind}: ${i.detail}`);
+    }
+  }
+  if (r.variant.status === 'rendered' && r.variant.pdfPath) {
+    console.log(`\nPDF: ${r.variant.pdfPath} (${r.variant.pdfBytes} bytes)`);
+  } else if (r.variant.error) {
+    console.log(`\nnote: ${r.variant.error}`);
+  }
+  return r.variant.status === 'rendered' ? 0 : 1;
 }
 
 class UsageError extends Error {}

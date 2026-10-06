@@ -64,3 +64,28 @@
 - `apps/mcp` — MCP server over stdio with the PLAN §6 tools (minus `discover_ats`, Phase 5) plus `add_contact`, `find_emails`, `draft_outreach`; `approve` is destructive-annotated and confirms via elicitation; `.mcp.json`.
 - `profile_update_fact` edits `facts.yaml` in place, keeping comments.
 - `docs/outreach.md` — Gmail setup and the draft → approve → send → track flow.
+
+## [Phase 4] — Tailoring
+
+- `packages/db` — migration `0004`: `resume_variants` (bullets, header, validation report, PDF path, status `rendered | validation_failed | render_failed`, provider/model); `resume-repo.ts` with `insertResumeVariant`, `getResumeVariant`, `listResumeVariantsForJob`, `latestRenderedResumeForJob`.
+- `packages/plugin-sdk`
+  - `tailor.ts` — `TailoredResume` / `TailoredBullet` / `TailoredHeader` zod schemas, `FactValidation` + `ValidationIssue` for the grounding report; `TailoredArtifacts = TailoredResume`; `defineTailorPlugin` helper.
+  - `outreach.ts` — `EmailAttachment` schema and an `attachments` field on `EmailDraft` / `OutreachActionInput`; patch schema accepts attachment edits.
+- `plugins/tailor-resume-typst`
+  - LLM prompt asks for ≤ `maxBullets` grounded bullets, each citing a fact id, with a 1-2 sentence summary and headline skills.
+  - Validator (PLAN.md §7): drops any bullet whose fact id is unknown or that introduces proper terms or numbers not present in the source fact's `content`/`metrics`/`tags`; strips header skills that aren't in the profile; flags long bullets as warnings but keeps them.
+- `packages/core/tailor-runner.ts` — `runTailor({jobId})`: resolves job + active profile, runs the plugin, writes `plugin_runs`/`events`, inserts a `resume_variants` row. Renders the Typst template (`templates/resume.typ`) to `data/resumes/<hash>.pdf` by spawning `typst compile`; a missing/failing binary records `render_failed` with a clear error so the bullets + report are still available. `checkTypst()` helper probes the binary.
+- `plugins/actor-gmail-outreach`
+  - `buildMime` now emits `multipart/mixed` with one base64 part per attachment when `EmailDraft.attachments` is non-empty; falls back to plain-text otherwise.
+  - `execute()` reads attachment bytes from disk at send time (never over the DB boundary); dry-run logs the filenames.
+- `packages/core/outreach.ts` — `draftOutreach` auto-attaches the latest `rendered` resume variant for the job via `resolveResumeAttachment`; follow-ups do not re-attach.
+- `apps/cli` — `jf tailor <jobId>` (id-prefix accepted) runs the tailor and prints the status, kept/dropped counts, dropped-bullet details, and the PDF path. Checks for `typst` up-front and warns if missing.
+- `apps/server`
+  - Routes: `POST /api/jobs/:id/tailor`, `GET /api/jobs/:id/resume-variants`, `GET /api/resume-variants/:id`, `GET /api/resume-variants/:id/pdf` (streams the PDF under the loopback + CSRF guards; writes still require `x-jobforge`).
+  - `runtime.ts` grows `lazyTailorDeps` (shares the LLM client and plugin registry with outreach); `index.ts` wires it in.
+- `apps/web` — `ResumePanel` on job detail: "Tailor for this job" / "Retailor" button, status badge, bullets grouped by section with their fact-id citations, header summary + skill chips, expandable validation report, and a link to open the PDF; older variants collapse into a `<details>`.
+- `apps/mcp` — adds `tailor_resume(jobId)` and `list_resume_variants(jobId)` tools (both non-destructive; tailor isn't on the `approve` path, so no elicitation).
+- `packages/shared/app-config.ts` — new `resume: { name, contact, headline }` section (defaults empty) rendered into the Typst header; never auto-invented.
+- `.gitignore` — `data/resumes/` kept out of the tree.
+
+Dependencies: no new third-party packages; `typst` is required at runtime (not at build/test time — tests skip the PDF-render assertion when the binary isn't on PATH).

@@ -10,4 +10,5 @@ coverage
 .turbo
 *.tsbuildinfo
 pgdata/
+data/resumes/
 config.yaml

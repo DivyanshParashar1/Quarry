@@ -22,6 +22,7 @@
     "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
+    "@jobforge/tailor-resume-typst": "workspace:*",
     "@jobforge/tracker-gmail": "workspace:*",
     "fastify": "^5.12.5",
     "zod": "^3.25.76"

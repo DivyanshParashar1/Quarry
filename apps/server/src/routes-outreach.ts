@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -9,7 +9,9 @@ import {
   getCompany,
   getContact,
   getJobDetail,
+  getResumeVariant,
   listContacts,
+  listResumeVariantsForJob,
   listReviewItems,
   listSourceTargets,
   listThreads,
@@ -31,7 +33,9 @@ import {
   enrichContacts,
   loadProfile,
   rejectReviewItem,
+  runTailor,
   type OutreachDeps,
+  type TailorRunDeps,
 } from '@jobforge/core';
 
 export interface OutreachRouteOptions {
@@ -39,6 +43,8 @@ export interface OutreachRouteOptions {
   policy: AppConfig['outreach'];
   /** Built lazily on first use: drafting needs the LLM, enrichment needs DNS. */
   outreachDeps?: () => Promise<OutreachDeps>;
+  /** Built lazily on first tailor call (needs the LLM + Typst). */
+  tailorDeps?: () => Promise<TailorRunDeps>;
   /** Enqueue source fetches (the server's pg-boss); absent in tests that don't need it. */
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
@@ -214,5 +220,40 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     const { id } = idParams.parse(req.params);
     const c = await getContact(db, id);
     return c ?? reply.status(404).send({ error: 'not_found' });
+  });
+
+  // --- resume variants (tailor) ---------------------------------------------
+  const tailor = async () => {
+    if (!o.tailorDeps) throw Object.assign(new Error('tailoring is not configured on this server'), { statusCode: 503 });
+    return o.tailorDeps();
+  };
+
+  app.get('/api/jobs/:id/resume-variants', async (req) => {
+    const { id } = idParams.parse(req.params);
+    return { variants: await listResumeVariantsForJob(db, id) };
+  });
+
+  app.post('/api/jobs/:id/tailor', async (req, reply) => {
+    const { id } = idParams.parse(req.params);
+    const deps = await tailor();
+    const r = await runTailor(deps, { jobId: id });
+    return reply.status(201).send(r.variant);
+  });
+
+  app.get('/api/resume-variants/:id', async (req, reply) => {
+    const { id } = idParams.parse(req.params);
+    const v = await getResumeVariant(db, id);
+    return v ?? reply.status(404).send({ error: 'not_found' });
+  });
+
+  app.get('/api/resume-variants/:id/pdf', async (req, reply) => {
+    const { id } = idParams.parse(req.params);
+    const v = await getResumeVariant(db, id);
+    if (!v) return reply.status(404).send({ error: 'not_found' });
+    if (!v.pdfPath || !existsSync(v.pdfPath)) return reply.status(404).send({ error: 'no_pdf', message: v.error ?? 'variant has no rendered PDF' });
+    return reply
+      .header('content-type', 'application/pdf')
+      .header('content-disposition', `inline; filename="resume-${v.id.slice(0, 8)}.pdf"`)
+      .send(createReadStream(v.pdfPath));
   });
 }

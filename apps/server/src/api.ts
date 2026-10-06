@@ -12,7 +12,7 @@ import {
   type DB,
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type Logger } from '@jobforge/shared';
-import { OutreachError, type OutreachDeps, type OutreachErrorCode } from '@jobforge/core';
+import { OutreachError, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
@@ -51,6 +51,7 @@ export interface ApiOptions {
   webDir?: string;
   policy?: AppConfig['outreach'];
   outreachDeps?: () => Promise<OutreachDeps>;
+  tailorDeps?: () => Promise<TailorRunDeps>;
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
 }
@@ -169,6 +170,7 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     db,
     policy: opts.policy ?? parseAppConfig({}).outreach,
     ...(opts.outreachDeps ? { outreachDeps: opts.outreachDeps } : {}),
+    ...(opts.tailorDeps ? { tailorDeps: opts.tailorDeps } : {}),
     ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
     ...(opts.profileDir ? { profileDir: opts.profileDir } : {}),
   });

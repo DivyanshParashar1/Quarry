@@ -216,6 +216,29 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
   );
 
   server.registerTool(
+    'tailor_resume',
+    {
+      title: 'Tailor resume for a job',
+      description:
+        'Produce a grounded, one-page resume PDF for a job: LLM selects + rephrases facts; validator drops any bullet that invents experience. Returns the variant row (with validation report).',
+      inputSchema: { jobId: z.string().uuid() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    ({ jobId }) => run(() => api.send('POST', `/api/jobs/${jobId}/tailor`)),
+  );
+
+  server.registerTool(
+    'list_resume_variants',
+    {
+      title: 'List resume variants for a job',
+      description: 'All tailored resume variants for the job, newest first (with validation report and PDF availability).',
+      inputSchema: { jobId: z.string().uuid() },
+      annotations: readOnly,
+    },
+    ({ jobId }) => run(() => api.get(`/api/jobs/${jobId}/resume-variants`)),
+  );
+
+  server.registerTool(
     'profile_update_fact',
     {
       title: 'Update profile fact',

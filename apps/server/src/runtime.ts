@@ -1,7 +1,7 @@
 import type { AppConfig, Env, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
 import { createLLMFromConfig } from '@jobforge/llm';
-import { createDnsResolver, createGmailClient, type DomainRateLimiter, type OutreachDeps, type PluginRegistry } from '@jobforge/core';
+import { createDnsResolver, createGmailClient, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
 
 export async function createGmail(env: Env, limiter: DomainRateLimiter): Promise<GmailHandle | undefined> {
@@ -34,5 +34,27 @@ export function lazyOutreachDeps(o: {
       dns: createDnsResolver(),
       llm: createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }),
       ...(o.gmail ? { gmail: o.gmail } : {}),
+    });
+}
+
+/** Tailor deps built once, on first use (needs the LLM and the Typst binary at render time). */
+export function lazyTailorDeps(o: {
+  env: Env;
+  config: AppConfig;
+  db: DB;
+  log: Logger;
+  registry: PluginRegistry;
+  limiter: DomainRateLimiter;
+}): () => Promise<TailorRunDeps> {
+  let cached: TailorRunDeps | null = null;
+  return async () =>
+    (cached ??= {
+      db: o.db,
+      registry: o.registry,
+      log: o.log,
+      limiter: o.limiter,
+      dryRun: o.env.MODE !== 'live',
+      llm: createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }),
+      contact: o.config.resume,
     });
 }

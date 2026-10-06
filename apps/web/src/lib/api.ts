@@ -159,3 +159,43 @@ export interface Pipeline {
   review: Record<ReviewStatus, number>;
   threads: Record<Thread['state'], number>;
 }
+
+export type ResumeStatus = 'rendered' | 'validation_failed' | 'render_failed';
+
+export interface ValidationIssue {
+  kind: 'unknown_fact_id' | 'invented_number' | 'invented_term' | 'too_long' | 'empty';
+  detail: string;
+}
+
+export interface FactValidation {
+  factId: string;
+  text: string;
+  section: string;
+  status: 'ok' | 'warning' | 'error';
+  issues: ValidationIssue[];
+}
+
+export interface TailoredBullet {
+  factId: string;
+  text: string;
+  section: string;
+}
+
+export interface ResumeVariant {
+  id: string;
+  jobId: string;
+  profileVersion: string;
+  pluginId: string;
+  templateId: string;
+  factIds: string[];
+  bullets: TailoredBullet[];
+  header: { summary: string; skills: string[] };
+  validationReport: FactValidation[];
+  status: ResumeStatus;
+  pdfPath: string | null;
+  pdfBytes: number | null;
+  provider: string | null;
+  model: string | null;
+  error: string | null;
+  createdAt: string;
+}

@@ -80,6 +80,9 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
+      '@jobforge/tailor-resume-typst':
+        specifier: workspace:*
+        version: link:../../plugins/tailor-resume-typst
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
@@ -154,6 +157,9 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
+      '@jobforge/tailor-resume-typst':
+        specifier: workspace:*
+        version: link:../../plugins/tailor-resume-typst
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
@@ -259,6 +265,9 @@ importers:
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../llm
+      '@jobforge/tailor-resume-typst':
+        specifier: workspace:*
+        version: link:../../plugins/tailor-resume-typst
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
@@ -459,6 +468,25 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/tailor-resume-typst:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@jobforge/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

@@ -7,7 +7,7 @@ import { createDb } from '@jobforge/db';
 import { DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
-import { createGmail, lazyOutreachDeps } from './runtime.js';
+import { createGmail, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -24,6 +24,7 @@ export async function bootstrap() {
     return undefined;
   });
   const outreachDeps = lazyOutreachDeps({ env, config, db, log, registry, limiter, gmail });
+  const tailorDeps = lazyTailorDeps({ env, config, db, log, registry, limiter });
   const loops = await registerOutreachWorkers(boss, outreachDeps, { live: env.MODE === 'live', gmailConnected: !!gmail, log });
 
   const facts = findUp('profile/facts.yaml');
@@ -33,6 +34,7 @@ export async function bootstrap() {
     webDir: fileURLToPath(new URL('../../web/dist', import.meta.url)),
     policy: config.outreach,
     outreachDeps,
+    tailorDeps,
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     ...(facts ? { profileDir: dirname(facts) } : {}),
   });
