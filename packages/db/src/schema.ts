@@ -98,14 +98,19 @@ export const rawPostings = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     sourcePlugin: text('source_plugin').notNull(),
+    companySourceId: uuid('company_source_id').references(() => companySources.id, { onDelete: 'set null' }),
     externalId: text('external_id').notNull(),
     url: text('url'),
     payload: jsonb('payload').notNull(),
     fingerprint: text('fingerprint').notNull(),
     canonicalJobId: uuid('canonical_job_id').references(() => jobs.id, { onDelete: 'set null' }),
     fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull().defaultNow(),
+    // Bumped every time a fetch sees this posting; used to close jobs that disappear from a board.
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
+    companySourceIdx: index('raw_postings_company_source_idx').on(t.companySourceId),
+    canonicalJobIdx: index('raw_postings_canonical_job_idx').on(t.canonicalJobId),
     sourceExternalUniq: uniqueIndex('raw_postings_source_external_uniq').on(
       t.sourcePlugin,
       t.externalId,

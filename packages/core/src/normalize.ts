@@ -127,7 +127,7 @@ export function htmlToMarkdown(html: string): string {
     .replace(/<\/li>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?(p|div|ul|ol|section|article|table|tr|blockquote)\b[^>]*>/gi, '\n\n');
-  s = decodeEntities(stripTags(s)).replace(/ /g, ' ');
+  s = decodeEntities(stripTags(s)).replace(/\u00a0/g, ' ');
   return s
     .split('\n')
     .map((line) => line.replace(/[ \t]+/g, ' ').trim())

@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.5
+        version: 9.39.5
+      '@jobforge/db':
+        specifier: workspace:*
+        version: link:packages/db
       '@types/node':
         specifier: ^22.9.0
         version: 22.20.5
@@ -100,6 +106,9 @@ importers:
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../shared
+      drizzle-orm:
+        specifier: ^0.36.4
+        version: 0.36.4(@opentelemetry/api@1.9.1)(pg@8.23.1)(postgres@3.4.9)
       pg-boss:
         specifier: ^12.36.0
         version: 12.36.0(@opentelemetry/api@1.9.1)
