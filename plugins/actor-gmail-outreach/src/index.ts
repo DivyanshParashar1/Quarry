@@ -1,12 +1,15 @@
+import { readFile } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { z } from 'zod';
 import {
   defineActorPlugin,
   emailDraftSchema,
+  type EmailAttachment,
   type EmailDraft,
   type EmailSendResult,
   type OutreachActionInput,
 } from '@jobforge/plugin-sdk';
-import { buildMime, messageIdFor, toBase64Url } from './mime.js';
+import { buildMime, messageIdFor, toBase64Url, type MimeAttachment } from './mime.js';
 import { outreachPrompt, outreachSchema, SYSTEM_PROMPT } from './prompt.js';
 
 export * from './mime.js';
@@ -61,6 +64,7 @@ export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft
       subject,
       body: sig ? `${res.data.body}\n\n${sig}` : res.data.body,
       factIds,
+      attachments: input.attachments ?? [],
       gmailThreadId: followup ? (input.previous?.gmailThreadId ?? null) : null,
       inReplyTo: followup ? (input.previous?.messageIds.at(-1) ?? null) : null,
       references: followup ? (input.previous?.messageIds ?? []) : [],
@@ -73,9 +77,13 @@ export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft
     if (!gmail) throw new Error('Gmail is not connected');
     const messageId = messageIdFor(idempotencyKey, gmail.address);
     const sentAt = new Date();
+    const attachments = await loadAttachments(draft.attachments);
 
     if (ctx.dryRun) {
-      ctx.log.info({ to: draft.to, subject: draft.subject, messageId }, 'DRY RUN: would send email');
+      ctx.log.info(
+        { to: draft.to, subject: draft.subject, messageId, attachments: attachments.map((a) => a.filename) },
+        'DRY RUN: would send email',
+      );
       return { dryRun: true, messageId, gmailId: null, gmailThreadId: draft.gmailThreadId, sentAt: sentAt.toISOString(), deduplicated: false };
     }
 
@@ -95,13 +103,23 @@ export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft
       inReplyTo: draft.inReplyTo,
       references: draft.references,
       date: sentAt,
+      attachments,
     });
     const sent = await gmail.send!(toBase64Url(raw), draft.gmailThreadId ?? undefined);
-    ctx.log.info({ to: draft.to, gmailId: sent.id }, 'email sent');
+    ctx.log.info({ to: draft.to, gmailId: sent.id, attachments: attachments.length }, 'email sent');
     return { dryRun: false, messageId, gmailId: sent.id, gmailThreadId: sent.threadId, sentAt: sentAt.toISOString(), deduplicated: false };
   },
 });
 
 function reSubject(s: string): string {
   return /^re:/i.test(s.trim()) ? s.trim() : `Re: ${s.trim()}`;
+}
+
+async function loadAttachments(list: EmailAttachment[]): Promise<MimeAttachment[]> {
+  const out: MimeAttachment[] = [];
+  for (const a of list) {
+    const data = await readFile(a.path);
+    out.push({ filename: a.filename || basename(a.path), contentType: a.contentType, data });
+  }
+  return out;
 }

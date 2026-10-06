@@ -68,6 +68,26 @@ describe('mime', () => {
     expect(messageIdFor('outreach:r1', 'me@gmail.com')).not.toBe(messageIdFor('outreach:r2', 'me@gmail.com'));
     expect(messageIdFor('k', 'me@gmail.com')).toMatch(/^<jobforge\.[0-9a-f]{32}@gmail\.com>$/);
   });
+
+  it('wraps body + attachment in multipart/mixed with a stable boundary', () => {
+    const pdfBytes = Buffer.from('%PDF-1.4\n%mock pdf bytes', 'utf8');
+    const raw = buildMime({
+      from: { name: 'Asha', address: 'asha@gmail.com' },
+      to: { name: 'Jane', address: 'jane@acme.com' },
+      subject: 'Role',
+      body: 'See attached.',
+      messageId: '<m@gmail.com>',
+      attachments: [{ filename: 'resume.pdf', contentType: 'application/pdf', data: pdfBytes }],
+    });
+    const match = raw.match(/boundary="([^"]+)"/);
+    expect(match).toBeTruthy();
+    const boundary = match![1]!;
+    expect(raw).toContain(`--${boundary}\r\nContent-Type: text/plain; charset="UTF-8"`);
+    expect(raw).toContain('Content-Disposition: attachment; filename="resume.pdf"');
+    expect(raw).toContain('Content-Type: application/pdf; name="resume.pdf"');
+    expect(raw).toContain(pdfBytes.toString('base64'));
+    expect(raw.trimEnd().endsWith(`--${boundary}--`)).toBe(true);
+  });
 });
 
 describe('actor-gmail-outreach', () => {
@@ -115,6 +135,7 @@ describe('actor-gmail-outreach', () => {
     subject: 'Payments ledger role',
     body: BODY,
     factIds: [],
+    attachments: [],
     gmailThreadId: null,
     inReplyTo: null,
     references: [],

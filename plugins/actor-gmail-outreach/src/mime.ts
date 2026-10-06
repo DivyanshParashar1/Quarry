@@ -1,7 +1,15 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
-// Plain-text RFC 5322 message builder. Header values are stripped of CR/LF so
-// a draft can never inject headers.
+// RFC 5322 message builder. Header values are stripped of CR/LF so a draft can
+// never inject headers. Supports plain-text only, or plain-text + attachments
+// via a `multipart/mixed` wrapper.
+
+export interface MimeAttachment {
+  filename: string;
+  contentType: string;
+  /** Raw bytes; this builder base64-encodes and line-wraps them. */
+  data: Buffer;
+}
 
 export interface MimeInput {
   from: { name: string; address: string };
@@ -12,6 +20,7 @@ export interface MimeInput {
   inReplyTo?: string | null;
   references?: string[];
   date?: Date;
+  attachments?: MimeAttachment[];
 }
 
 const clean = (s: string) => s.replace(/[\r\n]+/g, ' ').trim();
@@ -32,7 +41,7 @@ export function formatAddress(a: { name: string; address: string }): string {
 }
 
 export function buildMime(m: MimeInput): string {
-  const headers = [
+  const commonHeaders = [
     `From: ${formatAddress(m.from)}`,
     `To: ${formatAddress(m.to)}`,
     `Subject: ${encodeHeader(m.subject)}`,
@@ -41,13 +50,37 @@ export function buildMime(m: MimeInput): string {
     ...(m.inReplyTo ? [`In-Reply-To: ${clean(m.inReplyTo)}`] : []),
     ...(m.references?.length ? [`References: ${m.references.map(clean).join(' ')}`] : []),
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset="UTF-8"',
-    'Content-Transfer-Encoding: base64',
   ];
-  const body = Buffer.from(m.body.replace(/\r?\n/g, '\r\n'), 'utf8')
-    .toString('base64')
-    .replace(/.{76}/g, '$&\r\n');
-  return `${headers.join('\r\n')}\r\n\r\n${body}\r\n`;
+  const textPart = `Content-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n${wrap76(
+    Buffer.from(m.body.replace(/\r?\n/g, '\r\n'), 'utf8').toString('base64'),
+  )}`;
+  const atts = m.attachments ?? [];
+  if (!atts.length) {
+    return `${commonHeaders.join('\r\n')}\r\n${textPart}\r\n`;
+  }
+  const boundary = `jf-${randomBytes(12).toString('hex')}`;
+  const parts = [
+    `--${boundary}\r\n${textPart}`,
+    ...atts.map((a) => `--${boundary}\r\n${attachmentPart(a)}`),
+    `--${boundary}--`,
+  ];
+  const multipartHeader = `Content-Type: multipart/mixed; boundary="${boundary}"`;
+  return `${commonHeaders.join('\r\n')}\r\n${multipartHeader}\r\n\r\n${parts.join('\r\n')}\r\n`;
+}
+
+function attachmentPart(a: MimeAttachment): string {
+  const name = encodeHeader(a.filename).replace(/"/g, '');
+  const type = clean(a.contentType) || 'application/octet-stream';
+  const headers = [
+    `Content-Type: ${type}; name="${name}"`,
+    'Content-Transfer-Encoding: base64',
+    `Content-Disposition: attachment; filename="${name}"`,
+  ];
+  return `${headers.join('\r\n')}\r\n\r\n${wrap76(a.data.toString('base64'))}`;
+}
+
+function wrap76(s: string): string {
+  return s.replace(/.{76}/g, '$&\r\n');
 }
 
 export function toBase64Url(s: string): string {
