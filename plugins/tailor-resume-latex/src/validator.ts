@@ -22,13 +22,68 @@ export interface ValidationResult {
   headerIssues: ValidationIssue[];
 }
 
-// Short common words we don't flag as "unknown terms" even if they look like proper nouns.
+// Short common words we don't flag as "unknown terms" even if they look like
+// proper nouns. Covers action verbs across tenses + generic connectives so a
+// resume bullet's opening ("Served", "Pursuing", "Spearheaded") never trips the
+// validator. Add technology names to the user's facts, not here.
 const COMMON_STOPWORDS = new Set([
   'A', 'An', 'And', 'The', 'For', 'With', 'From', 'To', 'Of', 'In', 'On', 'At', 'By', 'Or', 'As', 'Up', 'Via',
   'I', 'My', 'We', 'Our', 'This', 'That', 'These', 'Those', 'Across', 'During', 'After', 'Before', 'Over',
-  'Led', 'Built', 'Shipped', 'Designed', 'Delivered', 'Reduced', 'Improved', 'Owned', 'Scaled', 'Launched',
-  'Implemented', 'Developed', 'Automated', 'Migrated', 'Refactored', 'Optimized', 'Deployed', 'Integrated',
-  'Managed', 'Mentored', 'Collaborated', 'Architected', 'Created', 'Introduced', 'Expanded', 'Analyzed',
+  'Than', 'Into', 'Onto', 'Through', 'When', 'While', 'Where', 'Which', 'Who', 'What', 'Why', 'How',
+  'Led', 'Leading', 'Leads', 'Lead',
+  'Built', 'Building', 'Builds',
+  'Shipped', 'Shipping', 'Ships',
+  'Designed', 'Designing', 'Designs',
+  'Delivered', 'Delivering', 'Delivers',
+  'Reduced', 'Reducing', 'Reduces',
+  'Improved', 'Improving', 'Improves',
+  'Owned', 'Owning', 'Owns',
+  'Scaled', 'Scaling', 'Scales',
+  'Launched', 'Launching', 'Launches',
+  'Implemented', 'Implementing', 'Implements',
+  'Developed', 'Developing', 'Develops',
+  'Automated', 'Automating', 'Automates',
+  'Migrated', 'Migrating', 'Migrates',
+  'Refactored', 'Refactoring', 'Refactors',
+  'Optimized', 'Optimizing', 'Optimizes',
+  'Deployed', 'Deploying', 'Deploys',
+  'Integrated', 'Integrating', 'Integrates',
+  'Managed', 'Managing', 'Manages',
+  'Mentored', 'Mentoring', 'Mentors',
+  'Collaborated', 'Collaborating', 'Collaborates',
+  'Architected', 'Architecting', 'Architects',
+  'Created', 'Creating', 'Creates',
+  'Introduced', 'Introducing', 'Introduces',
+  'Expanded', 'Expanding', 'Expands',
+  'Analyzed', 'Analyzing', 'Analyzes',
+  'Served', 'Serving', 'Serves', 'Serve',
+  'Pursued', 'Pursuing', 'Pursues', 'Pursue',
+  'Contributed', 'Contributing', 'Contributes',
+  'Rewrote', 'Rewriting', 'Rewrites', 'Rewrite',
+  'Wrote', 'Writing', 'Writes',
+  'Added', 'Adding', 'Adds',
+  'Removed', 'Removing', 'Removes',
+  'Enabled', 'Enabling', 'Enables',
+  'Supported', 'Supporting', 'Supports',
+  'Maintained', 'Maintaining', 'Maintains',
+  'Reviewed', 'Reviewing', 'Reviews',
+  'Tested', 'Testing', 'Tests',
+  'Trained', 'Training', 'Trains',
+  'Fixed', 'Fixing', 'Fixes',
+  'Streamlined', 'Streamlining',
+  'Investigated', 'Investigating', 'Investigates',
+  'Prototyped', 'Prototyping', 'Prototypes',
+  'Rolled', 'Rolling', 'Rolls',
+  'Benchmarked', 'Benchmarking', 'Benchmarks',
+  'Measured', 'Measuring', 'Measures',
+  'Monitored', 'Monitoring', 'Monitors',
+  'Partnered', 'Partnering',
+  'Spearheaded', 'Spearheading',
+  'Drove', 'Driving', 'Drives',
+  'Grew', 'Growing', 'Grows',
+  'Shaped', 'Shaping',
+  'Set', 'Setting', 'Sets',
+  'Cut', 'Cutting', 'Cuts',
 ]);
 
 /**
@@ -61,6 +116,18 @@ function normalizedIncludes(haystack: string, needle: string): boolean {
   return n.length > 0 && h.includes(n);
 }
 
+/**
+ * A term is grounded if it (or every meaningful sub-token when split on
+ * hyphens / slashes) is in the fact. Lets "Firestore-backed" pass when the
+ * fact mentions "Firestore"; still catches a fully-invented "Firestore-Spanner".
+ */
+function termIsGrounded(term: string, haystack: string): boolean {
+  if (normalizedIncludes(haystack, term)) return true;
+  const parts = term.split(/[-/]/).filter((p) => p && !COMMON_STOPWORDS.has(p));
+  if (parts.length < 2) return false;
+  return parts.every((p) => normalizedIncludes(haystack, p));
+}
+
 function factHaystack(f: ProfileFact): string {
   const metricValues = Object.entries(f.metrics)
     .map(([k, v]) => `${k} ${String(v)}`)
@@ -85,9 +152,8 @@ export function validateBullet(bullet: TailoredBullet, factsById: Map<string, Pr
 
   const haystack = factHaystack(fact);
   for (const term of extractProperTerms(text)) {
-    if (!normalizedIncludes(haystack, term)) {
-      issues.push({ kind: 'invented_term', detail: `"${term}" is not in fact ${fact.id}` });
-    }
+    if (termIsGrounded(term, haystack)) continue;
+    issues.push({ kind: 'invented_term', detail: `"${term}" is not in fact ${fact.id}` });
   }
   const factNumbers = new Set([...extractNumbers(haystack), ...metricNumbers(fact)]);
   for (const n of extractNumbers(text)) {

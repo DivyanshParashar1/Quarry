@@ -264,9 +264,10 @@ async function renderPdf(args: {
 
   await new Promise<void>((resolveSpawn, rejectSpawn) => {
     // `-interaction=nonstopmode -halt-on-error` turns any error into a non-zero exit instead of a prompt.
+    // No `-silent`: we need latexmk's stdout to surface the real pdflatex error.
     const child = spawn(
       args.latexBin,
-      ['-pdf', '-interaction=nonstopmode', '-halt-on-error', '-silent', basename(texFile)],
+      ['-pdf', '-interaction=nonstopmode', '-halt-on-error', basename(texFile)],
       { cwd: workDir, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     let stderr = '';
@@ -302,8 +303,17 @@ async function renderPdf(args: {
           rejectSpawn(err instanceof Error ? err : new Error(String(err)));
         }
       } else {
-        const tail = (stderr || stdout).trim().split('\n').slice(-20).join('\n');
-        rejectSpawn(new Error(`latexmk exited with code ${code}: ${tail || '(no output)'}`));
+        // The real pdflatex error lives in resume.log (around a line that starts with "!").
+        let detail = '';
+        try {
+          const logText = await readFile(join(workDir, 'resume.log'), 'utf8');
+          const errLine = logText.split('\n').findIndex((l) => l.startsWith('!'));
+          if (errLine >= 0) detail = logText.split('\n').slice(errLine, errLine + 8).join('\n');
+          else detail = logText.split('\n').slice(-20).join('\n');
+        } catch {
+          detail = (stderr || stdout).trim().split('\n').slice(-20).join('\n');
+        }
+        rejectSpawn(new Error(`latexmk exited with code ${code}:\n${detail.trim() || '(no output)'}`));
       }
     });
   });
