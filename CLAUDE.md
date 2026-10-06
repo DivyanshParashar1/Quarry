@@ -5,6 +5,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 ## Working rules
 - Read `PLAN.md` before starting. Work only on the current phase. Stop at the end of a phase for review.
 - Prefer small, reviewable commits with clear messages.
+- Never add a `Co-Authored-By` trailer (or any other AI attribution line) to commit messages or PR descriptions.
 - Write tests alongside code. External HTTP is tested against recorded fixtures, never live endpoints in CI.
 - Do not add a dependency that is not listed in PLAN.md section 2 without noting it (and the reason) in the phase summary.
 - Never send real email, submit real forms, or call paid APIs during development unless the user explicitly asks in the session.
