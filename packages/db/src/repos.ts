@@ -319,3 +319,20 @@ export async function appendEvent(
     payload: e.payload ?? null,
   });
 }
+
+const PREFIX_TABLES = { jobs, contacts: sql`contacts`, review_items: sql`review_items`, companies } as const;
+
+/**
+ * Resolve a full id or a unique id prefix (as printed by the CLI) to the full
+ * uuid. Throws when nothing or more than one row matches.
+ */
+export async function resolveIdPrefix(db: DB, table: keyof typeof PREFIX_TABLES, prefix: string): Promise<string> {
+  const p = prefix.trim().toLowerCase();
+  if (!/^[0-9a-f-]{4,36}$/.test(p)) throw new Error(`"${prefix}" is not an id or id prefix`);
+  const rows = await db.execute<{ id: string }>(
+    sql`select id::text as id from ${PREFIX_TABLES[table]} where id::text like ${`${p}%`} limit 2`,
+  );
+  if (!rows.length) throw new Error(`no ${table.replace(/s$/, '').replace('_', ' ')} with id ${prefix}`);
+  if (rows.length > 1) throw new Error(`id prefix ${prefix} is ambiguous; use more characters`);
+  return rows[0]!.id;
+}

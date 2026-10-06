@@ -30,7 +30,9 @@ import { checkClaudeCli } from '@jobforge/llm';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
 import { fmtDate, table } from './format.js';
 import { createRegistry } from './plugins.js';
-import { createEmbedder, createLLM } from './runtime.js';
+import { createEmbedder, createGmail, createLLM } from './runtime.js';
+import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
+import { gmailAuth } from './gmail-auth.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -53,6 +55,22 @@ Usage:
       prefilter, then the LLM rubric. Already-scored jobs are skipped unless --rescore.
   jf llm check
       Show the provider/model per task and check the provider is reachable (no model call).
+
+Outreach (nothing is sent without an approved review item; dry run unless --live or MODE=live):
+  jf gmail auth | status         Connect your Gmail (OAuth, local) / show the connected account.
+  jf contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]
+  jf contacts list [--company <name>]
+  jf contacts enrich [--company <name>]    Infer emails from the company pattern (MX-checked).
+  jf outreach draft --contact <id> [--job <id>] [--force]
+      LLM-draft an email into the review queue.
+  jf review list [--all] | show <id> | edit <id> [--subject] [--to] [--body-file <path>]
+  jf review approve <id> [--override-company-cap] | reject <id> [--reason <text>]
+  jf outreach send [--live] [--watch]
+      Send approved emails (one per run; --watch keeps going, respecting caps and spacing).
+  jf outreach followups           Draft due follow-ups for review.
+  jf outreach track               Check Gmail for replies and bounces.
+  jf outreach threads
+Ids can be shortened to their first 8 characters.
 `;
 
 /** Load the nearest .env above cwd into process.env (existing vars win). */
@@ -82,6 +100,21 @@ async function main(argv: string[]): Promise<number> {
       dir: { type: 'string' },
       rescore: { type: 'boolean' },
       'no-embed': { type: 'boolean' },
+      name: { type: 'string' },
+      role: { type: 'string' },
+      email: { type: 'string' },
+      linkedin: { type: 'string' },
+      domain: { type: 'string' },
+      contact: { type: 'string' },
+      job: { type: 'string' },
+      subject: { type: 'string' },
+      'body-file': { type: 'string' },
+      to: { type: 'string' },
+      reason: { type: 'string' },
+      'override-company-cap': { type: 'boolean' },
+      live: { type: 'boolean' },
+      watch: { type: 'boolean' },
+      force: { type: 'boolean' },
       verbose: { type: 'boolean', short: 'v' },
       help: { type: 'boolean', short: 'h' },
     },
@@ -187,6 +220,22 @@ async function main(argv: string[]): Promise<number> {
     }
 
     if (cmd === 'llm' && sub === 'check') return await llmCheck(env, config, db, log);
+
+    const cmdCtx = { env, config, db, log, out: (s: string) => console.log(s) };
+    if (cmd === 'contacts') return await contactsCommand(sub, values, cmdCtx);
+    if (cmd === 'review') return await reviewCommand(sub, arg, values, cmdCtx);
+    if (cmd === 'outreach') return await outreachCommand(sub, values, cmdCtx);
+    if (cmd === 'gmail' && sub === 'auth') {
+      const envPath = findUp('.env') ?? resolve('.env');
+      const address = await gmailAuth(env, envPath, (s) => console.log(s));
+      console.log(`Connected ${address}. Token saved to ${envPath} (mode 600).`);
+      return 0;
+    }
+    if (cmd === 'gmail' && sub === 'status') {
+      const gmail = await createGmail(env, new DomainRateLimiter());
+      console.log(gmail ? `connected: ${gmail.address} · mode ${env.MODE}` : 'Gmail not connected. Run `jf gmail auth`.');
+      return gmail ? 0 : 1;
+    }
 
     if (cmd === 'jobs' && sub === 'list') {
       const profile = await getActiveProfile(db);
@@ -367,6 +416,10 @@ class UsageError extends Error {}
 main(process.argv.slice(2))
   .then((code) => process.exit(code))
   .catch((err: unknown) => {
+    if (err instanceof CmdError) {
+      process.stderr.write(`${err.message}\n`);
+      process.exit(2);
+    }
     if (err instanceof UsageError) {
       process.stderr.write(`${err.message}\n\n${HELP}`);
       process.exit(2);

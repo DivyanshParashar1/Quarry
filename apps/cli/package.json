@@ -12,15 +12,18 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
     "@jobforge/embeddings": "workspace:*",
+    "@jobforge/enricher-contacts-pattern": "workspace:*",
     "@jobforge/llm": "workspace:*",
     "@jobforge/matcher-default": "workspace:*",
     "@jobforge/shared": "workspace:*",
     "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
+    "@jobforge/tracker-gmail": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
