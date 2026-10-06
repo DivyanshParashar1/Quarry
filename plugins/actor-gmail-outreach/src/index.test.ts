@@ -98,8 +98,8 @@ describe('actor-gmail-outreach', () => {
 
   it('prepare drafts a grounded email; placeholders trigger the repair retry; unknown fact ids are dropped', async () => {
     const { provider, llm } = llmWith([
-      { subject: 'Backend role', body: 'Hi [Name], ' + BODY, fact_ids: [] },
-      { subject: 'Payments ledger role', body: BODY, fact_ids: ['exp-ledger', 'made-up'] },
+      { subject: 'Backend role', body: 'Hi [Name], ' + BODY, fact_ids: [], confidence: 0.9 },
+      { subject: 'Payments ledger role', body: BODY, fact_ids: ['exp-ledger', 'made-up'], confidence: 0.9 },
     ]);
     const draft = await plugin.prepare(testContext(cfg, undefined, { llm }), input());
     expect(provider.calls).toHaveLength(2);
@@ -117,7 +117,7 @@ describe('actor-gmail-outreach', () => {
   });
 
   it('follow-ups reply in-thread with Re: subject and References', async () => {
-    const { llm, provider } = llmWith([{ subject: 'whatever', body: 'Hi Jane, just bumping this in case it got buried. Since writing, I also shipped X.', fact_ids: [] }]);
+    const { llm, provider } = llmWith([{ subject: 'whatever', body: 'Hi Jane, just bumping this in case it got buried. Since writing, I also shipped X.', fact_ids: [], confidence: 0.9 }]);
     const draft = await plugin.prepare(
       testContext(cfg, undefined, { llm }),
       input({
@@ -136,6 +136,7 @@ describe('actor-gmail-outreach', () => {
     body: BODY,
     factIds: [],
     attachments: [],
+    confidence: null,
     gmailThreadId: null,
     inReplyTo: null,
     references: [],

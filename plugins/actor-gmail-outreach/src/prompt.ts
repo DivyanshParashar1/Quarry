@@ -15,6 +15,11 @@ export function outreachSchema(maxWords: number, followup = false) {
       .refine((b) => !PLACEHOLDER_RE.test(b), 'contains a placeholder like [Name]; write the real text')
       .refine((b) => wordCount(b) <= Math.ceil(maxWords * 1.25), `longer than ${maxWords} words`),
     fact_ids: z.array(z.string()).max(8).describe('ids of the candidate facts the email relies on'),
+    confidence: z
+      .number()
+      .min(0)
+      .max(1)
+      .describe('How confident you are this email should be sent as-is, 0..1. The autopilot escalates <0.8 to human review.'),
   });
 }
 export type OutreachOutput = z.infer<ReturnType<typeof outreachSchema>>;
@@ -31,7 +36,9 @@ Rules:
 - Mention one concrete thing about the role or team from the posting.
 - Plain text. No markdown, no emojis, no flattery, no "I hope this email finds you well".
 - Do not include a greeting line other than "Hi <first name>," and do not include a signature; it is appended automatically.
-- Never use placeholders such as [Name] or {{company}}; write the real words.`;
+- Never use placeholders such as [Name] or {{company}}; write the real words.
+
+Also return a self-reported "confidence" 0..1 that this email is ready to send: 1 = send now, <0.8 = the system escalates to a human reviewer. Be honest.`;
 
 export function outreachPrompt(input: OutreachActionInput, maxWords: number, descriptionChars = 2500): string {
   const { job, company, contact, profile } = input;

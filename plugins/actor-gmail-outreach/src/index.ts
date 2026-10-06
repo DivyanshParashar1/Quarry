@@ -65,6 +65,7 @@ export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft
       body: sig ? `${res.data.body}\n\n${sig}` : res.data.body,
       factIds,
       attachments: input.attachments ?? [],
+      confidence: res.data.confidence,
       gmailThreadId: followup ? (input.previous?.gmailThreadId ?? null) : null,
       inReplyTo: followup ? (input.previous?.messageIds.at(-1) ?? null) : null,
       references: followup ? (input.previous?.messageIds ?? []) : [],

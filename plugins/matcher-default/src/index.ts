@@ -42,7 +42,7 @@ export default defineMatcherPlugin<MatcherConfig>({
 export async function scoreJobs(ctx: PluginContext<MatcherConfig>, jobs: Job[], profile: Profile): Promise<MatchResult[]> {
   const cfg = ctx.config;
   const out: MatchResult[] = [];
-  const base = { provider: null, model: null } as const;
+  const base = { provider: null, model: null, confidence: null } as const;
 
   // 1. Hard filters
   const passed: Job[] = [];
@@ -136,6 +136,7 @@ export async function scoreJobs(ctx: PluginContext<MatcherConfig>, jobs: Job[], 
             reasons: r.reasons,
             provider: res.provider,
             model: res.model,
+            confidence: r.confidence,
           });
         }
         const missing = batch.filter((b) => !byRef.has(b.ref)).length;

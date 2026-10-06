@@ -13,6 +13,11 @@ export const rubricItemSchema = z.object({
     .max(10)
     .describe('10 = clearly eligible; low when work authorization, batch, degree, or clearance requirements likely exclude the candidate'),
   score: z.number().int().min(0).max(100).describe('Overall fit, 0-100'),
+  confidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe('How confident you are in this score, 0..1. 1 = you have strong evidence either way; <0.75 = the posting is ambiguous. The autopilot escalates low-confidence items to human review.'),
   reasons: z.string().min(1).max(700).describe('2-3 sentences citing specific requirements and specific candidate facts'),
   concerns: z.array(z.string().max(200)).max(4).describe('Concrete gaps or red flags; empty if none'),
 });
@@ -29,6 +34,7 @@ Score each job independently against the candidate profile. Be calibrated and sk
 - 25-49: weak fit.
 - 0-24: clearly unsuitable or the candidate is likely ineligible.
 Ground every claim in the posting text and the candidate's listed facts. Never assume skills or experience the profile does not state. Eligibility problems (work authorization, required location, graduation batch, clearance) cap the score at 30.
+For each job also return a "confidence" 0..1: how sure you are of the score given the posting and the candidate facts. The system escalates low-confidence items to a human; be honest.
 Return exactly one result per job, using the job's ref.`;
 
 export function candidateBlock(profile: Profile, maxFacts = 40): string {

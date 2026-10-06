@@ -57,6 +57,7 @@ function rubricProvider(opts: { omit?: string[]; fail?: boolean } = {}) {
         location_fit: 9,
         eligibility: 10,
         score: 90 - Number(ref.slice(1)),
+        confidence: 0.85,
         reasons: `Strong Go/Postgres overlap for ${ref}.`,
         concerns: [],
       })),
