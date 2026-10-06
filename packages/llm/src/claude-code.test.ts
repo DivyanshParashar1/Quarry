@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { buildClaudeArgs, checkClaudeCli, createClaudeCodeProvider, parseClaudeResult } from './claude-code.js';
 import { ProviderError } from './provider.js';
@@ -42,7 +42,8 @@ describe('claude-code adapter', () => {
     const echo = (res.data as { echo: { stdin: string; cwd: string; schemaType: string } }).echo;
     expect(echo.stdin).toBe('hello prompt');
     expect(echo.schemaType).toBe('object');
-    expect(echo.cwd.startsWith(tmpdir())).toBe(true);
+    // The child reports its resolved cwd (macOS: /var -> /private/var).
+    expect(echo.cwd.startsWith(realpathSync(tmpdir()))).toBe(true);
     expect(echo.cwd).toMatch(/jobforge-claude-/);
     expect(existsSync(echo.cwd)).toBe(false); // cleaned up
     expect(res.usage).toEqual({ promptTokens: 120, completionTokens: 30, totalTokens: 150, costUsd: 0.0123 });
