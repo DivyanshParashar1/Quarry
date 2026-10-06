@@ -118,12 +118,24 @@ importers:
       '@fastify/static':
         specifier: ^10.1.5
         version: 10.1.5
+      '@jobforge/actor-gmail-outreach':
+        specifier: workspace:*
+        version: link:../../plugins/actor-gmail-outreach
       '@jobforge/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@jobforge/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@jobforge/enricher-contacts-pattern':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -136,6 +148,9 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
+      '@jobforge/tracker-gmail':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-gmail
       fastify:
         specifier: ^5.12.5
         version: 5.12.5

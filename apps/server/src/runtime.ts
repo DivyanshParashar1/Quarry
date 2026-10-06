@@ -1,0 +1,38 @@
+import type { AppConfig, Env, Logger } from '@jobforge/shared';
+import { recordLlmCall, type DB } from '@jobforge/db';
+import { createLLMFromConfig } from '@jobforge/llm';
+import { createDnsResolver, createGmailClient, type DomainRateLimiter, type OutreachDeps, type PluginRegistry } from '@jobforge/core';
+import type { GmailHandle } from '@jobforge/plugin-sdk';
+
+export async function createGmail(env: Env, limiter: DomainRateLimiter): Promise<GmailHandle | undefined> {
+  if (!env.GMAIL_CLIENT_ID || !env.GMAIL_CLIENT_SECRET || !env.GMAIL_REFRESH_TOKEN) return undefined;
+  return createGmailClient(
+    { clientId: env.GMAIL_CLIENT_ID, clientSecret: env.GMAIL_CLIENT_SECRET, redirectUri: env.GMAIL_REDIRECT_URI, refreshToken: env.GMAIL_REFRESH_TOKEN },
+    limiter,
+  );
+}
+
+/** Outreach deps built once, on first use (the LLM client and Gmail login are lazy). */
+export function lazyOutreachDeps(o: {
+  env: Env;
+  config: AppConfig;
+  db: DB;
+  log: Logger;
+  registry: PluginRegistry;
+  limiter: DomainRateLimiter;
+  gmail: GmailHandle | undefined;
+}): () => Promise<OutreachDeps> {
+  let cached: OutreachDeps | null = null;
+  return async () =>
+    (cached ??= {
+      db: o.db,
+      registry: o.registry,
+      log: o.log,
+      limiter: o.limiter,
+      dryRun: o.env.MODE !== 'live',
+      policy: o.config.outreach,
+      dns: createDnsResolver(),
+      llm: createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }),
+      ...(o.gmail ? { gmail: o.gmail } : {}),
+    });
+}

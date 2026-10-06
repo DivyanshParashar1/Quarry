@@ -336,3 +336,32 @@ export async function resolveIdPrefix(db: DB, table: keyof typeof PREFIX_TABLES,
   if (rows.length > 1) throw new Error(`id prefix ${prefix} is ambiguous; use more characters`);
   return rows[0]!.id;
 }
+
+export interface PipelineRunRow {
+  pluginId: string;
+  stage: string;
+  status: string;
+  startedAt: Date;
+  finishedAt: Date | null;
+  itemsIn: number;
+  itemsOut: number;
+  error: string | null;
+}
+
+/** Latest run per plugin plus boards currently failing (for `pipeline_status`). */
+export async function pipelineStatus(db: DB): Promise<{
+  lastRuns: PipelineRunRow[];
+  failingSources: { company: string; atsType: string; boardToken: string | null; error: string | null }[];
+}> {
+  const lastRuns = await db.execute<PipelineRunRow & Record<string, unknown>>(sql`
+    select distinct on (plugin_id) plugin_id as "pluginId", stage, status, started_at as "startedAt",
+      finished_at as "finishedAt", items_in as "itemsIn", items_out as "itemsOut", error
+    from ${pluginRuns} order by plugin_id, started_at desc`);
+  const failingSources = await db
+    .select({ company: companies.name, atsType: companySources.atsType, boardToken: companySources.boardToken, error: companySources.lastError })
+    .from(companySources)
+    .innerJoin(companies, eq(companies.id, companySources.companyId))
+    .where(eq(companySources.status, 'error'))
+    .orderBy(asc(companies.name));
+  return { lastRuns: [...lastRuns], failingSources };
+}

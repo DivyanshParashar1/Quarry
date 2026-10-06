@@ -46,9 +46,10 @@ export interface ReviewListRow extends ReviewItemRow {
 
 export async function listReviewItems(
   db: DB,
-  f: { status?: ReviewStatus[]; kind?: ReviewKind[]; limit?: number; ids?: string[] } = {},
+  f: { status?: ReviewStatus[]; kind?: ReviewKind[]; limit?: number; ids?: string[]; companyId?: string } = {},
 ): Promise<ReviewListRow[]> {
   const conds: SQL[] = [];
+  if (f.companyId) conds.push(eq(reviewItems.companyId, f.companyId));
   if (f.status?.length) conds.push(inArray(reviewItems.status, f.status));
   if (f.kind?.length) conds.push(inArray(reviewItems.kind, f.kind));
   if (f.ids?.length) conds.push(inArray(reviewItems.id, f.ids));
@@ -309,8 +310,12 @@ export async function threadsDueForFollowup(db: DB, now: Date, maxFollowups: num
     .orderBy(asc(outreachThreads.nextFollowupAt));
 }
 
-export async function listThreads(db: DB, f: { states?: ThreadRow['state'][]; jobId?: string; limit?: number } = {}) {
+export async function listThreads(
+  db: DB,
+  f: { states?: ThreadRow['state'][]; jobId?: string | undefined; companyId?: string | undefined; limit?: number } = {},
+) {
   const conds: SQL[] = [];
+  if (f.companyId) conds.push(eq(outreachThreads.companyId, f.companyId));
   if (f.states?.length) conds.push(inArray(outreachThreads.state, f.states));
   if (f.jobId) conds.push(eq(outreachThreads.jobId, f.jobId));
   const rows = await db

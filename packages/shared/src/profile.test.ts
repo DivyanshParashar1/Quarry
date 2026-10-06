@@ -46,3 +46,30 @@ describe('profile files', () => {
     expect(profileSummary([a, b], prefs)).toMatch(/^Target roles: Backend Engineer\.\nTech stack: Go\.\nSkills: Go\.\nBuilt X$/);
   });
 });
+
+describe('upsertFactInFile', () => {
+  it('updates in place and appends, keeping comments; refuses invalid facts', async () => {
+    const { upsertFactInFile } = await import('./index.js');
+    const { readFileSync } = await import('node:fs');
+    const d = dirWith('# my facts\nfacts:\n  # Go skill\n  - id: skill-go\n    kind: skill\n    content: Go\n', '{}');
+    const f = join(d, 'facts.yaml');
+    expect(upsertFactInFile(f, { id: 'skill-go', content: 'Go (3 years)' })).toMatchObject({ created: false, fact: { kind: 'skill', content: 'Go (3 years)' } });
+    expect(upsertFactInFile(f, { id: 'proj-x', kind: 'project', content: 'Built X', tags: ['go'] }).created).toBe(true);
+    const text = readFileSync(f, 'utf8');
+    expect(text).toContain('# my facts');
+    expect(text).toContain('# Go skill');
+    expect(readProfileDir(d).facts.map((x) => [x.id, x.content])).toEqual([
+      ['skill-go', 'Go (3 years)'],
+      ['proj-x', 'Built X'],
+    ]);
+    expect(() => upsertFactInFile(f, { id: 'new-one', content: 'no kind' })).toThrow();
+    expect(() => upsertFactInFile(join(d, 'empty.yaml'), { id: 'Bad Id', kind: 'skill', content: 'x' })).toThrow();
+  });
+
+  it('works from an empty `facts: []` template', async () => {
+    const { upsertFactInFile } = await import('./index.js');
+    const d = dirWith('# header\nfacts: []\n', '{}');
+    upsertFactInFile(join(d, 'facts.yaml'), { id: 'a', kind: 'skill', content: 'Go' });
+    expect(readProfileDir(d).facts).toHaveLength(1);
+  });
+});

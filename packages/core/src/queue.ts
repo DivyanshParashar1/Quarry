@@ -1,9 +1,13 @@
 import { PgBoss } from 'pg-boss';
 import { listSourceTargets } from '@jobforge/db';
 import { runSourceTarget, type SourceRunDeps, type SourceRunSummary } from './source-runner.js';
+import { draftDueFollowups, pollTracker, runSendTick, type OutreachDeps } from './outreach.js';
 
 export const QUEUES = {
   sourceFetch: 'source.fetch',
+  outreachSend: 'outreach.send',
+  outreachTrack: 'outreach.track',
+  outreachFollowups: 'outreach.followups',
 } as const;
 
 export interface SourceFetchJob {
@@ -86,4 +90,44 @@ export async function waitForJobs(
     if (done.size < ids.length) await new Promise((r) => setTimeout(r, opts.pollMs ?? 500));
   }
   return done;
+}
+
+/**
+ * Scheduled outreach loops. Tracking and follow-up drafting need Gmail; the
+ * send loop runs only in live mode (dry-run previews are a CLI action). Each
+ * loop is idempotent and the send loop holds a lease, so overlaps are harmless.
+ */
+export async function registerOutreachWorkers(
+  boss: PgBoss,
+  deps: () => Promise<OutreachDeps>,
+  opts: { live: boolean; gmailConnected: boolean; log: { info: (o: object, m: string) => void; warn: (o: object, m: string) => void } },
+): Promise<string[]> {
+  const enabled: string[] = [];
+  const loops: [string, string, (d: OutreachDeps) => Promise<unknown>, boolean][] = [
+    [QUEUES.outreachSend, '* * * * *', runSendTick, opts.live && opts.gmailConnected],
+    [QUEUES.outreachTrack, '*/10 * * * *', (d) => pollTracker(d), opts.gmailConnected],
+    [QUEUES.outreachFollowups, '17 * * * *', draftDueFollowups, opts.gmailConnected],
+  ];
+  for (const [name, cron, fn, on] of loops) {
+    if (!(await boss.getQueue(name).catch(() => null))) {
+      await boss.createQueue(name, { retryLimit: 0, expireInSeconds: 10 * 60 });
+    }
+    if (!on) {
+      await boss.unschedule(name).catch(() => {});
+      continue;
+    }
+    await boss.schedule(name, cron);
+    await boss.work(name, { localConcurrency: 1, batchSize: 1 }, async () => {
+      try {
+        const r = await fn(await deps());
+        opts.log.info({ loop: name, result: r }, 'outreach loop ran');
+        return r;
+      } catch (err) {
+        opts.log.warn({ loop: name, err: err instanceof Error ? err.message : String(err) }, 'outreach loop failed');
+        throw err;
+      }
+    });
+    enabled.push(name);
+  }
+  return enabled;
 }

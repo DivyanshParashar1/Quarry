@@ -1,11 +1,13 @@
 // API + worker host: serves the dashboard API (and the built web app) and runs
 // the pg-boss stage workers.
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
+import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { DomainRateLimiter, registerSourceWorker, startBoss } from '@jobforge/core';
+import { DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
+import { createGmail, lazyOutreachDeps } from './runtime.js';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -13,20 +15,37 @@ export async function bootstrap() {
   const log = createLogger({ level: env.LOG_LEVEL });
   const { db, close } = createDb(env.DATABASE_URL);
   const registry = createRegistry(config);
+  const limiter = new DomainRateLimiter();
   const boss = await startBoss(env.DATABASE_URL);
-  await registerSourceWorker(boss, {
-    db,
-    registry,
-    log,
-    limiter: new DomainRateLimiter(),
-    dryRun: env.MODE !== 'live',
-  });
+  await registerSourceWorker(boss, { db, registry, log, limiter, dryRun: env.MODE !== 'live' });
 
-  const api = await buildApi({ db, log, webDir: fileURLToPath(new URL('../../web/dist', import.meta.url)) });
+  const gmail = await createGmail(env, limiter).catch((err: unknown) => {
+    log.warn({ err: err instanceof Error ? err.message : String(err) }, 'Gmail login failed; outreach loops disabled');
+    return undefined;
+  });
+  const outreachDeps = lazyOutreachDeps({ env, config, db, log, registry, limiter, gmail });
+  const loops = await registerOutreachWorkers(boss, outreachDeps, { live: env.MODE === 'live', gmailConnected: !!gmail, log });
+
+  const facts = findUp('profile/facts.yaml');
+  const api = await buildApi({
+    db,
+    log,
+    webDir: fileURLToPath(new URL('../../web/dist', import.meta.url)),
+    policy: config.outreach,
+    outreachDeps,
+    enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
+    ...(facts ? { profileDir: dirname(facts) } : {}),
+  });
   // Local, single-user tool: bind to loopback only.
   await api.listen({ port: env.PORT, host: '127.0.0.1' });
   log.info(
-    { mode: env.MODE, url: `http://localhost:${env.PORT}`, plugins: registry.list().map((p) => p.manifest.id) },
+    {
+      mode: env.MODE,
+      url: `http://localhost:${env.PORT}`,
+      gmail: gmail?.address ?? null,
+      outreachLoops: loops,
+      plugins: registry.list().map((p) => p.manifest.id),
+    },
     'jobforge server started',
   );
 

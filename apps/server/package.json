@@ -12,12 +12,17 @@
   },
   "dependencies": {
     "@fastify/static": "^10.1.5",
+    "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
+    "@jobforge/enricher-contacts-pattern": "workspace:*",
+    "@jobforge/llm": "workspace:*",
+    "@jobforge/plugin-sdk": "workspace:*",
     "@jobforge/shared": "workspace:*",
     "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
+    "@jobforge/tracker-gmail": "workspace:*",
     "fastify": "^5.12.5",
     "zod": "^3.25.76"
   },
