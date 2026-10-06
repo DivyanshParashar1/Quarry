@@ -63,3 +63,41 @@ export function upsertFactInFile(
 function stripUndefined<T extends object>(o: T): Partial<T> {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
+
+/** Remove one fact from facts.yaml by id. Returns false if the id wasn't present. */
+export function deleteFactInFile(path: string, id: string): { deleted: boolean } {
+  if (!existsSync(path)) return { deleted: false };
+  const doc = parseDocument(readFileSync(path, 'utf8'));
+  const seq = doc.get('facts');
+  if (!isSeq(seq)) return { deleted: false };
+  const idx = seq.items.findIndex((it) => isMap(it) && it.get('id') === id);
+  if (idx < 0) return { deleted: false };
+  (seq as YAMLSeq).items.splice(idx, 1);
+  const all = factsFileSchema.safeParse(doc.toJSON());
+  if (!all.success) throw new ConfigError(`facts.yaml would become invalid: ${all.error.issues[0]?.message ?? ''}`);
+  writeFileSync(path, doc.toString());
+  return { deleted: true };
+}
+
+/**
+ * Overwrite preferences.yaml with a validated Preferences object. Comments are
+ * preserved at the file level (parseDocument is used so top-of-file comments
+ * survive), but inline key comments are lost — document the trade-off.
+ */
+export function writePreferencesFile(path: string, incoming: Preferences): Preferences {
+  const parsed = preferencesSchema.parse(incoming);
+  const existing = existsSync(path) ? parseDocument(readFileSync(path, 'utf8')) : parseDocument('');
+  // Replace each top-level key in-place so file-level comments / ordering is kept.
+  const data = parsed as unknown as Record<string, unknown>;
+  const keys = Object.keys(data);
+  for (const k of keys) existing.set(k, existing.createNode(data[k]));
+  // Drop any keys no longer in the schema (e.g. renamed) to avoid confusion.
+  if (isMap(existing.contents)) {
+    const existingKeys = (existing.contents as YAMLMap).items.map((it) => String((it.key as { value?: unknown }).value ?? ''));
+    for (const k of existingKeys) {
+      if (!keys.includes(k)) existing.delete(k);
+    }
+  }
+  writeFileSync(path, existing.toString());
+  return parsed;
+}
