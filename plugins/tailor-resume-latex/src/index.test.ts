@@ -41,7 +41,7 @@ function withLlm(output: unknown) {
   return { provider, llm: createLLMClient({ providers: { 'claude-code': provider }, defaultProvider: 'claude-code' }) };
 }
 
-describe('tailor-resume-typst', () => {
+describe('tailor-resume-latex', () => {
   it('declares the tailor stage, LLM permission, and no side effects', () => {
     expect(pluginManifestSchema.safeParse(plugin.manifest).success).toBe(true);
     expect(plugin.manifest).toMatchObject({ stage: 'tailor', sideEffects: 'none', permissions: { llm: true } });
@@ -55,6 +55,7 @@ describe('tailor-resume-typst', () => {
         { factId: 'skill-go', text: 'Go, 3 years.', section: 'Skills' },
         { factId: 'exp-acme', text: 'Rewrote the service in Rust and cut latency 95%.', section: 'Experience' },
       ],
+      confidence: 0.9,
     });
     const cfg = configSchema.parse({});
     const r = await tailorOne(testContext(cfg, undefined, { llm }), job, profile);
@@ -62,10 +63,29 @@ describe('tailor-resume-typst', () => {
     expect(r.dropped).toHaveLength(1);
     expect(r.dropped[0]!.text).toMatch(/Rust/);
     expect(r.header.skills).toEqual(['Go', 'Postgres']);
+    // 0.9 self-reported minus 0.1 for the one dropped bullet => 0.8.
+    expect(r.confidence).toBeCloseTo(0.8, 2);
+  });
+
+  it('penalises confidence when the validator has to drop multiple bullets', async () => {
+    const { llm } = withLlm({
+      header: { summary: '', skills: [] },
+      bullets: [
+        { factId: 'ghost1', text: 'did a thing', section: 'Experience' },
+        { factId: 'ghost2', text: 'did another thing', section: 'Experience' },
+        { factId: 'ghost3', text: 'did a third thing', section: 'Experience' },
+      ],
+      confidence: 1,
+    });
+    const cfg = configSchema.parse({});
+    const r = await tailorOne(testContext(cfg, undefined, { llm }), job, profile);
+    expect(r.bullets).toHaveLength(0);
+    // 1 - min(0.5, 3*0.1) = 0.7
+    expect(r.confidence).toBeCloseTo(0.7, 2);
   });
 
   it('throws when the profile has no facts', async () => {
-    const { llm } = withLlm({ header: { summary: '', skills: [] }, bullets: [] });
+    const { llm } = withLlm({ header: { summary: '', skills: [] }, bullets: [], confidence: 0 });
     const cfg = configSchema.parse({});
     await expect(tailorOne(testContext(cfg, undefined, { llm }), job, { ...profile, facts: [] })).rejects.toThrow(/no facts/);
   });

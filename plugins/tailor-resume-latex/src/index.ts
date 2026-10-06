@@ -25,14 +25,15 @@ export const configSchema = z
   .strict();
 export type TailorConfig = z.infer<typeof configSchema>;
 
-export const PLUGIN_ID = 'tailor-resume-typst';
+export const PLUGIN_ID = 'tailor-resume-latex';
 
-/** Result of the tailor stage: the validated resume plus the full validation report. */
+/** Result of the tailor stage: validated resume plus the full validation report. */
 export interface TailorOutcome extends TailoredResume {
-  /** Every bullet the LLM returned, kept or dropped, with issues. */
   report: FactValidation[];
   dropped: FactValidation[];
   headerIssues: ValidationIssue[];
+  /** Self-reported 0..1 confidence; the autopilot gates on this. */
+  confidence: number;
   provider: string;
   model: string;
 }
@@ -80,11 +81,20 @@ export async function tailorOne(
     bulletMaxChars: ctx.config.bulletMaxChars,
     allowedSkills: profile.preferences.stack,
   });
+
   if (!v.bullets.length) {
     ctx.log.warn({ dropped: v.dropped.length }, 'tailor: all bullets failed validation');
   } else if (v.dropped.length) {
     ctx.log.info({ kept: v.bullets.length, dropped: v.dropped.length }, 'tailor: some bullets dropped by validator');
   }
+
+  // Downgrade confidence if the validator had to drop or warn on bullets.
+  const dropped = v.dropped.length;
+  const warned = v.report.filter((r) => r.status === 'warning').length;
+  const headerPenalty = v.headerIssues.length * 0.05;
+  const dropPenalty = Math.min(0.5, dropped * 0.1);
+  const warnPenalty = Math.min(0.2, warned * 0.03);
+  const confidence = Math.max(0, Math.min(1, res.data.confidence - dropPenalty - warnPenalty - headerPenalty));
 
   return {
     bullets: v.bullets,
@@ -92,6 +102,7 @@ export async function tailorOne(
     report: v.report,
     dropped: v.dropped,
     headerIssues: v.headerIssues,
+    confidence,
     provider: res.provider,
     model: res.model,
   };

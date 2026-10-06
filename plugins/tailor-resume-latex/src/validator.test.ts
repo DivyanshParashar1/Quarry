@@ -71,8 +71,7 @@ describe('validate', () => {
       facts,
     });
     expect(v.bullets).toHaveLength(0);
-    const kinds = v.dropped[0]!.issues.map((i) => i.kind);
-    expect(kinds).toContain('invented_term');
+    expect(v.dropped[0]!.issues.map((i) => i.kind)).toContain('invented_term');
   });
 
   it('drops bullets that invent numbers not in the fact or metrics', () => {

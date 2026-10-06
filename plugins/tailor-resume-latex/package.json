@@ -1,9 +1,9 @@
 {
-  "name": "@jobforge/tailor-resume-typst",
+  "name": "@jobforge/tailor-resume-latex",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "LLM-driven, grounded resume tailoring; validates every bullet traces to a profile fact.",
+  "description": "LLM-driven grounded resume tailoring; renders Jake's-resume LaTeX to PDF.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

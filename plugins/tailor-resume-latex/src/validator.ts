@@ -49,13 +49,11 @@ export function extractProperTerms(s: string): string[] {
 }
 
 export function extractNumbers(s: string): string[] {
-  // Numbers, percentages, scales (10k, 2M, 3.5x, 99.9%). Keep them as the normalized token.
   const out: string[] = [];
   for (const m of s.matchAll(/\b\d[\d.,]*(?:\s?[kKmMbB]|\s?%|\s?x)?/g)) out.push(m[0].replace(/\s/g, '').toLowerCase());
   return out;
 }
 
-/** Loose contains check: ignores case and non-alphanumeric separators (so "GoLang" matches "go lang"). */
 function normalizedIncludes(haystack: string, needle: string): boolean {
   const flat = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
   const h = flat(haystack);
@@ -71,7 +69,7 @@ function factHaystack(f: ProfileFact): string {
 }
 
 function metricNumbers(f: ProfileFact): string[] {
-  return Object.values(f.metrics).flatMap((v) => (typeof v === 'number' ? extractNumbers(String(v)) : extractNumbers(String(v))));
+  return Object.values(f.metrics).flatMap((v) => extractNumbers(String(v)));
 }
 
 export function validateBullet(bullet: TailoredBullet, factsById: Map<string, ProfileFact>, maxChars: number): FactValidation {
@@ -107,34 +105,24 @@ export function validateBullet(bullet: TailoredBullet, factsById: Map<string, Pr
 export function validateHeader(header: TailoredHeader, facts: ProfileFact[], allowedSkills: string[] = []): { header: TailoredHeader; issues: ValidationIssue[] } {
   const haystack = facts.map(factHaystack).join(' ');
   const issues: ValidationIssue[] = [];
-  // Keep only skills we can trace to the profile.
   const allowed = new Set(allowedSkills.map((s) => s.toLowerCase()));
   const skills: string[] = [];
   for (const s of header.skills) {
     if (allowed.has(s.toLowerCase()) || normalizedIncludes(haystack, s)) skills.push(s);
     else issues.push({ kind: 'invented_term', detail: `skill "${s}" is not in the profile; dropped` });
   }
-  // Flag made-up proper terms in summary, but don't drop the summary wholesale.
   for (const term of extractProperTerms(header.summary)) {
     if (!normalizedIncludes(haystack, term)) {
       issues.push({ kind: 'invented_term', detail: `summary mentions "${term}" which is not in the profile` });
     }
   }
   for (const n of extractNumbers(header.summary)) {
-    const allowedNumbers = new Set([
-      ...extractNumbers(haystack),
-      ...facts.flatMap(metricNumbers),
-    ]);
+    const allowedNumbers = new Set([...extractNumbers(haystack), ...facts.flatMap(metricNumbers)]);
     if (!allowedNumbers.has(n)) issues.push({ kind: 'invented_number', detail: `summary mentions "${n}" which is not in the profile` });
   }
   return { header: { summary: header.summary.trim(), skills }, issues };
 }
 
-/**
- * Run every bullet through the grounded-tailoring validator. Bullets with any
- * `error`-level issue are dropped; warnings keep the bullet but surface in the
- * report so the user can see what was flagged.
- */
 export function validate(input: ValidationInput): ValidationResult {
   const maxChars = input.bulletMaxChars ?? 220;
   const factsById = new Map(input.facts.map((f) => [f.id, f]));

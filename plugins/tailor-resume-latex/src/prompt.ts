@@ -1,8 +1,20 @@
 import type { Job, Profile, TailoredResume } from '@jobforge/plugin-sdk';
 import { tailoredResumeSchema } from '@jobforge/plugin-sdk';
+import { z } from 'zod';
 
-export const outputSchema = tailoredResumeSchema;
-export type TailoredOutput = TailoredResume;
+/**
+ * The tailor returns the resume shape plus a self-reported `confidence` 0..1
+ * that the autopilot uses to decide whether to auto-send without human review.
+ */
+export const outputSchema = tailoredResumeSchema.extend({
+  confidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe('How confident you are this resume is a strong, grounded fit. 1 = send without human review; <0.75 = escalate.'),
+});
+export type TailoredOutput = z.infer<typeof outputSchema>;
+export type TailoredCore = TailoredResume;
 
 export const SYSTEM_PROMPT = `You are a careful resume writer who tailors ONE candidate's resume for ONE job.
 
@@ -14,6 +26,8 @@ Rules (non-negotiable; the system validates and discards bullets that break them
 - Section names must be one of: Experience, Projects, Education, Achievements, Skills (use the one matching the fact's kind).
 - The summary is 1-2 sentences; do not restate the headline; do not invent experience.
 - Skills must be drawn from the candidate's listed stack or skill facts; order by relevance to the job.
+
+Also return a self-reported "confidence" 0..1. Base it on: how strong the match is, how many bullets you dropped, and whether the candidate clearly meets the role's must-haves. Score < 0.75 if anything feels forced or you had to stretch.
 
 Return exactly the JSON shape asked for.`;
 
@@ -45,7 +59,7 @@ export function tailorPrompt(job: Job, profile: Profile, maxBullets: number): st
   lines.push(
     '',
     `Select up to ${maxBullets} bullets, in display order, choosing the facts most relevant to this job.`,
-    'Return the TailoredResume JSON. Each bullet must cite an id from the fact bank above.',
+    'Return the JSON with header, bullets (each citing a fact id), and your self-reported confidence.',
   );
   return lines.join('\n');
 }

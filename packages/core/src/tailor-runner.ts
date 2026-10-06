@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Logger } from '@jobforge/shared';
 import type { FactValidation, Job, TailoredBullet, TailoredHeader, ValidationIssue } from '@jobforge/plugin-sdk';
@@ -18,12 +18,13 @@ import {
 } from '@jobforge/db';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
-// Tailoring runner (PLAN.md §8 Phase 4):
+// Tailoring runner (PLAN.md §8 Phase 4; LaTeX-swap):
 //   1. ask the tailor plugin for selected + rephrased bullets (grounded; validator inside the plugin)
-//   2. render Typst to a one-page PDF
-//   3. persist resume_variants row (with validation report, pdf path if rendered).
+//   2. render Jake's-resume LaTeX template to a one-page PDF via latexmk
+//   3. persist resume_variants row (with validation report, pdf path if rendered,
+//      self-reported confidence for the autopilot).
 
-export const DEFAULT_TAILOR = 'tailor-resume-typst';
+export const DEFAULT_TAILOR = 'tailor-resume-latex';
 
 export class NoTailorProfileError extends Error {
   constructor() {
@@ -43,10 +44,10 @@ export interface TailorRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {
   log: Logger;
   /** Where to write rendered PDFs (defaults to <repoRoot>/data/resumes). */
   resumeDir?: string;
-  /** Path to the Typst template file (defaults to <repoRoot>/templates/resume.typ). */
+  /** Path to the LaTeX template (defaults to <repoRoot>/templates/resume.tex). */
   templatePath?: string;
-  /** Path to the `typst` binary (defaults to `typst` on PATH). */
-  typstBin?: string;
+  /** Path to the `latexmk` binary (defaults to `latexmk` on PATH, override via LATEX_BIN). */
+  latexBin?: string;
   /** Metadata rendered into the resume header; only displayed, never invented. */
   contact?: { name?: string; headline?: string; contact?: string };
   timeoutMs?: number;
@@ -59,10 +60,11 @@ export interface TailorRunResult {
   report: FactValidation[];
   dropped: FactValidation[];
   headerIssues: ValidationIssue[];
+  confidence: number;
 }
 
 /**
- * Tailor one job: ask the plugin for bullets, render the Typst PDF, store a
+ * Tailor one job: ask the plugin for bullets, render the LaTeX PDF, store a
  * resume_variants row. Never throws for render failures — the row is still
  * written with `render_failed` so the user can see the validation report.
  */
@@ -103,11 +105,12 @@ export async function runTailor(
       report: FactValidation[];
       dropped: FactValidation[];
       headerIssues: ValidationIssue[];
+      confidence: number;
       provider: string;
       model: string;
     };
 
-    const renderInput = {
+    const renderInput: RenderInput = {
       name: deps.contact?.name ?? '',
       headline: deps.contact?.headline ?? '',
       contact: deps.contact?.contact ?? '',
@@ -118,7 +121,7 @@ export async function runTailor(
 
     const templatePath = deps.templatePath ?? defaultTemplatePath();
     const resumeDir = deps.resumeDir ?? defaultResumeDir();
-    const typstBin = deps.typstBin ?? process.env.TYPST_BIN ?? 'typst';
+    const latexBin = deps.latexBin ?? process.env.LATEX_BIN ?? 'latexmk';
     const stableId = hashResumeId(job.id, profile.version, renderInput);
     const pdfPath = join(resumeDir, `${stableId}.pdf`);
 
@@ -134,7 +137,7 @@ export async function runTailor(
     } else {
       try {
         await mkdir(resumeDir, { recursive: true });
-        await renderPdf({ templatePath, resumeDir, pdfPath, renderInput, typstBin, log, signal });
+        await renderPdf({ templatePath, resumeDir, pdfPath, renderInput, latexBin, log, signal });
         bytes = (await stat(pdfPath)).size;
         pdfPathOrNull = pdfPath;
         status = 'rendered';
@@ -149,7 +152,7 @@ export async function runTailor(
       jobId: job.id,
       profileVersion: profile.version,
       pluginId,
-      templateId: 'default',
+      templateId: 'jakes-resume',
       factIds: raw.bullets.map((b) => b.factId),
       bullets: raw.bullets,
       header: raw.header,
@@ -160,22 +163,23 @@ export async function runTailor(
       provider: raw.provider,
       model: raw.model,
       error,
+      confidence: raw.confidence,
     });
 
     await finishPluginRun(deps.db, runId, {
       status: 'succeeded',
       itemsIn: profile.facts.length,
       itemsOut: raw.bullets.length,
-      meta: { variantId: variant.id, status, dropped: raw.dropped.length },
+      meta: { variantId: variant.id, status, dropped: raw.dropped.length, confidence: raw.confidence },
     });
     await appendEvent(deps.db, {
       kind: `tailor.${status}`,
       subjectType: 'job',
       subjectId: job.id,
-      payload: { variantId: variant.id, dropped: raw.dropped.length, kept: raw.bullets.length },
+      payload: { variantId: variant.id, dropped: raw.dropped.length, kept: raw.bullets.length, confidence: raw.confidence },
     });
 
-    return { variant, jobId: job.id, profileVersion: profile.version, report: raw.report, dropped: raw.dropped, headerIssues: raw.headerIssues };
+    return { variant, jobId: job.id, profileVersion: profile.version, report: raw.report, dropped: raw.dropped, headerIssues: raw.headerIssues, confidence: raw.confidence };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await finishPluginRun(deps.db, runId, { status: 'failed', itemsIn: profile.facts.length, itemsOut: 0, error: message });
@@ -207,28 +211,69 @@ function toSections(bullets: TailoredBullet[]): { title: string; bullets: string
   return order.map((title) => ({ title, bullets: byTitle.get(title)! }));
 }
 
+/**
+ * Minimal LaTeX escape for user-controlled strings in math-free body text.
+ * Keeps the renderer safe against stray `&`, `$`, `%`, `#`, `_`, `{`, `}`, `~`, `^`, `\`.
+ */
+export function escapeLatex(s: string): string {
+  return s
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/([#$%&_{}])/g, '\\$1')
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\^/g, '\\textasciicircum{}');
+}
+
+/** Expand the %%NAME%%/%%CONTACT%%/%%SUMMARY%%/%%SKILLS%%/%%SECTIONS%% placeholders in the template. */
+export function fillLatexTemplate(template: string, input: RenderInput): string {
+  const summary = input.summary.trim()
+    ? `\\begin{center}\\small ${escapeLatex(input.summary.trim())}\\end{center}`
+    : '';
+  const skills = input.skills.length
+    ? `\\section{Skills}\\begin{itemize}[leftmargin=0.15in, label={}]\\small{\\item{${input.skills.map(escapeLatex).join(' $\\cdot$ ')}}}\\end{itemize}`
+    : '';
+  const sections = input.sections
+    .map((s) => {
+      const items = s.bullets.map((b) => `  \\resumeItem{${escapeLatex(b)}}`).join('\n');
+      return `\\section{${escapeLatex(s.title)}}\n\\resumeSubHeadingListStart\n  \\resumeItemListStart\n${items}\n  \\resumeItemListEnd\n\\resumeSubHeadingListEnd`;
+    })
+    .join('\n\n');
+  return template
+    .replace(/%%NAME%%/g, escapeLatex(input.name || 'Candidate'))
+    .replace(/%%CONTACT%%/g, escapeLatex(input.contact || ''))
+    .replace(/%%SUMMARY%%/g, summary)
+    .replace(/%%SKILLS%%/g, skills)
+    .replace(/%%SECTIONS%%/g, sections);
+}
+
 async function renderPdf(args: {
   templatePath: string;
   resumeDir: string;
   pdfPath: string;
   renderInput: RenderInput;
-  typstBin: string;
+  latexBin: string;
   log: Logger;
   signal: AbortSignal;
 }): Promise<void> {
-  const template = await readFile(args.templatePath);
+  const template = await readFile(args.templatePath, 'utf8');
+  const filled = fillLatexTemplate(template, args.renderInput);
   const workDir = join(args.resumeDir, '.build', `job-${createHash('sha256').update(args.pdfPath).digest('hex').slice(0, 12)}`);
+  await rm(workDir, { recursive: true, force: true });
   await mkdir(workDir, { recursive: true });
-  const typFile = join(workDir, 'resume.typ');
-  const dataFile = join(workDir, 'data.json');
-  await Promise.all([writeFile(typFile, template), writeFile(dataFile, JSON.stringify(args.renderInput))]);
+  const texFile = join(workDir, 'resume.tex');
+  await writeFile(texFile, filled);
 
   await new Promise<void>((resolveSpawn, rejectSpawn) => {
-    const child = spawn(args.typstBin, ['compile', typFile, args.pdfPath], {
-      cwd: workDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    // `-interaction=nonstopmode -halt-on-error` turns any error into a non-zero exit instead of a prompt.
+    const child = spawn(
+      args.latexBin,
+      ['-pdf', '-interaction=nonstopmode', '-halt-on-error', '-silent', basename(texFile)],
+      { cwd: workDir, stdio: ['ignore', 'pipe', 'pipe'] },
+    );
     let stderr = '';
+    let stdout = '';
+    child.stdout.on('data', (b: Buffer) => {
+      stdout += b.toString();
+    });
     child.stderr.on('data', (b: Buffer) => {
       stderr += b.toString();
     });
@@ -237,13 +282,29 @@ async function renderPdf(args: {
     child.on('error', (err) => {
       args.signal.removeEventListener('abort', onAbort);
       const code = (err as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT') rejectSpawn(new Error(`typst binary not found at "${args.typstBin}"; install from https://github.com/typst/typst or set TYPST_BIN`));
-      else rejectSpawn(err);
+      if (code === 'ENOENT') {
+        rejectSpawn(
+          new Error(
+            `latex binary not found at "${args.latexBin}"; install TeX Live (which provides latexmk + pdflatex) or set LATEX_BIN`,
+          ),
+        );
+      } else rejectSpawn(err);
     });
-    child.on('close', (code) => {
+    child.on('close', async (code) => {
       args.signal.removeEventListener('abort', onAbort);
-      if (code === 0) resolveSpawn();
-      else rejectSpawn(new Error(`typst exited with code ${code}: ${stderr.trim() || '(no stderr)'}`));
+      if (code === 0) {
+        try {
+          const produced = join(workDir, 'resume.pdf');
+          const data = await readFile(produced);
+          await writeFile(args.pdfPath, data);
+          resolveSpawn();
+        } catch (err) {
+          rejectSpawn(err instanceof Error ? err : new Error(String(err)));
+        }
+      } else {
+        const tail = (stderr || stdout).trim().split('\n').slice(-20).join('\n');
+        rejectSpawn(new Error(`latexmk exited with code ${code}: ${tail || '(no output)'}`));
+      }
     });
   });
 }
@@ -253,13 +314,11 @@ function hashResumeId(jobId: string, profileVersion: string, input: RenderInput)
 }
 
 function defaultTemplatePath(): string {
-  const found = findUp('templates/resume.typ', dirname(fileURLToPath(import.meta.url)));
-  // Fall back to repo-root/templates/resume.typ even if missing: renderPdf will surface a clear error.
-  return found ?? resolve(process.cwd(), 'templates', 'resume.typ');
+  const found = findUp('templates/resume.tex', dirname(fileURLToPath(import.meta.url)));
+  return found ?? resolve(process.cwd(), 'templates', 'resume.tex');
 }
 
 function defaultResumeDir(): string {
-  // Repo root: nearest ancestor with pnpm-workspace.yaml. Fall back to cwd.
   const anchor = findUp('pnpm-workspace.yaml', dirname(fileURLToPath(import.meta.url)));
   const root = anchor ? dirname(anchor) : process.cwd();
   return resolve(root, 'data', 'resumes');
@@ -276,22 +335,23 @@ function findUp(name: string, from: string): string | null {
   }
 }
 
-/** Check whether the configured typst binary is available (used by CLI/server for a friendly error). */
-export async function checkTypst(typstBin: string = process.env.TYPST_BIN ?? 'typst'): Promise<{ ok: boolean; version?: string; error?: string }> {
+/** Check whether the configured latexmk binary is available (used by CLI/server for a friendly error). */
+export async function checkLatex(latexBin: string = process.env.LATEX_BIN ?? 'latexmk'): Promise<{ ok: boolean; version?: string; error?: string }> {
   return new Promise((resolveCheck) => {
-    const child = spawn(typstBin, ['--version'], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(latexBin, ['-version'], { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     child.stdout.on('data', (b: Buffer) => {
       out += b.toString();
     });
     child.on('error', (err) => {
       const code = (err as NodeJS.ErrnoException).code;
-      resolveCheck({ ok: false, error: code === 'ENOENT' ? `typst not found at "${typstBin}"` : err.message });
+      resolveCheck({ ok: false, error: code === 'ENOENT' ? `latexmk not found at "${latexBin}"` : err.message });
     });
     child.on('close', (code) => {
-      if (code === 0) resolveCheck({ ok: true, version: out.trim() });
-      else resolveCheck({ ok: false, error: `typst --version exited ${code}` });
+      if (code === 0) {
+        const version = out.trim().split('\n')[0] ?? '';
+        resolveCheck({ ok: true, version });
+      } else resolveCheck({ ok: false, error: `latexmk -version exited ${code}` });
     });
   });
 }
-
