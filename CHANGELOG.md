@@ -89,3 +89,30 @@
 - `.gitignore` — `data/resumes/` kept out of the tree.
 
 Dependencies: no new third-party packages; `typst` is required at runtime (not at build/test time — tests skip the PDF-render assertion when the binary isn't on PATH).
+
+## [Phase 4.5] — LaTeX swap and LLM-in-the-loop autopilot
+
+- **Resume renderer swapped from Typst to LaTeX.**
+  - Deleted `plugins/tailor-resume-typst` and `templates/resume.typ`.
+  - New `plugins/tailor-resume-latex` (same grounded-bullet validator; prompt now also asks the LLM to self-report a confidence 0..1 and the plugin penalises it per dropped/warned bullet).
+  - New `templates/resume.tex` based on Jake Gutierrez's one-page CV template; renderer fills `%%NAME%%`, `%%CONTACT%%`, `%%SUMMARY%%`, `%%SKILLS%%`, `%%SECTIONS%%` placeholders with LaTeX-escaped bullets grouped by section.
+  - `packages/core/tailor-runner.ts`: `renderPdf` now spawns `latexmk -pdf -interaction=nonstopmode -halt-on-error -silent`; `escapeLatex` and `fillLatexTemplate` are exported. `checkTypst` → `checkLatex`, `TYPST_BIN` → `LATEX_BIN`, `DEFAULT_TAILOR = 'tailor-resume-latex'`, template id `'jakes-resume'`.
+  - CLI `jf tailor` + MCP tools now reference LaTeX.
+- **Confidence scores.** Migration 0005 adds `confidence real` to `match_results`, `resume_variants`, and `review_items`, plus `review_items.decided_by text`. Matcher, tailor, and outreach-actor LLM schemas each include a self-reported `confidence` 0..1. `EmailDraft.confidence` carries it from `prepare` into the review item.
+- **Autopilot** (`packages/core/src/autopilot.ts`):
+  - Walks top-ranked LLM-scored jobs, enforces deterministic + confidence gates in sequence:
+    1. `match_confidence >= floor.match` and `score >= minMatchScore`
+    2. no open outreach for the company's contacts and no prior thread
+    3. a `rendered` resume variant for the active profile (reused if present, else `runTailor`), with `tailor_confidence >= floor.tailor` and zero validator errors
+    4. an active contact with `email_confidence >= minEmailConfidence`
+    5. company cap `perCompanyPerWeek` (if already at limit, escalate to human)
+    6. `draftOutreach` succeeds and `draft_confidence >= floor.outreach`
+    7. autopilot's own `maxAutoApprovesPerDay` budget still has room
+  - Items that pass all floors are transitioned `pending → approved` with `decided_by='autopilot'` and a composite confidence; the send loop handles the actual email per MODE=live. Items that fail any floor stay pending for human review (user ask: "only confused jobs go to review"). Each decision is logged with a reason + note.
+- **Config.** New `autopilot: { enabled, minMatchScore, confidenceFloor: {match, tailor, outreach}, minEmailConfidence, maxAutoApprovesPerDay, candidateBatch }` with conservative defaults (disabled; 0.75/0.75/0.8 floors; 10 approves/day).
+- **CLI.** `jf autopilot [--limit <n>] [--live]` prints a per-job decision table.
+- **Server.** `POST /api/autopilot/run` + lazy deps; when `autopilot.enabled && MODE=live`, the server registers an hourly pg-boss cron (`autopilot.hourly`).
+- **MCP.** New `run_autopilot(limit?)` tool; still non-destructive (auto-approval honours the server's dry-run gate).
+- **DB.** `autopilotApprovesSince`, `transitionReviewItem` accepts `decidedBy` and `confidence`.
+
+Dependencies: no new third-party packages; `latexmk` (TeX Live) is required at runtime for PDF rendering. Tests pre-insert a rendered variant so they don't depend on a local LaTeX install.
