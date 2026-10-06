@@ -18,6 +18,13 @@ Nothing leaves your machine without an **approved review item**. Sending is a
    `gmail.readonly`. The refresh token is written to `.env` (mode 600) and never printed.
 4. `pnpm jf gmail status` shows the connected address.
 
+**"Error 403: access_denied … has not completed the Google verification process"**
+means the account you signed in with is not on the app's test-user list. In
+Google Cloud Console → **Google Auth Platform → Audience → Test users**, add that
+exact Gmail address, then rerun `pnpm jf gmail auth`. Keep the app in *Testing*;
+it does not need verification for your own use. (In Testing mode the refresh
+token expires after 7 days; rerun `jf gmail auth` when it does.)
+
 ## 2. Contacts
 
 ```
