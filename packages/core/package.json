@@ -26,6 +26,7 @@
     "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/enricher-contacts-pattern": "workspace:*",
     "@jobforge/llm": "workspace:*",
+    "@jobforge/tailor-resume-typst": "workspace:*",
     "@jobforge/tracker-gmail": "workspace:*",
     "typescript": "^5.6.3"
   }

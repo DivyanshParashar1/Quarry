@@ -13,6 +13,7 @@ import {
   type PluginManifest,
   type SourcePlugin,
   type Stage,
+  type TailorPlugin,
 } from '@jobforge/plugin-sdk';
 import { createScopedHttp } from './http.js';
 import { scopeGmail } from './capabilities.js';
@@ -106,6 +107,10 @@ export class PluginRegistry {
     const p = this.get(id);
     if (p.manifest.stage !== 'matcher') throw new PluginError(`${id} is not a matcher plugin`);
     return p as LoadedPlugin<MatcherPlugin>;
+  }
+
+  tailor(id: string): LoadedPlugin<TailorPlugin> {
+    return this.ofStage<TailorPlugin>(id, 'tailor');
   }
 
   list(): LoadedPlugin[] {

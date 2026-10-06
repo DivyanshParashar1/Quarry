@@ -4,6 +4,7 @@ import {
   emailDraftPatchSchema,
   emailDraftSchema,
   type ApprovedDraft,
+  type EmailAttachment,
   type EmailDraft,
   type EmailSendResult,
   type GmailTrackEvent,
@@ -28,6 +29,7 @@ import {
   getState,
   getThread,
   jobsToMatch,
+  latestRenderedResumeForJob,
   latestSentThreadToEmail,
   liveSendsSince,
   markThread,
@@ -144,12 +146,14 @@ export async function draftOutreach(
   const job = opts.jobId ? await loadJob(db, opts.jobId) : null;
   const company = (await loadCompanyRef(db, contact.companyId))!;
 
+  const attachments = job ? await resolveResumeAttachment(db, job.id) : [];
   const input: OutreachActionInput = {
     kind: 'outreach',
     job,
     company,
     contact: { ...company.contacts.find((c) => c.id === contact.id)!, email: contact.email },
     profile,
+    attachments,
   };
   const draft = await prepare(deps, OUTREACH_ACTOR, input);
   const item = await createReviewItem(db, {
@@ -511,4 +515,22 @@ export async function pollTracker(deps: OutreachDeps, opts: { pluginId?: string;
   }
   await setState(db, STATE_TRACKER_CURSOR, now.toISOString());
   return res;
+}
+
+/**
+ * Pick the latest successfully-rendered resume variant for a job and build an
+ * EmailAttachment the actor can send. The variant must still exist on disk;
+ * stale rows just produce an empty list (the user can retailor).
+ */
+export async function resolveResumeAttachment(db: DB, jobId: string): Promise<EmailAttachment[]> {
+  const v = await latestRenderedResumeForJob(db, jobId);
+  if (!v || !v.pdfPath) return [];
+  return [
+    {
+      filename: 'resume.pdf',
+      contentType: 'application/pdf',
+      path: v.pdfPath,
+      resumeVariantId: v.id,
+    },
+  ];
 }
