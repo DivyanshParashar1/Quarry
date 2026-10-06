@@ -110,6 +110,7 @@ export interface MatchResultInput {
   reasons: string;
   provider: string | null;
   model: string | null;
+  confidence: number | null;
 }
 
 /** Upsert by (job, profile version): rescoring replaces the previous result. */
@@ -135,6 +136,7 @@ export async function saveMatchResults(
           reasons: sql`excluded.reasons`,
           provider: sql`excluded.provider`,
           model: sql`excluded.model`,
+          confidence: sql`excluded.confidence`,
           createdAt: sql`now()`,
         },
       });
@@ -273,6 +275,7 @@ export interface JobDetail {
     reasons: string;
     provider: string | null;
     model: string | null;
+    confidence: number | null;
     createdAt: Date;
   } | null;
   sources: { sourcePlugin: string; externalId: string; url: string | null; lastSeenAt: Date }[];
@@ -325,6 +328,7 @@ export async function getJobDetail(db: DB, id: string, profileVersion: string | 
           reasons: m.reasons,
           provider: m.provider,
           model: m.model,
+          confidence: m.confidence,
           createdAt: m.createdAt,
         }
       : null,

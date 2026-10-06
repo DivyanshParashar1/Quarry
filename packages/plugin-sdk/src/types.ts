@@ -113,6 +113,8 @@ export interface MatchResult {
   reasons: string;
   provider: string | null;
   model: string | null;
+  /** Self-reported LLM confidence 0..1 (null for deterministic methods). The autopilot gates on this. */
+  confidence: number | null;
 }
 import type { TailoredResume } from './tailor.js';
 /** What a tailor plugin returns (PLAN.md §7). See `TailoredResume`. */

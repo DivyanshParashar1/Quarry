@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { DB } from './client.js';
 import { actions, appState, companies, contacts, events, jobs, outreachThreads, reviewItems } from './schema.js';
 
@@ -88,7 +88,15 @@ export async function transitionReviewItem(
   id: string,
   from: ReviewStatus[],
   to: ReviewStatus,
-  extra: { decisionNote?: string | null; overrideCompanyCap?: boolean; error?: string | null; decided?: boolean } = {},
+  extra: {
+    decisionNote?: string | null;
+    overrideCompanyCap?: boolean;
+    error?: string | null;
+    decided?: boolean;
+    /** 'human' | 'autopilot' — only set at decision time. */
+    decidedBy?: 'human' | 'autopilot';
+    confidence?: number | null;
+  } = {},
 ): Promise<ReviewItemRow | null> {
   const [r] = await db
     .update(reviewItems)
@@ -96,6 +104,8 @@ export async function transitionReviewItem(
       status: to,
       updatedAt: new Date(),
       ...(extra.decided ? { decidedAt: new Date() } : {}),
+      ...(extra.decidedBy ? { decidedBy: extra.decidedBy } : {}),
+      ...(extra.confidence !== undefined ? { confidence: extra.confidence } : {}),
       ...(extra.decisionNote !== undefined ? { decisionNote: extra.decisionNote } : {}),
       ...(extra.overrideCompanyCap !== undefined ? { overrideCompanyCap: extra.overrideCompanyCap } : {}),
       ...(extra.error !== undefined ? { error: extra.error?.slice(0, 2000) ?? null } : {}),
@@ -386,6 +396,15 @@ export async function executedItemsForThread(db: DB, threadId: string, firstRevi
       ),
     )
     .orderBy(desc(reviewItems.updatedAt));
+}
+
+/** Count review items the autopilot auto-approved since `since`. */
+export async function autopilotApprovesSince(db: DB, since: Date): Promise<number> {
+  const [r] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(reviewItems)
+    .where(and(eq(reviewItems.decidedBy, 'autopilot'), gte(reviewItems.decidedAt, since)));
+  return r?.n ?? 0;
 }
 
 /** Active (pending/approved) first-email items for a contact, to avoid duplicate drafts. */

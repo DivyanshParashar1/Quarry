@@ -20,6 +20,7 @@ export interface NewResumeVariant {
   provider: string | null;
   model: string | null;
   error: string | null;
+  confidence: number | null;
 }
 
 export async function insertResumeVariant(db: DB, v: NewResumeVariant): Promise<ResumeVariantRow> {

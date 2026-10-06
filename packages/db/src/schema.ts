@@ -238,6 +238,8 @@ export const matchResults = pgTable(
     reasons: text('reasons').notNull(),
     provider: text('provider'),
     model: text('model'),
+    /** Self-reported LLM confidence 0..1; the autopilot gates on this. */
+    confidence: real('confidence'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
@@ -339,6 +341,10 @@ export const reviewItems = pgTable(
     notBefore: timestamp('not_before', { withTimezone: true }),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     decisionNote: text('decision_note'),
+    /** 'human' | 'autopilot' — who approved/rejected this item. Null while pending. */
+    decidedBy: text('decided_by'),
+    /** Composite LLM confidence 0..1 used by the autopilot (min across match, tailor, draft). */
+    confidence: real('confidence'),
     editedAt: timestamp('edited_at', { withTimezone: true }),
     error: text('error'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -453,6 +459,8 @@ export const resumeVariants = pgTable(
     provider: text('provider'),
     model: text('model'),
     error: text('error'),
+    /** Self-reported LLM confidence 0..1 (penalised by the validator); the autopilot gates on this. */
+    confidence: real('confidence'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

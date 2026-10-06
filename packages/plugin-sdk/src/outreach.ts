@@ -83,6 +83,8 @@ export const emailDraftSchema = z
     factIds: z.array(z.string()).default([]),
     /** Attachments picked up by the actor at send time (e.g. the tailored resume PDF). */
     attachments: z.array(attachmentSchema).max(5).default([]),
+    /** Self-reported LLM confidence 0..1; the autopilot uses this to decide auto-approve vs. escalate. */
+    confidence: z.number().min(0).max(1).nullable().default(null),
     /** Follow-ups reply into the original thread. */
     gmailThreadId: z.string().nullable().default(null),
     inReplyTo: z.string().nullable().default(null),
