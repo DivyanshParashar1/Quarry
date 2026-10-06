@@ -1,0 +1,4 @@
+# Fact bank for grounded tailoring (loaded in Phase 2).
+# See PLAN.md section 7. Every fact becomes a row in `profile_facts`.
+# kinds: project | experience | education | skill | achievement
+facts: []

@@ -1,0 +1,9 @@
+# Candidate preferences (loaded in Phase 2).
+# See PLAN.md section 7.
+roles: []
+locations: []
+remote_policy: []       # e.g. ['remote', 'hybrid']
+stack: []
+salary_floor: null
+exclusions: []
+batch_eligibility: []   # e.g. visa / work-auth filters

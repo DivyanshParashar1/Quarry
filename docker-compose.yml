@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: jobforge-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jobforge
+      POSTGRES_PASSWORD: jobforge
+      POSTGRES_DB: jobforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobforge -d jobforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

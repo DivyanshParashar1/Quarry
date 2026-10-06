@@ -1,0 +1,10 @@
+{
+  "name": "@jobforge/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "echo 'web scaffold — Vite project added in Phase 2'",
+    "build": "echo 'web scaffold — Vite project added in Phase 2'"
+  }
+}

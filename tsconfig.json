@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "."
+  },
+  "include": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/db" },
+    { "path": "./packages/plugin-sdk" },
+    { "path": "./packages/core" },
+    { "path": "./packages/llm" },
+    { "path": "./packages/embeddings" },
+    { "path": "./apps/server" },
+    { "path": "./apps/mcp" },
+    { "path": "./apps/cli" }
+  ]
+}

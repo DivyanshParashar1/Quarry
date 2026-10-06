@@ -1,0 +1,17 @@
+{
+  "name": "@jobforge/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": { "jf": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@jobforge/shared": "workspace:*",
+    "@jobforge/db": "workspace:*"
+  },
+  "devDependencies": { "tsx": "^4.19.2", "typescript": "^5.6.3" }
+}
