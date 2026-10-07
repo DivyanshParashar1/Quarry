@@ -135,3 +135,53 @@ Dependencies: no new third-party packages; `latexmk` (TeX Live) is required at r
 - The redundant `PUT /api/profile/facts/:id` previously living in `routes-outreach.ts` is removed; the MCP server already hits that endpoint via a method that `PATCH` now serves.
 
 Dependencies added (apps/server): `@fastify/multipart ^9`, `pdf-parse ^1.1.1`, `@types/pdf-parse ^1.1.4`. These are server-only and the only sensible path for user-uploaded PDFs; noting the three outside PLAN.md §2.
+
+## [Phase 5.5] — Block-based resume tailor (sub-phase 1: content + deterministic assembler)
+
+Pivot away from fact-grounded resume generation. The LLM no longer authors bullets from `facts.yaml`; instead the user keeps a library of hand-written LaTeX fragments and the tailor only (a) selects which blocks to include per job and (b) rewrites individual bullets when they lack impact for the JD. LaTeX structure is never regenerated.
+
+- `profile/resume/` — new source of truth for resume content:
+  - `preamble.tex` — Jake-template preamble + custom commands, extracted verbatim from `my_resume.tex`.
+  - `blocks/*.tex` — one self-contained fragment per experience, project, education entry, skills group, and extracurricular (nine blocks total).
+  - `manifest.yaml` — declares section wrappers (`\section{...}` + `\resumeSubHeadingListStart` etc. per section), block metadata (section, tags, bullet ids, tech-stack line), budget rules (min/max blocks per section, bullet-count hint).
+- `packages/plugin-sdk/src/tailor.ts` — fully replaced schema:
+  - `resumeManifestSchema` + `BlockMeta`/`BulletMeta`/`SectionWrapper`/`Budget` zod shapes mirror the YAML.
+  - `TailorSelection` carries `included_block_ids` (priority-ordered), `bullet_rewrites`, `tech_stack_rewrites`, `skills_reorder`, `rationale`, `confidence`.
+  - `RewriteValidation` + `GuardrailIssue` replace the fact-grounded validator shape; guardrail compares a rewrite to its original bullet (no fact lookup).
+  - `TailoredResume` now returns the assembled `.tex` string, compiled PDF bytes, page count, selection, report, status, and provider metadata — the plugin owns rendering.
+- `plugins/tailor-resume-latex/` — rewritten end-to-end:
+  - `manifest-loader.ts` — reads `profile/resume/manifest.yaml`, validates every referenced fragment exists, loads them into memory.
+  - `assembler.ts` — groups selected blocks by section, applies rewrites via exact-string replace against each fragment, emits sections in manifest order with per-section wrappers and inter-block separators.
+  - `compile.ts` — `latexmk -pdf -interaction=nonstopmode -halt-on-error` in a temp dir, returns PDF bytes + parsed page count from the log.
+  - `index.ts` — Phase 1 is deterministic: pick every manifest block in declared order, no LLM calls. LLM-driven selection + bullet polish land in sub-phase 2.
+  - `assembler.test.ts` — verifies the deterministic output matches `my_resume.tex` modulo whitespace, that bullet rewrites apply by string replace, and that `applySkillsReorder` preserves dropped items at the tail.
+- `packages/core/src/tailor-runner.ts` — slimmed from 373 to 185 lines; the plugin now assembles + compiles, the runner only persists. The old `escapeLatex`/`fillLatexTemplate` placeholder path is gone. Legacy DB columns (`fact_ids`, `bullets`, `header`) are temporarily reused as metadata carriers (`selectedBlockIds`, `rewrites`) until a sub-phase 2 migration formalises the schema. `templates/resume.tex` is retired.
+- `apps/web/src/components/ResumePanel.tsx` + `apps/web/src/lib/api.ts` — `ResumeVariant` reshaped: shows selected block ids as badges, bullet-rewrite diffs under a disclosure, and the guardrail report; keeps the inline PDF viewer.
+- `apps/cli/src/index.ts` — `jf tailor` prints `<N> blocks · <M> bullet rewrites` instead of the old "bullets kept / dropped" counters.
+- Tests: `tailor-runner.db.test.ts` now uses a stub tailor plugin returning a fixed `TailoredResume`; `autopilot.db.test.ts` pre-inserts a rendered variant in the new shape. 199 tests pass.
+
+Dependencies added (plugins/tailor-resume-latex): `yaml ^2.9.1` (manifest parsing), `tsx ^4` (dev-only).
+
+Next sub-phases: (2) LLM selector picks blocks per JD within budget + shrink-loop verify ≤ 1 page; (3) LLM bullet-rewrite pass with guardrail revert-on-invented-content; (4) DB migration drops legacy `fact_ids`/`bullets`/`header` from `resume_variants` and adds a read-only `/applications` audit page.
+
+## [Phase 5.5] — Block-based resume tailor (sub-phase 2: web editor + LLM selector + skills rewrite)
+
+User-visible shift: the resume is now editable from the dashboard. Each section (experience, projects, …) is a list of hand-written LaTeX blocks the user manages in-app; the LLM only decides which blocks to include for a given job and, as the sole exception, regenerates the "Technical Skills" fragment with new ordering/filtering. No bullet-level rewrites yet — those stay on hold until a later sub-phase.
+
+- **Server** (apps/server):
+  - `resume-files.ts` — safe read/write for `profile/resume/manifest.yaml` + `blocks/*.tex`. Block ids are regex-validated (`^[a-z0-9][a-z0-9._-]{0,63}$`), file paths are confined to `<resumeDir>/blocks/`, every write re-validates the manifest against the plugin-sdk schema before touching disk, and YAML comments are preserved via `parseDocument`.
+  - `routes-resume.ts` — `GET /api/resume` (manifest + fragments), `POST /api/resume/blocks` (create), `PUT /api/resume/blocks/:id` (update), `DELETE /api/resume/blocks/:id` (removes fragment file too), `PUT /api/resume/order/:section` (reorder within a section).
+  - `api.ts` + `index.ts` — register the resume routes and auto-discover `profile/resume/` under the repo root.
+- **Web** (apps/web):
+  - New `/resume` tab (fourth after jobs/review/profile) rendering `ResumeEditor.tsx` — left sidebar lists sections from `manifest.sections_order` with block counts, right pane shows block list + a form for the selected block (id, title, tags, bullet ids, tech-stack line, always-include, raw LaTeX textarea). Create / Save / Delete all go through the REST surface.
+  - `lib/api.ts` gets `ResumeManifest`, `ResumeBlock`, `ResumeData`, etc.
+- **Plugin** (plugins/tailor-resume-latex):
+  - `selector.ts` — LLM pass that returns `included_block_ids` + rationale + confidence. `enforceRules()` clamps the result against the manifest: unknown ids dropped, duplicates removed, `always_include` blocks force-prepended per section, per-section counts clamped to `budget.{experience,project}_blocks.{min,max}`, result ordered by `sections_order` with the header block first. Bad LLM output can't produce an invalid resume.
+  - `skills.ts` — second LLM pass that regenerates only the Technical Skills fragment. Returns raw LaTeX directly (per user ask) but is gated by `validateSkillsLatex`: requires `\begin{itemize}...\end{itemize}` wrapper, only allows commands from a strict allowlist (`begin, end, small, item, textbf, textit, \\`), rejects any forbidden token (`\input`, `\include`, `\write`, `\def`, `\catcode`, `\@`, `\verb`, `\url`, `\href`, …), and refuses any item not present in the original catalogue (so the LLM can never invent a skill). Rejected rewrites fall back to the original fragment and log a warning.
+  - `assembler.ts` grows a `fragmentOverrides` field that replaces a block's fragment wholesale — used to apply the LLM-regenerated skills section while leaving every other block exactly as the user wrote it.
+  - `compile.ts` adds `-no-shell-escape` to the latexmk invocation. LLM-produced LaTeX can no longer invoke `\write18` even if a crafted fragment slipped past the validator.
+  - `index.ts` config: `mode: 'deterministic' | 'llm'` (default `llm` now; deterministic kept for tests), `tailorSkills: boolean` (default true). The provider string on the stored variant becomes `llm+skills` when the skills pass actually took effect.
+- **Tests**: 16 new unit tests covering selector hard rules (header, always_include, budget clamp, unknown-id drop), skills validator (invented-item reject, forbidden-token reject, unknown-command reject, missing-wrapper reject), and resume-files writers (create, update, delete, reorder, id validation, unknown section). 215/216 total pass.
+- **Dependencies**: `yaml` added to `apps/server`. No new third-party packages elsewhere.
+
+Deferred to sub-phase 3+: compile-and-shrink loop for 1-page enforcement; LLM bullet rewrites with the per-bullet guardrail; DB migration retiring the legacy `fact_ids`/`bullets`/`header` columns; `/applications` audit page.
