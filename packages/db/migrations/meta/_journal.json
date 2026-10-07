@@ -50,6 +50,20 @@
       "when": 1791411323561,
       "tag": "0006_curved_mimic",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791413109203,
+      "tag": "0007_glossy_leopardon",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791413767948,
+      "tag": "0008_brave_beyonder",
+      "breakpoints": true
     }
   ]
 }

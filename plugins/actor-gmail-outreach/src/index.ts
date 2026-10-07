@@ -8,9 +8,10 @@ import {
   type EmailDraft,
   type EmailSendResult,
   type OutreachActionInput,
+  type PluginContext,
 } from '@jobforge/plugin-sdk';
 import { buildMime, messageIdFor, toBase64Url, type MimeAttachment } from './mime.js';
-import { outreachPrompt, outreachSchema, SYSTEM_PROMPT } from './prompt.js';
+import { outreachPrompt, outreachSchema, referralPrompt, referralSchema, REFERRAL_SYSTEM_PROMPT, SYSTEM_PROMPT } from './prompt.js';
 
 export * from './mime.js';
 export * from './prompt.js';
@@ -23,13 +24,15 @@ export const configSchema = z
     signature: z.string().default(''),
     maxWords: z.number().int().min(40).max(400).default(150),
     followupMaxWords: z.number().int().min(20).max(200).default(70),
+    /** Referral asks are deliberately short. */
+    referralMaxWords: z.number().int().min(30).max(200).default(90),
   })
   .strict();
 export type OutreachConfig = z.infer<typeof configSchema>;
 
 export const PLUGIN_ID = 'actor-gmail-outreach';
 
-export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft, EmailSendResult>({
+const outreachActor = defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft, EmailSendResult>({
   manifest: {
     id: PLUGIN_ID,
     version: '0.1.0',
@@ -42,6 +45,7 @@ export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft
 
   // No side effects: an LLM call and validation only.
   async prepare(ctx, input) {
+    if (input.kind === 'referral_ask') return prepareReferral(ctx, input);
     const followup = input.kind === 'followup';
     const maxWords = followup ? ctx.config.followupMaxWords : ctx.config.maxWords;
     const res = await ctx.llm!.generate({
@@ -111,6 +115,41 @@ export default defineActorPlugin<OutreachConfig, OutreachActionInput, EmailDraft
     return { dryRun: false, messageId, gmailId: sent.id, gmailThreadId: sent.threadId, sentAt: sentAt.toISOString(), deduplicated: false };
   },
 });
+
+export default outreachActor;
+
+async function prepareReferral(
+  ctx: PluginContext<OutreachConfig>,
+  input: OutreachActionInput,
+): Promise<EmailDraft> {
+  const maxWords = ctx.config.referralMaxWords;
+  const bullets = input.resumeBullets ?? [];
+  const res = await ctx.llm!.generate({
+    task: 'outreach',
+    system: REFERRAL_SYSTEM_PROMPT,
+    prompt: referralPrompt(input, maxWords),
+    schema: referralSchema(maxWords, bullets.map((b) => b.id)),
+    maxTokens: 800,
+    signal: ctx.signal,
+  });
+  let body = res.data.body;
+  // The posting link is the point of the ask; make sure it survived the LLM.
+  const url = input.job?.applyUrl;
+  if (url && !body.includes(url)) body = `${body}\n\nRole: ${url}`;
+  const sig = ctx.config.signature.trim();
+  const bulletId = bullets.some((b) => b.id === res.data.bullet_id) ? res.data.bullet_id : null;
+  return emailDraftSchema.parse({
+    to: input.contact.email,
+    toName: input.contact.name,
+    subject: res.data.subject,
+    body: sig ? `${body}\n\n${sig}` : body,
+    // A bullet that came from a profile fact keeps the grounding trail.
+    factIds: bulletId && input.profile.facts.some((f) => f.id === bulletId) ? [bulletId] : [],
+    attachments: input.attachments ?? [],
+    confidence: res.data.confidence,
+    resumeBulletId: bulletId,
+  });
+}
 
 function reSubject(s: string): string {
   return /^re:/i.test(s.trim()) ? s.trim() : `Re: ${s.trim()}`;

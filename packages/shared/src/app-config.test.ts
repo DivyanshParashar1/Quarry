@@ -7,7 +7,17 @@ describe('config.yaml', () => {
     expect(loadAppConfig('/nonexistent/config.yaml')).toEqual({
       llm: { tasks: {} },
       embeddings: { model: 'Xenova/bge-small-en-v1.5' },
-      outreach: { dailyCap: 20, perCompanyPerWeek: 2, spacingMinutes: [4, 11], followupDays: [5, 7], maxFollowups: 2 },
+      outreach: {
+        dailyCap: null,
+        perCompanyPerWeek: null,
+        senderDailyLimit: 400,
+        perJobReferralCap: 10,
+        perContactCooldownDays: 30,
+        referralMinEmailConfidence: 0.3,
+        spacingMinutes: [4, 11],
+        followupDays: [5, 7],
+        maxFollowups: 2,
+      },
       resume: { name: '', contact: '', headline: '' },
       autopilot: {
         enabled: false,
@@ -16,6 +26,14 @@ describe('config.yaml', () => {
         minEmailConfidence: 0.6,
         maxAutoApprovesPerDay: 10,
         candidateBatch: 20,
+      },
+      linkedin: {
+        dailyConnectionCap: 25,
+        searchIntervalSeconds: 60,
+        actionGapSeconds: [45, 120],
+        cooldownMinutes: 60,
+        searchKeywords: ['software engineer', 'SDE', 'developer'],
+        profilesPerCompany: 15,
       },
       discovery: { minConfidence: 0.5, lists: {}, alertThreshold: 40, recheckDays: 30, nightly: false },
       plugins: {},

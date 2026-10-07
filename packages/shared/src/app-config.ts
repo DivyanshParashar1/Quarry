@@ -39,13 +39,26 @@ export const appConfigSchema = z
       })
       .strict()
       .default({}),
-    /** Outreach safety policy. Defaults follow PLAN.md §9; raise caps deliberately. */
+    /**
+     * Outreach policy. PLAN-phases-6-13 (user-approved): no global daily cap and
+     * no per-company weekly cap by default; the product throttles are the
+     * per-contact cooldown and the per-job referral cap, plus the sender's own
+     * technical limit. Setting dailyCap / perCompanyPerWeek re-enables those caps.
+     */
     outreach: z
       .object({
-        /** Max real emails per rolling 24h (first emails + follow-ups). */
-        dailyCap: z.number().int().min(0).max(200).default(20),
-        /** Max distinct people emailed at one company per rolling 7 days, unless a review item overrides it. */
-        perCompanyPerWeek: z.number().int().min(1).default(2),
+        /** Optional product cap on real emails per rolling 24h. null = no cap. */
+        dailyCap: z.number().int().min(0).nullable().default(null),
+        /** Optional cap on distinct people emailed at one company per 7 days. null = no cap. */
+        perCompanyPerWeek: z.number().int().min(1).nullable().default(null),
+        /** Technical sender limit (Gmail allows ~500/day on consumer accounts); not a product cap. */
+        senderDailyLimit: z.number().int().min(1).default(400),
+        /** Default number of referral asks per job (a batch can override it). */
+        perJobReferralCap: z.number().int().min(1).max(100).default(10),
+        /** A person is never asked twice within this many days, across all jobs and channels. */
+        perContactCooldownDays: z.number().int().min(0).default(30),
+        /** Below this email confidence a contact is asked on LinkedIn instead (if they have a profile). */
+        referralMinEmailConfidence: z.number().min(0).max(1).default(0.3),
         /** Random gap between two real sends, in minutes [min, max]. */
         spacingMinutes: z
           .tuple([z.number().min(0), z.number().min(0)])
@@ -88,6 +101,27 @@ export const appConfigSchema = z
         maxAutoApprovesPerDay: z.number().int().min(0).max(100).default(10),
         /** How many top-ranked candidates to walk per run. */
         candidateBatch: z.number().int().min(1).max(100).default(20),
+      })
+      .strict()
+      .default({}),
+    /** LinkedIn (Phase 8/9). Also gated by LINKEDIN_ENABLED=true and a live run. */
+    linkedin: z
+      .object({
+        /** Technical safeguard for a new account (LinkedIn's soft limit); not a product cap. */
+        dailyConnectionCap: z.number().int().min(1).max(100).default(25),
+        /** Minimum gap between two people searches. */
+        searchIntervalSeconds: z.number().int().min(10).default(60),
+        /** Random pause between actions, seconds [min, max]. */
+        actionGapSeconds: z
+          .tuple([z.number().min(0), z.number().min(0)])
+          .default([45, 120])
+          .refine(([a, b]) => a <= b, 'min must be <= max'),
+        /** First cool-down after a warning/captcha page; doubles on each repeat. */
+        cooldownMinutes: z.number().int().min(1).default(60),
+        /** People-search title keywords for referral candidates. */
+        searchKeywords: z.array(z.string()).default(['software engineer', 'SDE', 'developer']),
+        /** Profiles to collect per company per run. */
+        profilesPerCompany: z.number().int().min(1).max(50).default(15),
       })
       .strict()
       .default({}),

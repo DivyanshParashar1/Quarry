@@ -17,6 +17,7 @@ import {
 } from '@jobforge/plugin-sdk';
 import { createScopedHttp } from './http.js';
 import { scopeGmail } from './capabilities.js';
+import { scopeBrowser, type RawBrowser } from './browser.js';
 import type { Clock, DomainRateLimiter } from './rate-limiter.js';
 
 export interface LoadedPlugin<P extends AnyPlugin = AnyPlugin> {
@@ -133,6 +134,8 @@ export interface ContextDeps {
   dns?: DnsResolver;
   /** Full client; narrowed to the manifest's gmail scopes before a plugin sees it. */
   gmail?: GmailHandle;
+  /** Unscoped browser; plugins declaring permissions.browser get a domain-scoped view. */
+  browser?: RawBrowser;
   /** Receives ctx.emit() calls; the runner persists them as events. */
   onEvent?: (kind: string, data: Record<string, unknown>) => void;
 }
@@ -145,9 +148,12 @@ export function buildContext<C>(loaded: LoadedPlugin, deps: ContextDeps): Plugin
   const wantsDns = loaded.manifest.permissions.dns === true;
   if (wantsDns && !deps.dns) throw new PluginError(`${loaded.manifest.id} needs DNS but no resolver was provided`);
   const gmail = scopeGmail(deps.gmail, loaded.manifest);
+  const wantsBrowser = loaded.manifest.permissions.browser === true;
+  if (wantsBrowser && !deps.browser) throw new PluginError(`${loaded.manifest.id} needs a browser but none was provided`);
   return {
     ...(wantsDns && deps.dns ? { dns: deps.dns } : {}),
     ...(gmail ? { gmail } : {}),
+    ...(wantsBrowser && deps.browser ? { browser: scopeBrowser(deps.browser, loaded.manifest, deps.limiter, log, deps.signal) } : {}),
     ...(wantsLlm && deps.llm ? { llm: deps.llm } : {}),
     ...(deps.embed ? { embed: deps.embed } : {}),
     config: loaded.config as C,

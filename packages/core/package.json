@@ -20,15 +20,16 @@
     "@jobforge/shared": "workspace:*",
     "pg-boss": "^12.36.0",
     "pino": "^9.14.0",
+    "playwright": "^1.63.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/enricher-contacts-pattern": "workspace:*",
     "@jobforge/llm": "workspace:*",
+    "@jobforge/source-gmail-alerts": "workspace:*",
     "@jobforge/tailor-resume-latex": "workspace:*",
     "@jobforge/tracker-gmail": "workspace:*",
-    "typescript": "^5.6.3",
-    "@jobforge/source-gmail-alerts": "workspace:*"
+    "typescript": "^5.6.3"
   }
 }

@@ -28,11 +28,8 @@ export interface ScopedHttp {
   getText(url: string, init?: HttpRequestInit): Promise<string>;
 }
 
-// Placeholders for capabilities that land in later phases. Kept as opaque
-// interfaces so the context shape is stable now.
-export interface BrowserHandle {
-  readonly kind: 'browser';
-}
+import type { BrowserHandle } from './browser.js';
+export type { BrowserHandle } from './browser.js';
 
 export interface PluginContext<C> {
   config: C;

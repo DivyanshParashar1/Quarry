@@ -210,3 +210,127 @@ export function parseRfc822(text: string): { headers: Record<string, string>; bo
   }
   return { headers, body };
 }
+
+// ---------------------------------------------------------------------------
+// Scripted fake browser for browser-plugin tests (LinkedIn, ATS apply)
+// ---------------------------------------------------------------------------
+
+export interface FakeBrowserAction {
+  type: 'goto' | 'click' | 'fill' | 'type' | 'upload' | 'select' | 'check' | 'screenshot' | 'mouse';
+  url: string;
+  selector?: string;
+  value?: string | string[];
+}
+
+export interface FakeBrowserOptions {
+  /**
+   * HTML per URL. A key ending in `*` matches any URL with that prefix
+   * (longest prefix wins). Values may be functions of the visit count.
+   */
+  pages: Record<string, string | ((visit: number) => string)>;
+  /** Called on click; return a URL to navigate to, or HTML to replace the current page with. */
+  onClick?: (selector: string, page: { url: string; html: string }) => { goto?: string; html?: string } | void;
+  /** Selectors that are never visible even if their key appears in the HTML. */
+  hidden?: string[];
+}
+
+/** The text a selector looks for, for the fake's substring visibility check. */
+export function selectorKey(selector: string): string {
+  const s = selector.trim();
+  let m = s.match(/^text=["']?(.+?)["']?$/);
+  if (m) return m[1]!;
+  m = s.match(/:has-text\(["'](.+?)["']\)/);
+  if (m) return m[1]!;
+  m = s.match(/\[([a-z-]+)\s*[*^$]?=\s*["']([^"']+)["']\]/i);
+  if (m) return `${m[1]}="${m[2]}`;
+  m = s.match(/^#([\w-]+)/);
+  if (m) return `id="${m[1]}"`;
+  return s;
+}
+
+export function fakeBrowser(opts: FakeBrowserOptions) {
+  const actions: FakeBrowserAction[] = [];
+  const visits = new Map<string, number>();
+  const resolve = (url: string): string => {
+    let html: string | ((n: number) => string) | undefined = opts.pages[url];
+    if (html === undefined) {
+      const prefix = Object.keys(opts.pages)
+        .filter((k) => k.endsWith('*') && url.startsWith(k.slice(0, -1)))
+        .sort((a, b) => b.length - a.length)[0];
+      if (prefix) html = opts.pages[prefix];
+    }
+    if (html === undefined) throw new Error(`fakeBrowser: no page for ${url}`);
+    const n = (visits.get(url) ?? 0) + 1;
+    visits.set(url, n);
+    return typeof html === 'function' ? html(n) : html;
+  };
+
+  const newPage = async () => {
+    const state = { url: 'about:blank', html: '' };
+    const visible = (sel: string) => !opts.hidden?.includes(sel) && state.html.includes(selectorKey(sel));
+    const need = (sel: string) => {
+      if (!visible(sel)) throw new Error(`fakeBrowser: selector not found: ${sel} on ${state.url}`);
+    };
+    const page = {
+      async goto(url: string) {
+        actions.push({ type: 'goto', url });
+        state.html = resolve(url);
+        state.url = url;
+        return null;
+      },
+      url: () => state.url,
+      content: async () => state.html,
+      title: async () => state.html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? '',
+      async click(selector: string) {
+        need(selector);
+        actions.push({ type: 'click', url: state.url, selector });
+        const r = opts.onClick?.(selector, { ...state });
+        if (r?.goto) await page.goto(r.goto);
+        else if (r?.html !== undefined) state.html = r.html;
+      },
+      async fill(selector: string, value: string) {
+        need(selector);
+        actions.push({ type: 'fill', url: state.url, selector, value });
+      },
+      async pressSequentially(selector: string, value: string) {
+        need(selector);
+        actions.push({ type: 'type', url: state.url, selector, value });
+      },
+      async setInputFiles(selector: string, files: string | string[]) {
+        need(selector);
+        actions.push({ type: 'upload', url: state.url, selector, value: files });
+      },
+      async selectOption(selector: string, values: string | string[]) {
+        need(selector);
+        actions.push({ type: 'select', url: state.url, selector, value: values });
+        return Array.isArray(values) ? values : [values];
+      },
+      async check(selector: string) {
+        need(selector);
+        actions.push({ type: 'check', url: state.url, selector });
+      },
+      isVisible: async (selector: string) => visible(selector),
+      async waitForSelector(selector: string, o: { state?: string } = {}) {
+        const want = o.state === 'hidden' || o.state === 'detached' ? false : true;
+        if (visible(selector) !== want) throw new Error(`fakeBrowser: timeout waiting for ${selector} (${o.state ?? 'visible'})`);
+        return null;
+      },
+      waitForTimeout: async () => {},
+      async screenshot(o: { path?: string } = {}) {
+        actions.push({ type: 'screenshot', url: state.url, ...(o.path ? { value: o.path } : {}) });
+        const buf = Buffer.from(`fake screenshot of ${state.url}`);
+        if (o.path) await (await import('node:fs/promises')).writeFile(o.path, buf);
+        return buf;
+      },
+      mouse: {
+        move: async () => {
+          actions.push({ type: 'mouse', url: state.url });
+        },
+        wheel: async () => {},
+      },
+      close: async () => {},
+    };
+    return page;
+  };
+  return { kind: 'browser' as const, newPage, actions };
+}

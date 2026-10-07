@@ -19,6 +19,7 @@ export interface NewReviewItem {
   contactId: string | null;
   companyId: string | null;
   threadId?: string | null;
+  batchId?: string | null;
   draft: Record<string, unknown>;
   notBefore?: Date | null;
 }
@@ -26,7 +27,7 @@ export interface NewReviewItem {
 export async function createReviewItem(db: DB, r: NewReviewItem): Promise<ReviewItemRow> {
   const [row] = await db
     .insert(reviewItems)
-    .values({ ...r, threadId: r.threadId ?? null, notBefore: r.notBefore ?? null, originalDraft: r.draft })
+    .values({ ...r, threadId: r.threadId ?? null, batchId: r.batchId ?? null, notBefore: r.notBefore ?? null, originalDraft: r.draft })
     .returning();
   return row!;
 }
@@ -115,12 +116,18 @@ export async function transitionReviewItem(
   return r ?? null;
 }
 
-/** Approved items whose not_before has passed, oldest decision first. */
-export async function approvedDueItems(db: DB, now: Date, limit = 50): Promise<ReviewItemRow[]> {
+/** Approved items whose not_before has passed, oldest decision first (optionally one actor's). */
+export async function approvedDueItems(db: DB, now: Date, limit = 50, pluginId?: string): Promise<ReviewItemRow[]> {
   return db
     .select()
     .from(reviewItems)
-    .where(and(eq(reviewItems.status, 'approved'), or(isNull(reviewItems.notBefore), lte(reviewItems.notBefore, now))))
+    .where(
+      and(
+        eq(reviewItems.status, 'approved'),
+        or(isNull(reviewItems.notBefore), lte(reviewItems.notBefore, now)),
+        pluginId ? eq(reviewItems.pluginId, pluginId) : undefined,
+      ),
+    )
     .orderBy(asc(reviewItems.decidedAt), asc(reviewItems.createdAt))
     .limit(limit);
 }
@@ -219,7 +226,7 @@ export async function contactsEmailedAtCompanySince(db: DB, companyId: string, s
     .where(
       and(
         eq(reviewItems.companyId, companyId),
-        eq(reviewItems.kind, 'outreach'),
+        inArray(reviewItems.kind, ['outreach', 'referral_ask']),
         eq(actions.status, 'succeeded'),
         eq(actions.dryRun, false),
         sql`${actions.executedAt} >= ${since.toISOString()}::timestamptz`,
@@ -244,6 +251,7 @@ export async function createThread(
     messageId: string;
     sentAt: Date;
     nextFollowupAt: Date | null;
+    channel?: 'email' | 'linkedin';
   },
 ): Promise<ThreadRow> {
   const [row] = await db
@@ -259,6 +267,7 @@ export async function createThread(
       sentAt: t.sentAt,
       lastSentAt: t.sentAt,
       nextFollowupAt: t.nextFollowupAt,
+      channel: t.channel ?? 'email',
     })
     .onConflictDoUpdate({ target: outreachThreads.gmailThreadId, set: { updatedAt: new Date() } })
     .returning();

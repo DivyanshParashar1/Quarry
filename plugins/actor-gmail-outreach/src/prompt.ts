@@ -73,3 +73,57 @@ export function outreachPrompt(input: OutreachActionInput, maxWords: number, des
   }
   return lines.filter((l) => l !== undefined).join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// Phase 8: referral asks
+// ---------------------------------------------------------------------------
+
+export const REFERRAL_SYSTEM_PROMPT = `You write a very short email from a job candidate to an employee at a company, asking whether they would refer the candidate for one specific open role.
+
+Rules:
+- Ask for a referral for exactly the role given, and include the posting URL exactly as provided.
+- Cite exactly ONE of the provided resume bullets: the one most relevant to the recipient's team or role. Paraphrase it faithfully; never add numbers, technologies or claims that aren't in that bullet. Return its id as bullet_id.
+- Make it easy to say yes: offer to send the resume and a two-line blurb they can forward.
+- Plain text, warm but brief. No flattery, no markdown, no emojis, no "hope you're well".
+- Greeting "Hi <first name>," only; no signature (it is appended automatically).
+- Never use placeholders such as [Name] or {{company}}.
+
+Also return a self-reported "confidence" 0..1 that this email is ready to send as-is. Be honest.`;
+
+export function referralSchema(maxWords: number, bulletIds: string[]) {
+  const ids = new Set(bulletIds);
+  return z.object({
+    subject: z.string().trim().min(3).max(90),
+    body: z
+      .string()
+      .trim()
+      .min(30)
+      .refine((b) => !PLACEHOLDER_RE.test(b), 'contains a placeholder like [Name]; write the real text')
+      .refine((b) => wordCount(b) <= Math.ceil(maxWords * 1.25), `longer than ${maxWords} words`),
+    bullet_id: z
+      .string()
+      .refine((id) => !ids.size || ids.has(id), 'bullet_id must be one of the provided bullet ids')
+      .describe('id of the single resume bullet the email cites'),
+    confidence: z.number().min(0).max(1),
+  });
+}
+
+export function referralPrompt(input: OutreachActionInput, maxWords: number, descriptionChars = 1200): string {
+  const { job, company, contact } = input;
+  const bullets = (input.resumeBullets ?? []).map((b) => `- [${b.id}] ${b.text}`).join('\n') || '- (none)';
+  const recipient = [contact.name, contact.role, contact.department ? `team: ${contact.department}` : null].filter(Boolean).join(', ');
+  return [
+    '# Recipient',
+    `${recipient} at ${company.name}${contact.roleHint ? ` (${contact.roleHint})` : ''}`,
+    '',
+    '# Role to be referred for',
+    job ? `${job.title}${job.locations.length ? ` — ${job.locations.join('; ')}` : ''}` : '(unknown role)',
+    job?.applyUrl ? `Posting URL: ${job.applyUrl}` : '',
+    (job?.descriptionMd ?? '').slice(0, descriptionChars),
+    '',
+    '# Resume bullets (cite exactly one)',
+    bullets,
+    '',
+    `Write the referral ask. At most ${maxWords} words. Subject under 7 words, naming the role.`,
+  ].join('\n');
+}

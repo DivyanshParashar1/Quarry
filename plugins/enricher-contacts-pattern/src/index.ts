@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { defineEnricherPlugin, type CompanyEnrichment } from '@jobforge/plugin-sdk';
-import { applyPattern, choosePattern, normalizeDomain, type PatternEvidence } from './patterns.js';
+import { applyPattern, choosePattern, normalizeDomain, rankPatterns, type PatternEvidence } from './patterns.js';
 
 export * from './patterns.js';
 
@@ -8,6 +8,8 @@ export const configSchema = z
   .object({
     /** Force a pattern per company domain when you already know it, e.g. { "acme.com": "{first}" }. */
     knownPatterns: z.record(z.string(), z.string().regex(/\{(first|last|f|l)\}/)).default({}),
+    /** Ranked alternative addresses kept per contact (the chosen one included). */
+    candidatesPerContact: z.number().int().min(1).max(10).default(3),
   })
   .strict();
 export type PatternEnricherConfig = z.infer<typeof configSchema>;
@@ -54,6 +56,8 @@ export default defineEnricherPlugin<PatternEnricherConfig, CompanyEnrichment>({
     const choice = choosePattern(evidence, ctx.config.knownPatterns[domain]);
     out.pattern = choice.pattern;
     out.patternConfidence = choice.confidence;
+    const ranked = rankPatterns(evidence, ctx.config.knownPatterns[domain], ctx.config.candidatesPerContact);
+    out.patternCandidates = ranked;
     notes.push(
       choice.basis === 'known_addresses'
         ? `Pattern ${choice.pattern} inferred from ${choice.samples} known address(es).`
@@ -70,7 +74,18 @@ export default defineEnricherPlugin<PatternEnricherConfig, CompanyEnrichment>({
         notes.push(`Can't apply ${choice.pattern} to "${c.name}" (needs a last name).`);
         continue;
       }
-      out.contacts.push({ contactId: c.id, email: `${local}@${domain}`, confidence: choice.confidence, source: `pattern:${choice.pattern}` });
+      const candidates = ranked
+        .map((r) => ({ local: applyPattern(r.pattern, c.name), ...r }))
+        .filter((r): r is typeof r & { local: string } => !!r.local)
+        .map((r) => ({ email: `${r.local}@${domain}`, confidence: r.confidence, pattern: r.pattern }))
+        .filter((r, i, all) => all.findIndex((x) => x.email === r.email) === i);
+      out.contacts.push({
+        contactId: c.id,
+        email: `${local}@${domain}`,
+        confidence: choice.confidence,
+        source: `pattern:${choice.pattern}`,
+        candidates,
+      });
     }
     ctx.log.debug({ domain, pattern: choice.pattern, contacts: out.contacts.length }, 'contacts enriched');
     return out;

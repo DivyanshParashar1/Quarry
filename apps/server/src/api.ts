@@ -74,6 +74,8 @@ const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
   invalid_state: 409,
   duplicate: 409,
   company_cap: 409,
+  cooldown: 409,
+  job_cap: 409,
   no_email: 422,
   contact_inactive: 422,
   no_profile: 422,

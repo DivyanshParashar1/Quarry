@@ -26,6 +26,24 @@ const EnvSchema = z.object({
   GMAIL_REDIRECT_URI: z.string().url().default('http://127.0.0.1:53682/oauth2callback'),
   /** Written by `jf gmail auth`. Never logged. */
   GMAIL_REFRESH_TOKEN: z.string().optional(),
+
+  /**
+   * Phase 8/9: LinkedIn automation runs only when this is true AND the run is
+   * live (--live or MODE=live). Use a dedicated account (PLAN-phases-6-13).
+   */
+  LINKEDIN_ENABLED: z
+    .enum(['true', 'false', '1', '0', ''])
+    .default('false')
+    .transform((v) => v === 'true' || v === '1'),
+  /** Where the encrypted LinkedIn session lives (default data/linkedin/state.enc). */
+  LINKEDIN_STATE_PATH: z.string().optional(),
+  /** Key for the session file when no OS keychain is available (32+ chars). Never logged. */
+  JOBFORGE_SESSION_KEY: z.string().min(32).optional(),
+  /** Show the browser (debugging / first login). */
+  BROWSER_HEADLESS: z
+    .enum(['true', 'false', '1', '0', ''])
+    .default('true')
+    .transform((v) => !(v === 'false' || v === '0')),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

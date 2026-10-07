@@ -6,6 +6,7 @@ import {
   getCompany,
   listContacts,
   setCompanyEmailInfo,
+  setContactHints,
   setInferredEmail,
   startPluginRun,
   type CompanyRow,
@@ -23,6 +24,9 @@ export function toContactRef(c: ContactRow): ContactRef {
     emailConfidence: c.emailConfidence,
     emailSource: c.emailSource,
     status: c.status,
+    roleHint: c.roleHint,
+    department: c.department,
+    linkedinUrl: c.linkedinUrl,
   };
 }
 
@@ -35,6 +39,8 @@ export function toCompanyRef(c: CompanyRow, contacts: ContactRow[]): Company {
     emailDomain: c.emailDomain,
     emailPattern: c.emailPattern,
     contacts: contacts.map(toContactRef),
+    linkedinId: c.linkedinId,
+    linkedinSlug: c.linkedinSlug,
   };
 }
 
@@ -104,6 +110,7 @@ export async function enrichContacts(
       for (const c of e.contacts) {
         if (!known.has(c.contactId)) continue; // plugins may only touch this company's contacts
         if (await setInferredEmail(deps.db, c.contactId, { email: c.email, confidence: c.confidence, source: c.source })) summary.emailsSet++;
+        if (c.candidates?.length) await setContactHints(deps.db, c.contactId, { emailCandidates: c.candidates });
       }
       await finishPluginRun(deps.db, runId, { status: 'succeeded', itemsIn: company.contacts.length, itemsOut: summary.emailsSet, meta: { pattern: e.pattern } });
       await appendEvent(deps.db, { kind: 'contacts.enriched', subjectType: 'company', subjectId: companyId, payload: { runId, pattern: e.pattern, emailsSet: summary.emailsSet } });

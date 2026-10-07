@@ -13,6 +13,25 @@ export interface Company {
   emailDomain: string | null;
   emailPattern: string | null;
   contacts: ContactRef[];
+  /** Phase 8: LinkedIn company identity, once known. */
+  linkedinId?: string | null;
+  linkedinSlug?: string | null;
+}
+
+/** What the LinkedIn employee enricher returns for one company. */
+export interface EmployeeEnrichment {
+  linkedinId: string | null;
+  linkedinSlug: string | null;
+  profiles: {
+    name: string;
+    headline: string | null;
+    location: string | null;
+    profileUrl: string;
+    roleHint: string;
+    seniorityHint: string;
+    department: string | null;
+  }[];
+  notes: string[];
 }
 
 export interface ContactRef {
@@ -25,6 +44,10 @@ export interface ContactRef {
   /** manual | pattern:<pattern> | provider:<id> */
   emailSource: string | null;
   status: 'active' | 'bounced' | 'do_not_contact';
+  /** Phase 8 targeting hints (engineer / manager / recruiter …), when known. */
+  roleHint?: string | null;
+  department?: string | null;
+  linkedinUrl?: string | null;
 }
 
 /** What a contacts enricher returns for one company. The core decides what to persist. */
@@ -34,21 +57,39 @@ export interface CompanyEnrichment {
   /** e.g. "{first}.{last}" */
   pattern: string | null;
   patternConfidence: number | null;
-  contacts: { contactId: string; email: string | null; confidence: number; source: string }[];
+  contacts: {
+    contactId: string;
+    email: string | null;
+    confidence: number;
+    source: string;
+    /** Phase 8: ranked alternatives (best first, the chosen one included), for when the first bounces. */
+    candidates?: { email: string; confidence: number; pattern: string }[];
+  }[];
+  /** Phase 8: every plausible pattern for the domain, best first. */
+  patternCandidates?: { pattern: string; confidence: number }[];
   notes: string[];
 }
 
 export type Enrichment = CompanyEnrichment | Record<string, unknown>;
 
+/** A plain-text resume bullet the actor may quote (from the job's tailored resume, or a profile fact). */
+export interface ResumeBullet {
+  id: string;
+  text: string;
+}
+
 /** Input to an outreach actor's prepare(). Built by the core; no side effects allowed. */
 export interface OutreachActionInput {
-  kind: 'outreach' | 'followup';
+  /** referral_ask (Phase 8): a short, job-specific referral request to one person. */
+  kind: 'outreach' | 'followup' | 'referral_ask';
   job: Job | null;
   company: Company;
   contact: ContactRef & { email: string };
   profile: Profile;
   /** Pre-resolved attachments the core wants on the outbound email (e.g. tailored resume). */
   attachments?: EmailAttachment[];
+  /** referral_ask: bullets to pick the single most relevant one from. */
+  resumeBullets?: ResumeBullet[];
   /** For follow-ups: the thread so far. */
   previous?: {
     subject: string;
@@ -85,6 +126,8 @@ export const emailDraftSchema = z
     attachments: z.array(attachmentSchema).max(5).default([]),
     /** Self-reported LLM confidence 0..1; the autopilot uses this to decide auto-approve vs. escalate. */
     confidence: z.number().min(0).max(1).nullable().default(null),
+    /** referral_ask: the resume bullet the email cites. */
+    resumeBulletId: z.string().nullable().default(null),
     /** Follow-ups reply into the original thread. */
     gmailThreadId: z.string().nullable().default(null),
     inReplyTo: z.string().nullable().default(null),
@@ -124,4 +167,37 @@ export interface GmailTrackEvent {
   kind: TrackEventKind;
   at: Date;
   data: { gmailThreadId: string; gmailMessageId: string; from: string; subject: string; snippet: string };
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8/9: LinkedIn referral asks (connection request with a note)
+// ---------------------------------------------------------------------------
+
+/** LinkedIn caps connection notes at 300 characters. */
+export const LINKEDIN_NOTE_MAX = 300;
+
+export const linkedinNoteDraftSchema = z
+  .object({
+    channel: z.literal('linkedin'),
+    profileUrl: z.string().url().refine((u) => /^https:\/\/(www\.)?linkedin\.com\/in\//.test(u), 'must be a linkedin.com/in/ profile URL'),
+    toName: z.string().min(1),
+    note: z.string().trim().min(20).max(LINKEDIN_NOTE_MAX),
+    /** The job the ask is about (for the reviewer). */
+    jobUrl: z.string().url().nullable().default(null),
+    resumeBulletId: z.string().nullable().default(null),
+    confidence: z.number().min(0).max(1).nullable().default(null),
+  })
+  .strict();
+export type LinkedInNoteDraft = z.infer<typeof linkedinNoteDraftSchema>;
+
+export const linkedinNoteDraftPatchSchema = z.object({ note: z.string().trim().min(20).max(LINKEDIN_NOTE_MAX).optional() }).strict();
+
+export interface LinkedInSendResult {
+  [key: string]: unknown;
+  dryRun: boolean;
+  /** sent | already_connected | already_pending */
+  outcome: 'sent' | 'already_connected' | 'already_pending' | 'dry_run';
+  profileUrl: string;
+  sentAt: string;
+  screenshots: string[];
 }

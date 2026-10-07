@@ -96,6 +96,26 @@ export function choosePattern(evidence: PatternEvidence[], configured?: string):
   return { pattern: prior.pattern, confidence: round(Math.min(0.4, prior.prior)), basis: 'prior', samples: 0 };
 }
 
+/**
+ * Every plausible pattern for a domain, best first: the chosen one with its
+ * confidence, then the remaining (non-excluded) patterns with confidence
+ * scaled from their priors into what the top choice leaves over.
+ */
+export function rankPatterns(evidence: PatternEvidence[], configured?: string, n = 3): { pattern: string; confidence: number }[] {
+  const top = choosePattern(evidence, configured);
+  const excluded = new Set<string>();
+  for (const e of evidence) if (!e.delivered) for (const m of patternsMatching(e.email.split('@')[0] ?? '', e.name)) excluded.add(m);
+  const rest = PATTERNS.filter((p) => p.pattern !== top.pattern && !excluded.has(p.pattern));
+  const restMass = rest.reduce((a, p) => a + p.prior, 0) || 1;
+  const leftover = Math.max(0, 1 - top.confidence);
+  const out = [{ pattern: top.pattern, confidence: top.confidence }];
+  for (const p of rest) {
+    if (out.length >= n) break;
+    out.push({ pattern: p.pattern, confidence: round(Math.min(top.confidence, leftover * (p.prior / restMass))) });
+  }
+  return out;
+}
+
 export function normalizeDomain(d: string | null | undefined): string | null {
   if (!d) return null;
   const host = d

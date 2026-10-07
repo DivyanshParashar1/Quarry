@@ -129,6 +129,47 @@ describe('actor-gmail-outreach', () => {
     expect(provider.calls[0]!.prompt).toContain('follow-up #1');
   });
 
+  it('drafts a short referral ask citing one bullet and keeping the posting URL', async () => {
+    const { provider, llm } = llmWith([
+      { subject: 'Referral for Backend Engineer?', body: 'Hi Jane,\n\nWould you refer me for the Backend Engineer role? I built a Go ledger service handling 2M transactions a day. Happy to send my resume and a two-line blurb.', bullet_id: 'b2', confidence: 0.86 },
+    ]);
+    const job = { ...input().job!, applyUrl: 'https://boards.greenhouse.io/acme/jobs/1' };
+    const draft = await plugin.prepare(
+      testContext(cfg, undefined, { llm }),
+      input({
+        kind: 'referral_ask',
+        job,
+        contact: { ...input().contact, roleHint: 'engineer', department: 'Payments' },
+        resumeBullets: [
+          { id: 'b1', text: 'Built a React dashboard' },
+          { id: 'b2', text: 'Built a Go ledger service handling 2M tx/day' },
+        ],
+      }),
+    );
+    expect(draft.resumeBulletId).toBe('b2');
+    expect(draft.body).toContain('Role: https://boards.greenhouse.io/acme/jobs/1'); // appended when the LLM dropped it
+    expect(draft.body.endsWith('Asha\nlinkedin.com/in/asha')).toBe(true);
+    expect(draft.confidence).toBe(0.86);
+    const prompt = provider.calls[0]!.prompt;
+    expect(prompt).toContain('Posting URL: https://boards.greenhouse.io/acme/jobs/1');
+    expect(prompt).toContain('team: Payments');
+    expect(prompt).toContain('[b2] Built a Go ledger service');
+  });
+
+  it('repairs a referral ask that cites an unknown bullet', async () => {
+    const { provider, llm } = llmWith([
+      { subject: 'Referral?', body: 'Hi Jane, would you refer me for the role at https://x.com/1 ? I have relevant backend work to share.', bullet_id: 'nope', confidence: 0.9 },
+      { subject: 'Referral?', body: 'Hi Jane, would you refer me for the role at https://x.com/1 ? I built a React dashboard for internal tools.', bullet_id: 'b1', confidence: 0.9 },
+    ]);
+    const draft = await plugin.prepare(
+      testContext(cfg, undefined, { llm }),
+      input({ kind: 'referral_ask', job: { ...input().job!, applyUrl: 'https://x.com/1' }, resumeBullets: [{ id: 'b1', text: 'Built a React dashboard' }] }),
+    );
+    expect(provider.calls).toHaveLength(2);
+    expect(draft.resumeBulletId).toBe('b1');
+    expect(draft.body).not.toContain('Role: https://x.com/1'); // URL already present
+  });
+
   const draft: EmailDraft = {
     to: 'jdoe@acme.com',
     toName: 'Jane Doe',
@@ -137,6 +178,7 @@ describe('actor-gmail-outreach', () => {
     factIds: [],
     attachments: [],
     confidence: null,
+    resumeBulletId: null,
     gmailThreadId: null,
     inReplyTo: null,
     references: [],

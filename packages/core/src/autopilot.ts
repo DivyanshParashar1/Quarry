@@ -177,12 +177,15 @@ export async function runAutopilot(deps: AutopilotRunDeps, opts: { limit?: numbe
       continue;
     }
 
-    // Per-company-per-week cap: if already at limit, autopilot escalates — human can override.
-    const sevenDaysAgo = new Date(now.getTime() - 7 * DAY_MS);
-    const emailedAtCompany = await contactsEmailedAtCompanySince(deps.db, candidate.companyId, sevenDaysAgo);
-    if (emailedAtCompany.length >= deps.outreachPolicy.perCompanyPerWeek && !emailedAtCompany.includes(candidate.id)) {
-      decisions.push({ ...base, stage: 'contact', reason: 'company_cap', note: `${emailedAtCompany.length} / ${deps.outreachPolicy.perCompanyPerWeek} at ${row.company} in last 7d` });
-      continue;
+    // Optional per-company-per-week cap (off by default since Phase 8): at the limit, escalate.
+    const companyCap = deps.outreachPolicy.perCompanyPerWeek;
+    if (companyCap !== null) {
+      const sevenDaysAgo = new Date(now.getTime() - 7 * DAY_MS);
+      const emailedAtCompany = await contactsEmailedAtCompanySince(deps.db, candidate.companyId, sevenDaysAgo);
+      if (emailedAtCompany.length >= companyCap && !emailedAtCompany.includes(candidate.id)) {
+        decisions.push({ ...base, stage: 'contact', reason: 'company_cap', note: `${emailedAtCompany.length} / ${companyCap} at ${row.company} in last 7d` });
+        continue;
+      }
     }
 
     // Draft via the normal path (auto-attaches the rendered resume).

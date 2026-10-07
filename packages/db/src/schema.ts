@@ -56,6 +56,9 @@ export const companies = pgTable(
     // Phase 6: provenance for discovered companies (null = imported/manual).
     /** e.g. `list:yc`, `list:gcc-journal`, `csv`, `manual`. */
     discoveredVia: text('discovered_via'),
+    // Phase 8: LinkedIn company identity (for people search).
+    linkedinId: text('linkedin_id'),
+    linkedinSlug: text('linkedin_slug'),
     discoveredAt: timestamp('discovered_at', { withTimezone: true }),
     /** Last time `discover_ats` looked at this company (hit or miss). */
     atsCheckedAt: timestamp('ats_checked_at', { withTimezone: true }),
@@ -307,8 +310,16 @@ export const contacts = pgTable(
     /** manual | pattern:<pattern> | provider:<plugin id> */
     emailSource: text('email_source'),
     linkedinUrl: text('linkedin_url'),
-    /** Who added the contact: manual | <plugin id>. */
+    /** Who added the contact: manual | pattern | linkedin | <plugin id>. */
     source: text('source').notNull().default('manual'),
+    // Phase 8: referral targeting hints (from the LinkedIn headline / manual entry).
+    /** engineer | manager | recruiter | leader | other */
+    roleHint: text('role_hint'),
+    /** junior | mid | senior | staff | exec */
+    seniorityHint: text('seniority_hint'),
+    department: text('department'),
+    /** Ranked alternative addresses [{ email, confidence, pattern }] from the pattern enricher. */
+    emailCandidates: jsonb('email_candidates').notNull().default(sql`'[]'::jsonb`),
     status: contactStatusEnum('status').notNull().default('active'),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -320,7 +331,38 @@ export const contacts = pgTable(
   }),
 );
 
-export const reviewKindEnum = pgEnum('review_kind', ['application', 'outreach', 'followup']);
+/** attention (Phase 9): a human must fix something (e.g. a LinkedIn checkpoint) before a paused loop resumes. */
+export const reviewKindEnum = pgEnum('review_kind', ['application', 'outreach', 'followup', 'referral_ask', 'attention']);
+
+export const batchStatusEnum = pgEnum('referral_batch_status', ['drafting', 'pending_review', 'sending', 'sent', 'replied', 'closed']);
+
+/**
+ * Phase 8: one referral fan-out per job — N `referral_ask` review items to
+ * distinct contacts (email and LinkedIn). A reply on any item marks the batch
+ * `replied` and stops that batch's follow-ups.
+ */
+export const jobReferralBatches = pgTable(
+  'job_referral_batches',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    jobId: uuid('job_id')
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    requestedCount: integer('requested_count').notNull().default(10),
+    draftedCount: integer('drafted_count').notNull().default(0),
+    sentCount: integer('sent_count').notNull().default(0),
+    repliedCount: integer('replied_count').notNull().default(0),
+    status: batchStatusEnum('status').notNull().default('drafting'),
+    firstSentAt: timestamp('first_sent_at', { withTimezone: true }),
+    repliedAt: timestamp('replied_at', { withTimezone: true }),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    jobUniq: uniqueIndex('job_referral_batches_job_uniq').on(t.jobId),
+  }),
+);
 export const reviewStatusEnum = pgEnum('review_status', [
   'pending',
   'approved',
@@ -347,6 +389,8 @@ export const reviewItems = pgTable(
     companyId: uuid('company_id').references(() => companies.id, { onDelete: 'set null' }),
     /** Follow-ups point at the outreach thread they continue. */
     threadId: uuid('thread_id').references((): AnyPgColumn => outreachThreads.id, { onDelete: 'set null' }),
+    /** Phase 8: the referral fan-out this item belongs to. */
+    batchId: uuid('batch_id').references((): AnyPgColumn => jobReferralBatches.id, { onDelete: 'set null' }),
     draft: jsonb('draft').notNull(),
     /** As the actor prepared it, before human edits. */
     originalDraft: jsonb('original_draft').notNull(),
@@ -368,6 +412,7 @@ export const reviewItems = pgTable(
   (t) => ({
     statusIdx: index('review_items_status_idx').on(t.status, t.createdAt),
     contactIdx: index('review_items_contact_idx').on(t.contactId),
+    batchIdx: index('review_items_batch_idx').on(t.batchId),
   }),
 );
 
@@ -410,7 +455,10 @@ export const outreachThreads = pgTable(
     jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'set null' }),
     /** The review item of the first email. */
     reviewItemId: uuid('review_item_id').references((): AnyPgColumn => reviewItems.id, { onDelete: 'set null' }),
+    /** Gmail thread id, or `linkedin:<profile>` for LinkedIn conversations (see `channel`). */
     gmailThreadId: text('gmail_thread_id').notNull(),
+    /** Phase 8/9: email | linkedin */
+    channel: text('channel').notNull().default('email'),
     subject: text('subject').notNull(),
     /** RFC 5322 Message-IDs we sent, oldest first (for In-Reply-To / References). */
     messageIds: text('message_ids').array().notNull().default(sql`'{}'::text[]`),

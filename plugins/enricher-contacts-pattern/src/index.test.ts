@@ -74,9 +74,12 @@ describe('enricher-contacts-pattern', () => {
     );
     expect(res).toMatchObject({ emailDomain: 'acme.com', mxHosts: ['aspmx.l.google.com'], pattern: '{f}{last}' });
     expect(res.contacts).toEqual([
-      { contactId: '2', email: 'rpatel@acme.com', confidence: res.patternConfidence, source: 'pattern:{f}{last}' },
-      { contactId: '4', email: 'oguess@acme.com', confidence: res.patternConfidence, source: 'pattern:{f}{last}' },
+      expect.objectContaining({ contactId: '2', email: 'rpatel@acme.com', confidence: res.patternConfidence, source: 'pattern:{f}{last}' }),
+      expect.objectContaining({ contactId: '4', email: 'oguess@acme.com', confidence: res.patternConfidence, source: 'pattern:{f}{last}' }),
     ]);
+    // ranked alternatives: the chosen address first, then other patterns
+    expect(res.contacts[0]!.candidates!.map((c) => c.email)).toEqual(['rpatel@acme.com', 'raj.patel@acme.com', 'raj@acme.com']);
+    expect(res.patternCandidates![0]).toEqual({ pattern: '{f}{last}', confidence: res.patternConfidence });
     expect(res.notes.join(' ')).toMatch(/Google Workspace.*1 known address.*needs a last name/);
   });
 
@@ -91,5 +94,22 @@ describe('enricher-contacts-pattern', () => {
   it('uses a configured pattern', async () => {
     const res = await plugin.enrich(ctx({ 'acme.com': ['mx.acme.com'] }, { knownPatterns: { 'acme.com': '{first}' } }), null, company([contact('2', 'Raj Patel')]));
     expect(res.contacts[0]).toMatchObject({ email: 'raj@acme.com', confidence: 0.9 });
+  });
+});
+
+import { rankPatterns } from './patterns.js';
+describe('rankPatterns (Phase 8)', () => {
+  it('puts the chosen pattern first, then priors, skipping bounced patterns', () => {
+    const r = rankPatterns([{ name: 'Jane Doe', email: 'jane.doe@acme.com', delivered: false }], undefined, 3);
+    expect(r[0]!.pattern).toBe('{first}');
+    expect(r.map((x) => x.pattern)).not.toContain('{first}.{last}');
+    expect(r).toHaveLength(3);
+    for (const x of r.slice(1)) expect(x.confidence).toBeLessThanOrEqual(r[0]!.confidence);
+  });
+  it('known addresses give a confident head and small alternatives', () => {
+    const r = rankPatterns([{ name: 'Jane Doe', email: 'jdoe@acme.com', delivered: true }], undefined, 2);
+    expect(r[0]).toMatchObject({ pattern: '{f}{last}' });
+    expect(r[0]!.confidence).toBeGreaterThan(0.6);
+    expect(r[1]!.confidence).toBeLessThan(0.4);
   });
 });

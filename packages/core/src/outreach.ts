@@ -3,6 +3,8 @@ import { JobForgeError, type AppConfig, type Logger } from '@jobforge/shared';
 import {
   emailDraftPatchSchema,
   emailDraftSchema,
+  linkedinNoteDraftPatchSchema,
+  linkedinNoteDraftSchema,
   type ApprovedDraft,
   type EmailAttachment,
   type EmailDraft,
@@ -14,7 +16,14 @@ import {
 import {
   appendEvent,
   approvedDueItems,
+  batchIdForThread,
   cancelPendingFollowups,
+  committedAsksForJob,
+  getBatch,
+  lastAskedAt,
+  markBatchReplied,
+  refreshBatchCounts,
+  updateBatch,
   claimAction,
   confirmContactEmail,
   contactsEmailedAtCompanySince,
@@ -69,6 +78,8 @@ const STATE_NEXT_SEND = 'outreach.nextSendAt';
 const STATE_TRACKER_CURSOR = 'tracker.gmail.cursor';
 
 export type OutreachErrorCode =
+  | 'cooldown'
+  | 'job_cap'
   | 'not_found'
   | 'invalid_state'
   | 'no_email'
@@ -116,6 +127,11 @@ export function isCoreApproved(d: unknown): boolean {
 // ---------------------------------------------------------------------------
 // Drafting and review decisions
 // ---------------------------------------------------------------------------
+
+/** An open job as actors see it (throws job_closed when it's gone). */
+export async function loadJobForOutreach(db: DB, jobId: string): Promise<Job> {
+  return loadJob(db, jobId);
+}
 
 async function loadJob(db: DB, jobId: string): Promise<Job> {
   const [j] = await jobsToMatch(db, '', { rescore: true, jobIds: [jobId] });
@@ -169,10 +185,20 @@ export async function draftOutreach(
 }
 
 async function prepare(deps: OutreachDeps, pluginId: string, input: OutreachActionInput): Promise<EmailDraft> {
+  return emailDraftSchema.parse(await prepareDraft(deps, pluginId, input));
+}
+
+/** Validate a stored draft against its actor's schema (email or LinkedIn note). */
+export function parseDraftFor(pluginId: string, draft: unknown): Record<string, unknown> {
+  return pluginId === OUTREACH_ACTOR ? emailDraftSchema.parse(draft) : linkedinNoteDraftSchema.parse(draft);
+}
+
+/** Run an outreach-style actor's prepare() (no side effects) and validate the draft. */
+export async function prepareDraft(deps: OutreachDeps, pluginId: string, input: OutreachActionInput): Promise<Record<string, unknown>> {
   const actor = deps.registry.actor(pluginId);
   const log = deps.log.child({ plugin: pluginId });
   const ctx = buildContext(actor, { ...deps, log, signal: AbortSignal.timeout(5 * 60_000) });
-  return emailDraftSchema.parse(await actor.plugin.prepare(ctx, input));
+  return parseDraftFor(pluginId, await actor.plugin.prepare(ctx, input));
 }
 
 /** Edit a pending draft (subject, body, recipient). */
@@ -180,8 +206,8 @@ export async function editDraft(db: DB, id: string, patch: unknown): Promise<Rev
   const item = await getReviewItem(db, id);
   if (!item) throw new OutreachError(`review item ${id} not found`, 'not_found');
   if (item.status !== 'pending') throw new OutreachError(`only pending items can be edited (this one is ${item.status})`, 'invalid_state');
-  const p = emailDraftPatchSchema.parse(patch);
-  const merged = emailDraftSchema.parse({ ...(item.draft as object), ...p });
+  const p = item.pluginId === OUTREACH_ACTOR ? emailDraftPatchSchema.parse(patch) : linkedinNoteDraftPatchSchema.parse(patch);
+  const merged = parseDraftFor(item.pluginId, { ...(item.draft as object), ...p });
   const updated = await updatePendingDraft(db, id, merged);
   if (!updated) throw new OutreachError('item changed state while editing', 'invalid_state');
   await appendEvent(db, { kind: 'review.edited', subjectType: 'review_item', subjectId: id, payload: { fields: Object.keys(p) } });
@@ -191,13 +217,17 @@ export async function editDraft(db: DB, id: string, patch: unknown): Promise<Rev
 export interface CapCheck {
   ok: boolean;
   emailedThisWeek: number;
-  limit: number;
+  limit: number | null;
 }
 
-/** "Never email more than N people at the same company in a week" (first emails only). */
+/**
+ * Optional "at most N people at one company per week" for cold outreach.
+ * Off by default since Phase 8 (user-approved); referral asks are governed by
+ * the per-job cap and the per-contact cooldown instead.
+ */
 export async function checkCompanyCap(db: DB, item: ReviewItemRow, policy: OutreachPolicy, now: Date, override = item.overrideCompanyCap): Promise<CapCheck> {
   const limit = policy.perCompanyPerWeek;
-  if (item.kind !== 'outreach' || !item.companyId) return { ok: true, emailedThisWeek: 0, limit };
+  if (limit === null || item.kind !== 'outreach' || !item.companyId) return { ok: true, emailedThisWeek: 0, limit };
   const emailed = await contactsEmailedAtCompanySince(db, item.companyId, new Date(now.getTime() - 7 * DAY));
   const already = item.contactId !== null && emailed.includes(item.contactId);
   return { ok: override || already || emailed.length < limit, emailedThisWeek: emailed.length, limit };
@@ -216,12 +246,13 @@ export async function approveReviewItem(
   const item = await getReviewItem(db, id);
   if (!item) throw new OutreachError(`review item ${id} not found`, 'not_found');
   if (item.status !== 'pending') throw new OutreachError(`item is ${item.status}, not pending`, 'invalid_state');
-  emailDraftSchema.parse(item.draft);
+  parseDraftFor(item.pluginId, item.draft);
   if (item.contactId) {
     const c = await getContact(db, item.contactId);
     if (!c || c.status !== 'active') throw new OutreachError(`contact is ${c?.status ?? 'missing'}`, 'contact_inactive');
   }
   const override = opts.overrideCompanyCap ?? false;
+  await assertReferralLimits(db, policy, item, opts.now ?? new Date());
   const cap = await checkCompanyCap(db, item, policy, opts.now ?? new Date(), override);
   if (!cap.ok) {
     throw new OutreachError(
@@ -238,6 +269,41 @@ export async function approveReviewItem(
   if (!approved) throw new OutreachError('item changed state while approving', 'invalid_state');
   await appendEvent(db, { kind: 'review.approved', subjectType: 'review_item', subjectId: id, payload: { overrideCompanyCap: override } });
   return approved;
+}
+
+/**
+ * Phase 8 product throttles, checked at approval and again right before an
+ * ask goes out: a person is never asked twice within the cooldown (any job,
+ * any channel), and a job never gets more than its batch's referral cap.
+ */
+export async function referralLimitProblem(db: DB, policy: OutreachPolicy, item: ReviewItemRow, now: Date): Promise<{ code: 'cooldown' | 'job_cap'; message: string } | null> {
+  if (item.kind !== 'outreach' && item.kind !== 'referral_ask') return null;
+  if (item.contactId && policy.perContactCooldownDays > 0) {
+    const last = await lastAskedAt(db, item.contactId, item.id);
+    const until = last ? new Date(last.at.getTime() + policy.perContactCooldownDays * DAY) : null;
+    // Pending/approved asks elsewhere block too: two fan-outs must not both queue the same person.
+    if (last && (last.status !== 'executed' || (until && until > now))) {
+      return {
+        code: 'cooldown',
+        message:
+          last.status === 'executed'
+            ? `this person was asked on ${last.at.toISOString().slice(0, 10)}; cooldown is ${policy.perContactCooldownDays} days`
+            : `this person already has a ${last.status} ask${last.jobId && last.jobId !== item.jobId ? ' for another job' : ''}`,
+      };
+    }
+  }
+  if (item.kind === 'referral_ask' && item.jobId) {
+    const batch = item.batchId ? await getBatch(db, item.batchId) : null;
+    const cap = batch?.requestedCount ?? policy.perJobReferralCap;
+    const committed = await committedAsksForJob(db, item.jobId, item.id);
+    if (committed >= cap) return { code: 'job_cap', message: `${committed} referral asks for this job are already approved or sent (cap ${cap})` };
+  }
+  return null;
+}
+
+async function assertReferralLimits(db: DB, policy: OutreachPolicy, item: ReviewItemRow, now: Date): Promise<void> {
+  const p = await referralLimitProblem(db, policy, item, now);
+  if (p) throw new OutreachError(p.message, p.code);
 }
 
 export async function rejectReviewItem(db: DB, id: string, reason: string | null): Promise<ReviewItemRow> {
@@ -284,7 +350,7 @@ export async function runSendTick(deps: OutreachDeps): Promise<SendTickResult> {
   const owner = randomUUID();
   if (!(await tryLease(deps.db, 'outreach.send', owner, 10 * 60_000))) return { ...out, skipped: 'locked' };
   try {
-    const due = await approvedDueItems(deps.db, now);
+    const due = await approvedDueItems(deps.db, now, 50, OUTREACH_ACTOR);
     if (deps.dryRun) {
       for (const item of due) out.outcomes.push(await executeOne(deps, item, true, now));
       return out;
@@ -294,7 +360,9 @@ export async function runSendTick(deps: OutreachDeps): Promise<SendTickResult> {
     const nextAt = await getState<string>(deps.db, STATE_NEXT_SEND);
     if (nextAt && now < new Date(nextAt)) return { ...out, waitingUntil: new Date(nextAt) };
     out.sentLast24h = await liveSendsSince(deps.db, OUTREACH_ACTOR, new Date(now.getTime() - DAY));
-    if (out.sentLast24h >= deps.policy.dailyCap) return { ...out, dailyCapReached: true };
+    // The optional product cap (off by default) and the sender's technical limit.
+    const limit = Math.min(deps.policy.dailyCap ?? Infinity, deps.policy.senderDailyLimit);
+    if (out.sentLast24h >= limit) return { ...out, dailyCapReached: true };
 
     for (const item of due) {
       if (item.contactId) {
@@ -303,6 +371,13 @@ export async function runSendTick(deps: OutreachDeps): Promise<SendTickResult> {
           await transitionReviewItem(deps.db, item.id, ['approved'], 'failed', { error: `contact is ${c?.status ?? 'missing'}` });
           continue;
         }
+      }
+      const limitProblem = await referralLimitProblem(deps.db, deps.policy, item, now);
+      if (limitProblem) {
+        // The rule changed under an approved item (e.g. someone else's ask went first): never send.
+        await transitionReviewItem(deps.db, item.id, ['approved'], 'failed', { error: `${limitProblem.code}: ${limitProblem.message}` });
+        out.held.push({ reviewItemId: item.id, reason: limitProblem.message });
+        continue;
       }
       const cap = await checkCompanyCap(deps.db, item, deps.policy, now);
       if (!cap.ok) {
@@ -384,7 +459,7 @@ async function finalizeSent(deps: OutreachDeps, item: ReviewItemRow, r: EmailSen
   const followupAt = (n: number) =>
     n < Math.min(policy.maxFollowups, policy.followupDays.length) ? new Date(sentAt.getTime() + policy.followupDays[n]! * DAY) : null;
   let threadId: string | null = item.threadId;
-  if (item.kind === 'outreach') {
+  if (item.kind === 'outreach' || item.kind === 'referral_ask') {
     const t = await createThread(db, {
       contactId: item.contactId!,
       companyId: item.companyId,
@@ -397,6 +472,7 @@ async function finalizeSent(deps: OutreachDeps, item: ReviewItemRow, r: EmailSen
       nextFollowupAt: followupAt(0),
     });
     threadId = t.id;
+    if (item.batchId) await noteBatchSent(db, item.batchId, sentAt);
   } else if (item.threadId) {
     const t = await getThread(db, item.threadId);
     if (t) await recordFollowupSent(db, t.id, r.messageId, sentAt, followupAt(t.followupsSent + 1));
@@ -406,6 +482,17 @@ async function finalizeSent(deps: OutreachDeps, item: ReviewItemRow, r: EmailSen
     subjectType: 'review_item',
     subjectId: item.id,
     payload: { kind: item.kind, to: (item.draft as EmailDraft).to, threadId, gmailId: r.gmailId, deduplicated: r.deduplicated },
+  });
+}
+
+/** A referral ask went out: bump the batch counts and move it to sending/sent. */
+export async function noteBatchSent(db: DB, batchId: string, at: Date): Promise<void> {
+  const b = await refreshBatchCounts(db, batchId);
+  if (!b || b.status === 'replied' || b.status === 'closed') return;
+  const pendingLeft = b.draftedCount - b.sentCount;
+  await updateBatch(db, batchId, {
+    status: pendingLeft > 0 ? 'sending' : 'sent',
+    ...(b.firstSentAt ? {} : { firstSentAt: at }),
   });
 }
 
@@ -502,6 +589,7 @@ export async function pollTracker(deps: OutreachDeps, opts: { pluginId?: string;
     if (e.kind === 'reply') {
       await confirmContactEmail(db, thread.contactId);
       res.replies++;
+      await onThreadReplied(db, thread.id, e.at);
     } else {
       await setContactStatus(db, thread.contactId, 'bounced');
       res.bounces++;
@@ -515,6 +603,24 @@ export async function pollTracker(deps: OutreachDeps, opts: { pluginId?: string;
   }
   await setState(db, STATE_TRACKER_CURSOR, now.toISOString());
   return res;
+}
+
+/**
+ * A reply on a referral thread (email or LinkedIn): the whole batch is
+ * `replied`, its other threads stop getting follow-ups, and the autopilot
+ * sequencer is told via a `referral.replied` event. Other batches are untouched.
+ */
+export async function onThreadReplied(db: DB, threadId: string, at: Date): Promise<void> {
+  const batchId = await batchIdForThread(db, threadId);
+  if (!batchId) return;
+  const r = await markBatchReplied(db, batchId, at);
+  const b = await refreshBatchCounts(db, batchId);
+  await appendEvent(db, {
+    kind: 'referral.replied',
+    subjectType: 'job',
+    ...(b ? { subjectId: b.jobId } : {}),
+    payload: { batchId, threadId, firstReply: r.first, cancelledFollowups: r.cancelledFollowups },
+  });
 }
 
 /**

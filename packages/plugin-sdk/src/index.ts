@@ -8,6 +8,8 @@ export * from './tailor.js';
 export * from './source-helpers.js';
 export * from './ats-tokens.js';
 export * from './markup.js';
+export * from './browser.js';
+export * from './linkedin.js';
 
 import type { ActorPlugin, EnricherPlugin, MatcherPlugin, SourcePlugin, TailorPlugin, TrackerPlugin } from './types.js';
 
