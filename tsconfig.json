@@ -65,6 +65,12 @@
     },
     {
       "path": "./plugins/source-gmail-alerts"
+    },
+    {
+      "path": "./plugins/source-successfactors"
+    },
+    {
+      "path": "./plugins/source-taleo"
     }
   ]
 }

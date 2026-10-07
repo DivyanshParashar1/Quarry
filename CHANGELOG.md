@@ -212,3 +212,25 @@ Deferred to sub-phase 3+: compile-and-shrink loop for 1-page enforcement; LLM bu
 Dependencies: none added.
 
 Known gaps: fixtures for Workday/SmartRecruiters are synthetic (no network access to those hosts while building); the Workday/SR seed boards are from memory and unverified; the "50+ companies from gcc-journal in one run" acceptance needs a live run.
+
+## [Phase 7] — Alert-email + SuccessFactors + Taleo sources
+
+- `packages/plugin-sdk`
+  - `GmailHandle.getMessageBody()` (read scope) returns the decoded HTML/text parts; `fakeGmail` supports it plus `from:` search terms and HTML bodies.
+  - `ctx.emit(kind, data)`: plugins can append audit events; the core stores them as `plugin.<id>.<kind>`.
+  - `markup.ts`: `xmlElements` / `xmlChild` (CDATA-aware) and `sanitizeHtml` — the strict cleanup for ATS-authored HTML (drops inline styles, fonts, spans, MS Office markup, every attribute but `href`).
+- `plugins/source-gmail-alerts` — reads the user's job-alert emails (no network permissions; Gmail read only). An HTML-email tokenizer + job-card extractor groups the logo/title/button links of each job by the portal's job id, then reads company/location from the text after (or, for YC, before) the title, skipping experience/salary/"Actively recruiting" noise. One parser file per sender: LinkedIn Job Alerts, Naukri, Wellfound weekly, YC Work at a Startup, Instahyre, Internshala, Unstop. Non-alert mail from the same sender is ignored via a marker; an alert with no recognisable jobs emits `parse_empty`; an exception emits `parse_failed`; neither stops other senders.
+- `packages/core`
+  - `runAlertSource`: employers in alerts are matched to known companies with a looser key (`companyMatchKey`: "Walmart Global Tech India" → "Walmart Global Tech", "Target Corporation India" → "Target"), otherwise created (`discovered_via = gmail-alert`); postings merge into canonical jobs through the existing fingerprint; alerts never close jobs; a cursor in `app_state` (with a day of overlap) keeps reruns cheap; plugin events are persisted.
+  - Gmail client: `getMessageBody` via `format: full` with nested multipart walking (`extractBodies`).
+  - `SOURCE_PLUGIN_FOR_ATS` adds successfactors and taleo.
+- `plugins/source-successfactors` — two board kinds (token formats from Phase 6): classic `career4.successfactors.com/<companyId>` via the XML job-listing feed (element-name aliases tolerated), and SAP-hosted RMK sites (`jobs.<tenant>.sapsf.com`) via the HTML search pages (`tr.data-row`, 25/page, "of N" total) + job pages. All descriptions go through `sanitizeHtml`. 1 req/s per host.
+- `plugins/source-taleo` — best effort: discovers the portal id from `careersection/<section>/jobsearch.ftl` (or takes `company_sources.config.portal`), then pages `rest/jobboard/searchjobs` (25/page) and maps `[title, locations, date]` columns. No descriptions (rendered client-side). 1 req/s per host.
+- `discover_ats` already recognised SuccessFactors (`career*.successfactors.*`, `*.sapsf.*`, RMK signature on custom domains) and Taleo (`*.taleo.net/careersection/<section>`) since Phase 6.
+- `apps/cli` — `jf fetch` also reads job alerts when Gmail is connected (`--no-alerts` to skip; `--plugin source-gmail-alerts` for alerts only); `jf gmail alerts [--since] [--dump <messageId>]`; `jf gmail subscribe-template` prints the portal alert searches to set up from `preferences.yaml`.
+- `apps/server` — polls job alerts every 30 minutes when Gmail is connected (read-only, so in dev mode too).
+- `apps/mcp` — `run_source` accepts the new source plugins.
+
+Dependencies: none added. (`@jobforge/source-gmail-alerts` is a dev dependency of `@jobforge/core` for its runner test.)
+
+Known gaps: all fixtures are synthetic; the "5 SuccessFactors + 3 Taleo tenants return postings" and "real inbox" acceptance runs need live access and real tenant ids.

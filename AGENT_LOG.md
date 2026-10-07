@@ -99,3 +99,43 @@ section. Each phase also gets a `CHANGELOG.md` entry.
 - Workday tenants could be discovered by probing `{slug}.wd{1,3,5,12,103}.myworkdayjobs.com`
   (only ~6 data centres), turning name-only companies into Workday boards.
 
+## Phase 7 — job-alert emails, SuccessFactors, Taleo
+
+### Decisions
+- **The alert source isn't company-scoped**, so it gets its own runner
+  (`runAlertSource`) instead of going through `company_sources`. Each posting carries
+  `companyName`; the runner maps it to a known company with a looser key that drops
+  "India", "GCC", "Technology Centre", legal suffixes etc., so alert jobs merge with the
+  ATS postings of the same company (the fingerprint includes the company name).
+- **Alerts never close jobs** (an alert not repeating a job means nothing).
+- **Parse failures are events.** Plugins previously had no way to write audit events.
+  I added an optional `ctx.emit(kind, data)` to the plugin context; the core persists
+  calls as `plugin.<id>.<kind>` events. Used for `parse_empty` / `parse_failed`.
+- **No HTML parser dependency.** Alert emails are flattened into text/link tokens with
+  regexes and parsed as "cards" grouped by the job id in the link. Each sender is one
+  small declarative file (sender list, job-URL regex, canonical URL, optional meta rule).
+- **YC digests put the company before the role**, so parsers can declare
+  `metaPosition: 'before'`.
+- **SuccessFactors custom domains aren't supported** by the plugin (its manifest can
+  only list SAP hosts). `discover_ats` still records them at low confidence (0.4, below
+  the 0.5 save threshold) so they're visible but not fetched.
+- **Taleo descriptions are not fetched**: Taleo renders job details client-side from an
+  escaped blob; parsing it reliably needs real samples. Matching uses the title until
+  the same job shows up from another source.
+- **The server polls alerts in dev mode too**: it's read-only Gmail access.
+
+### Issues noticed
+- All alert fixtures are synthetic — the real templates will differ. The README in
+  `plugins/source-gmail-alerts/fixtures` explains how to dump a real alert
+  (`jf gmail alerts --dump <id>`) and update the parser.
+- Gmail's `after:` operator works on seconds since epoch but some clients treat it as
+  a date; the runner re-reads one day of overlap. Dedup makes that harmless.
+- `jf fetch` previously only exited 1 when *every* board failed; with alerts included,
+  it exits 0 if either boards or alerts succeeded.
+
+### Ideas
+- Alert emails often carry a "posted N days ago" line; parsing it would give alert-only
+  jobs a `posted_at`, which the deadline logic (Phase 10) could use.
+- A LinkedIn alert job id could be enriched later by the Playwright session (Phase 8/9)
+  to fetch the description, which would let the matcher score alert-only jobs properly.
+

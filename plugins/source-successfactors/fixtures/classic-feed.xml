@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Job-Listing>
+  <Job>
+    <ReqId>10234</ReqId>
+    <JobTitle>Graduate Engineer Trainee - IT</JobTitle>
+    <Location>Mumbai, IN</Location>
+    <Department>Technology</Department>
+    <Posted-Date>2026-09-20</Posted-Date>
+    <Job-Description><![CDATA[<p style="margin:0"><span style="font-family:Arial"><b>About the role</b></span></p><p class="MsoNormal">Work on core banking systems.<o:p></o:p></p><ul><li style="color:red">Java</li><li>SQL</li></ul><!--[if gte mso 9]><xml>junk</xml><![endif]-->]]></Job-Description>
+  </Job>
+  <Job>
+    <ReqId>10240</ReqId>
+    <JobTitle>Software Engineer &amp; Analyst</JobTitle>
+    <City>Chennai</City><Country>India</Country>
+    <Posted-Date>2026-09-22</Posted-Date>
+    <Job-Description>&lt;p&gt;Payments platform.&lt;/p&gt;</Job-Description>
+  </Job>
+  <Job>
+    <ReqId>10301</ReqId>
+    <JobTitle>Relationship Manager</JobTitle>
+    <Location>London, GB</Location>
+  </Job>
+</Job-Listing>

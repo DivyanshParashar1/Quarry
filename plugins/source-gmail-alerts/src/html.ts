@@ -40,7 +40,7 @@ export function tokenize(html: string): Token[] {
 }
 
 function norm(s: string): string {
-  return decodeEntities(s).replace(/[ \s]+/g, ' ').trim();
+  return decodeEntities(s).replace(/[\u00a0\s]+/g, ' ').trim();
 }
 
 /** Text tokens only (for plain-text bodies and simple lookups). */

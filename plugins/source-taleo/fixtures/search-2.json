@@ -1,0 +1,50 @@
+{
+ "requisitionList": [
+  {
+   "jobId": "500025",
+   "contestNo": "SBI2625",
+   "column": [
+    "Assistant Manager - Software Developer",
+    "[\"India-Bengaluru\"]",
+    "Oct 1, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500026",
+   "contestNo": "SBI2626",
+   "column": [
+    "Assistant Manager - Software Developer",
+    "[\"India-Bengaluru\"]",
+    "Oct 1, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500027",
+   "contestNo": "SBI2627",
+   "column": [
+    "Assistant Manager - Software Developer",
+    "[\"India-Bengaluru\"]",
+    "Oct 1, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500028",
+   "contestNo": "SBI2628",
+   "column": [
+    "Assistant Manager - Software Developer",
+    "[\"India-Bengaluru\"]",
+    "Oct 1, 2026"
+   ],
+   "hasApplied": false
+  }
+ ],
+ "pagingData": {
+  "currentPageNo": 2,
+  "pageSize": 25,
+  "totalCount": 29
+ },
+ "facets": []
+}

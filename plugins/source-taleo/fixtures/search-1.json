@@ -1,0 +1,260 @@
+{
+ "requisitionList": [
+  {
+   "jobId": "500000",
+   "contestNo": "SBI2600",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 1, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500001",
+   "contestNo": "SBI2601",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 2, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500002",
+   "contestNo": "SBI2602",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 3, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500003",
+   "contestNo": "SBI2603",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 4, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500004",
+   "contestNo": "SBI2604",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 5, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500005",
+   "contestNo": "SBI2605",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 6, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500006",
+   "contestNo": "SBI2606",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 7, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500007",
+   "contestNo": "SBI2607",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 8, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500008",
+   "contestNo": "SBI2608",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 9, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500009",
+   "contestNo": "SBI2609",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 10, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500010",
+   "contestNo": "SBI2610",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 11, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500011",
+   "contestNo": "SBI2611",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 12, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500012",
+   "contestNo": "SBI2612",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 13, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500013",
+   "contestNo": "SBI2613",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 14, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500014",
+   "contestNo": "SBI2614",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 15, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500015",
+   "contestNo": "SBI2615",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 16, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500016",
+   "contestNo": "SBI2616",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 17, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500017",
+   "contestNo": "SBI2617",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 18, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500018",
+   "contestNo": "SBI2618",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 19, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500019",
+   "contestNo": "SBI2619",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 20, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500020",
+   "contestNo": "SBI2620",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 21, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500021",
+   "contestNo": "SBI2621",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 22, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500022",
+   "contestNo": "SBI2622",
+   "column": [
+    "Specialist Cadre Officer - IT",
+    "[\"India-Navi Mumbai\", \"India-Hyderabad\"]",
+    "Sep 23, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500023",
+   "contestNo": "SBI2623",
+   "column": [
+    "Deputy Manager (Systems)",
+    "[\"India-Kolkata\"]",
+    "Sep 24, 2026"
+   ],
+   "hasApplied": false
+  },
+  {
+   "jobId": "500024",
+   "contestNo": "SBI2624",
+   "column": [
+    "Probationary Officer",
+    "[\"India-Mumbai\"]",
+    "Sep 25, 2026"
+   ],
+   "hasApplied": false
+  }
+ ],
+ "pagingData": {
+  "currentPageNo": 1,
+  "pageSize": 25,
+  "totalCount": 29
+ },
+ "facets": []
+}

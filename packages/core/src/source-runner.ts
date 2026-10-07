@@ -21,6 +21,8 @@ export const SOURCE_PLUGIN_FOR_ATS: Partial<Record<AtsType, string>> = {
   ashby: 'source-ashby',
   workday: 'source-workday',
   smartrecruiters: 'source-smartrecruiters',
+  successfactors: 'source-successfactors',
+  taleo: 'source-taleo',
 };
 
 export interface SourceRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {

@@ -25,6 +25,8 @@
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
     "@jobforge/source-smartrecruiters": "workspace:*",
+    "@jobforge/source-successfactors": "workspace:*",
+    "@jobforge/source-taleo": "workspace:*",
     "@jobforge/source-workday": "workspace:*",
     "@jobforge/tailor-resume-latex": "workspace:*",
     "@jobforge/tracker-gmail": "workspace:*",

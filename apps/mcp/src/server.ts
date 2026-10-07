@@ -12,6 +12,8 @@ const SOURCE_ATS: Record<string, string> = {
   'source-ashby': 'ashby',
   'source-workday': 'workday',
   'source-smartrecruiters': 'smartrecruiters',
+  'source-successfactors': 'successfactors',
+  'source-taleo': 'taleo',
 };
 
 const ok = (data: unknown): CallToolResult => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
@@ -83,8 +85,8 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
     'run_source',
     {
       title: 'Run source',
-      description: 'Queue a fetch of job boards. pluginId: source-greenhouse | source-lever | source-ashby | source-workday | source-smartrecruiters (omit for all); company narrows to one company.',
-      inputSchema: { pluginId: z.enum(['source-greenhouse', 'source-lever', 'source-ashby', 'source-workday', 'source-smartrecruiters']).optional(), company: z.string().optional() },
+      description: 'Queue a fetch of job boards. pluginId: source-greenhouse | source-lever | source-ashby | source-workday | source-smartrecruiters | source-successfactors | source-taleo (omit for all); company narrows to one company.',
+      inputSchema: { pluginId: z.enum(['source-greenhouse', 'source-lever', 'source-ashby', 'source-workday', 'source-smartrecruiters', 'source-successfactors', 'source-taleo']).optional(), company: z.string().optional() },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     (a) => run(() => api.send('POST', '/api/sources/run', { ...(a.pluginId ? { atsType: SOURCE_ATS[a.pluginId] } : {}), ...(a.company ? { company: a.company } : {}) })),

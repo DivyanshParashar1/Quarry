@@ -86,6 +86,12 @@ importers:
       '@jobforge/source-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/source-smartrecruiters
+      '@jobforge/source-successfactors':
+        specifier: workspace:*
+        version: link:../../plugins/source-successfactors
+      '@jobforge/source-taleo':
+        specifier: workspace:*
+        version: link:../../plugins/source-taleo
       '@jobforge/source-workday':
         specifier: workspace:*
         version: link:../../plugins/source-workday
@@ -175,6 +181,12 @@ importers:
       '@jobforge/source-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/source-smartrecruiters
+      '@jobforge/source-successfactors':
+        specifier: workspace:*
+        version: link:../../plugins/source-successfactors
+      '@jobforge/source-taleo':
+        specifier: workspace:*
+        version: link:../../plugins/source-taleo
       '@jobforge/source-workday':
         specifier: workspace:*
         version: link:../../plugins/source-workday
@@ -522,6 +534,38 @@ importers:
         version: 5.9.3
 
   plugins/source-smartrecruiters:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-successfactors:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-taleo:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*
