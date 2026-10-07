@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AppConfig, LLMClient, Logger } from '@jobforge/shared';
-import { discoveredCountSince, listRecentlyDiscovered, type DB } from '@jobforge/db';
-import { COMPANY_LISTS, discoverAndSave, discoverAts, runDiscoverCompanies, type PageFetcher } from '@jobforge/core';
+import { discoveredCountSince, listRecentlyDiscovered, setCompanyTags, type DB } from '@jobforge/db';
+import { COMPANY_LISTS, discoverAndSave, discoverAts, runAtsRecheck, runDiscoverCompanies, runNightlyDiscovery, type PageFetcher } from '@jobforge/core';
 
 export interface DiscoveryRouteOptions {
   db: DB;
@@ -11,6 +11,8 @@ export interface DiscoveryRouteOptions {
   /** Robots-respecting fetcher for company sites; absent = discovery unavailable. */
   pages?: () => PageFetcher;
   llm?: () => Promise<LLMClient>;
+  /** Queue fetches for boards discovery adds. */
+  enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
 }
 
 /** Company discovery (Phase 6/13). Only reads public pages; nothing here has an external side effect. */
@@ -76,6 +78,35 @@ export function registerDiscoveryRoutes(app: FastifyInstance, o: DiscoveryRouteO
         running = null;
       });
     return reply.status(202).send({ started: b.list });
+  });
+
+  app.post('/api/companies/:id/tags', async (req, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const b = z
+      .object({ add: z.array(z.string().trim().min(1).max(40)).max(20).default([]), remove: z.array(z.string()).max(20).default([]) })
+      .strict()
+      .parse(req.body ?? {});
+    const tags = await setCompanyTags(o.db, id, b.add, b.remove);
+    return tags ? { tags } : reply.status(404).send({ error: 'not_found' });
+  });
+
+  app.post('/api/discovery/nightly', async (_req, reply) => {
+    if (running) return reply.status(409).send({ error: 'busy', message: `discovery of ${running} is already running` });
+    const p = pages();
+    const llm = o.llm ? await o.llm().catch(() => undefined) : undefined;
+    running = 'all lists';
+    void runNightlyDiscovery({ db: o.db, pages: p, llm, log, ...(o.enqueueFetch ? { enqueueFetch: o.enqueueFetch } : {}) }, o.config)
+      .then((s) => log.info({ added: s.added, newSources: s.newSources }, 'nightly discovery finished'))
+      .catch((err: unknown) => log.error({ err: err instanceof Error ? err.message : String(err) }, 'nightly discovery failed'))
+      .finally(() => {
+        running = null;
+      });
+    return reply.status(202).send({ started: 'all lists' });
+  });
+
+  app.post('/api/discovery/recheck', async (req) => {
+    const b = z.object({ limit: z.number().int().min(1).max(500).optional() }).strict().parse(req.body ?? {});
+    return runAtsRecheck({ db: o.db, pages: pages(), log, ...(o.enqueueFetch ? { enqueueFetch: o.enqueueFetch } : {}) }, o.config, b.limit ? { limit: b.limit } : {});
   });
 
   app.get('/api/companies/discovered', async (req) => {

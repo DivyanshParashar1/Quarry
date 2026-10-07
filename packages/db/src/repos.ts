@@ -95,7 +95,8 @@ export async function listSourceTargets(
   db: DB,
   filter: { atsTypes?: AtsType[]; companyName?: string; includePaused?: boolean; ids?: string[] } = {},
 ): Promise<SourceTargetRow[]> {
-  const conds: SQL[] = [sql`${companySources.boardToken} is not null`];
+  // Companies tagged `excluded` (by hand, from the /companies panel) are never fetched.
+  const conds: SQL[] = [sql`${companySources.boardToken} is not null`, sql`not ('excluded' = any(${companies.tags}))`];
   if (filter.atsTypes?.length) conds.push(inArray(companySources.atsType, filter.atsTypes));
   if (filter.companyName) conds.push(ilike(companies.name, filter.companyName));
   if (!filter.includePaused) conds.push(ne(companySources.status, 'paused'));

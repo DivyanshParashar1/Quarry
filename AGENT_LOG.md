@@ -336,3 +336,46 @@ section. Each phase also gets a `CHANGELOG.md` entry.
   "warm" contact) instead of cold-asking new people for the second job — would need a
   cooldown exception for people who said yes.
 
+
+## Phase 13 — continuous discovery
+
+### Decisions
+- **The ATS re-check lives in core, not in a plugin**, although its run is recorded
+  as `enricher-company-ats-recheck` as the plan names it. A plugin gets a fixed host allowlist,
+  and the re-check has to fetch arbitrary company domains. Core already has the
+  robots-respecting `PageFetcher` that Phase 6 discovery uses.
+- **"Stale" means paused, never deleted**, and a board is only marked stale when both
+  of these hold: (a) the careers site now points at a different board, and (b) the old
+  board is in `error` or its last successful fetch returned 0 postings. Many companies
+  run two ATSs at once (e.g. Lever for engineering and Workday for corporate). Pausing
+  a board that still works just because a second one showed up would lose jobs.
+- **Name-probe detections don't count** for a company that already has an active
+  board. Probing `greenhouse.io/<slug>` can hit a different company with the same
+  name. That is acceptable for a company with nothing, but not as evidence that a
+  known company moved.
+- **Exclusion is a tag (`excluded`)**, not a new column. It works with the existing
+  tags array. Excluded companies are skipped by `listSourceTargets` (so nothing is
+  fetched) and by the re-check.
+- **Nightly discovery is opt-in (`discovery.nightly: false`)**. It crawls third-party
+  directories every night, and a fresh checkout shouldn't do that until you've looked
+  at the list config. Turn it on in `config.yaml`. The re-check cron is gated on the
+  same flag.
+- The drift banner counts companies added in the last 24h (not discovered via CSV). It
+  shows on every tab, because the point is to notice it without going looking.
+
+### Issues noticed
+- `markAtsChecked` originally stamped the wall clock instead of the injected `now`. The
+  test caught it: with a simulated "31 days later", the next run re-checked everything
+  again. It's fixed now.
+- The re-check limit is 50 companies/day by default. With 280 seed companies plus
+  growth, each company gets looked at roughly every 30 days, which matches the plan's
+  "monthly". Beyond about 1,500 companies, raise `--limit` or the cron's limit.
+- The Companies tab only lists *discovered* companies (not CSV imports), as the plan
+  scopes it. To exclude a CSV company today, use `tag_company` from MCP or the API.
+
+### Ideas
+- A "boards" health view: every company_source with its last run, posting count and
+  error streak. The data is all in `plugin_runs` already. It would make stale-board
+  review manual-friendly.
+- Feed list-source drift into the banner by source: "YC added 120 today" tells you
+  which parser broke.

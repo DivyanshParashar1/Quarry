@@ -340,3 +340,19 @@ Known gaps: real submissions (one per ATS) need your live run; the newer React-b
 Dependencies: none.
 
 Known gaps: "20+ real jobs across all states" needs live data; the full flow is exercised end to end in `sequencer.db.test.ts` (admit → fan-out → send → reply / deadline / wait → apply → applied / expired, plus the kill-and-resume case).
+
+## [Phase 13] — Continuous company discovery
+
+- `packages/core/discovery/continuous.ts`
+  - `runNightlyDiscovery`: crawls every enabled company list (`discovery.lists.<id>.enabled`, default on), skipping LLM-assisted lists (Wellfound / Internshala / Hirect) when no LLM is configured, runs `discover_ats` on each new candidate, then queues `source.fetch` for every board added during the run. Writes a `discovery.nightly` event with per-list counts.
+  - `runAtsRecheck` (plugin run id `enricher-company-ats-recheck`): re-detects the ATS of companies whose `ats_checked_at` is older than `discovery.recheckDays` (30), adds newly found boards (`detected_by = 'recheck'`) and queues them, and marks an old board **stale** (status `paused`, never deleted, reason recorded) only when the careers site now points at a different board *and* the old one is failing or returned 0 postings on its last successful fetch. Name-slug probe hits are ignored for companies that already have an active board.
+- `packages/db` — `setCompanyTags`, `addCompanySource`, `newSourceIdsSince`, `lastSuccessfulPostings`, `markAtsChecked(at)`; `listSourceTargets` and the re-check skip companies tagged `excluded`.
+- `config.yaml` — `discovery.nightly` (default `false`), `discovery.recheckDays` (30), `discovery.alertThreshold` (40).
+- `apps/server` — pg-boss crons `discovery.nightly` (03:41) and `discovery.recheck` (04:13) when `discovery.nightly: true`; `POST /api/discovery/nightly`, `POST /api/discovery/recheck`, `POST /api/companies/:id/tags`; `GET /api/companies/discovered?days=` returns `lastDay` / `alert`.
+- `apps/web` — **Companies** tab: companies discovered in the last 1 / 7 / 30 days with their boards (stale ones struck through), Exclude / Include, add / remove tags, "Run discovery now", "Re-check ATSs". A dashboard-wide amber banner appears when discovery added more than `alertThreshold` companies in 24h.
+- `apps/cli` — `jf discover_companies --all` (the nightly run, once), `jf discover_ats --recheck [--limit N]`.
+- `apps/mcp` — `tag_company(companyId, add?, remove?)`.
+
+Dependencies: none.
+
+Known gaps: "10–30 new companies/week, each with a working source" needs the live crawl (egress is blocked here). The Greenhouse → Workday move and the no-duplicates property are covered in `continuous.db.test.ts`.

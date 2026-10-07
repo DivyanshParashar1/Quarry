@@ -117,8 +117,8 @@ export async function saveDiscoveredCompany(db: DB, c: SaveDiscoveredInput): Pro
   });
 }
 
-export async function markAtsChecked(db: DB, companyId: string): Promise<void> {
-  await db.update(companies).set({ atsCheckedAt: new Date() }).where(eq(companies.id, companyId));
+export async function markAtsChecked(db: DB, companyId: string, at = new Date()): Promise<void> {
+  await db.update(companies).set({ atsCheckedAt: at }).where(eq(companies.id, companyId));
 }
 
 export interface CompanyForAtsCheck {
@@ -219,4 +219,35 @@ export async function discoveredCountSince(db: DB, since: Date): Promise<number>
 /** Every company's id + name (for in-memory name matching; a few thousand rows at most). */
 export async function listAllCompanies(db: DB): Promise<{ id: string; name: string; domain: string | null }[]> {
   return db.select({ id: companies.id, name: companies.name, domain: companies.domain }).from(companies).orderBy(asc(companies.name));
+}
+
+/** Add/remove company tags (`excluded` stops fetching and re-checks for that company). */
+export async function setCompanyTags(db: DB, companyId: string, add: string[], remove: string[]): Promise<string[] | null> {
+  const [c] = await db.select({ tags: companies.tags }).from(companies).where(eq(companies.id, companyId));
+  if (!c) return null;
+  const tags = [...new Set([...c.tags.filter((t) => !remove.includes(t)), ...add])].sort();
+  await db.update(companies).set({ tags, updatedAt: new Date() }).where(eq(companies.id, companyId));
+  return tags;
+}
+
+/** Boards created since `since` (e.g. by tonight's discovery), to fetch right away. */
+export async function newSourceIdsSince(db: DB, since: Date): Promise<string[]> {
+  const rows = await db
+    .select({ id: companySources.id })
+    .from(companySources)
+    .where(and(gte(companySources.createdAt, since), sql`${companySources.status} <> 'paused'`));
+  return rows.map((r) => r.id);
+}
+
+/** Postings seen by the latest successful fetch of a board (null = never fetched successfully). */
+export async function lastSuccessfulPostings(db: DB, atsType: string, boardToken: string): Promise<number | null> {
+  const [r] = await db.execute<{ items_in: number }>(sql`
+    select items_in from plugin_runs where target_key = ${`${atsType}:${boardToken}`} and status = 'succeeded'
+    order by started_at desc limit 1`);
+  return r ? r.items_in : null;
+}
+
+export async function addCompanySource(db: DB, s: { companyId: string; atsType: AtsType; boardToken: string; detectedBy: string }): Promise<boolean> {
+  const rows = await db.insert(companySources).values(s).onConflictDoNothing().returning({ id: companySources.id });
+  return rows.length > 0;
 }

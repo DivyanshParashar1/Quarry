@@ -307,6 +307,17 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
   );
 
   server.registerTool(
+    'tag_company',
+    {
+      title: 'Tag or exclude a company',
+      description: 'Add/remove tags on a company (e.g. gcc, fintech). The tag "excluded" stops fetching its boards and re-checking its ATS.',
+      inputSchema: { companyId: z.string().uuid(), add: z.array(z.string().min(1)).optional(), remove: z.array(z.string().min(1)).optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    ({ companyId, add, remove }) => run(() => api.send('POST', `/api/companies/${companyId}/tags`, { add: add ?? [], remove: remove ?? [] })),
+  );
+
+  server.registerTool(
     'add_contact',
     {
       title: 'Add contact',

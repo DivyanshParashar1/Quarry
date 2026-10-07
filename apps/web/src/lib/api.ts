@@ -434,3 +434,22 @@ export interface TimelineEntry {
   summary: string;
   data: Record<string, unknown>;
 }
+
+export interface DiscoveredCompany {
+  id: string;
+  name: string;
+  domain: string | null;
+  tags: string[];
+  discoveredVia: string | null;
+  discoveredAt: string | null;
+  sources: { atsType: string; boardToken: string | null; status: string }[];
+}
+
+export interface DiscoveredPage {
+  days: number;
+  companies: DiscoveredCompany[];
+  lastDay: number;
+  alertThreshold: number;
+  alert: boolean;
+  running: string | null;
+}

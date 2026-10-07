@@ -23,7 +23,9 @@ import {
   discoverAts,
   DomainRateLimiter,
   normalizeDomain,
+  runAtsRecheck,
   runDiscoverCompanies,
+  runNightlyDiscovery,
   type DiscoverAtsResult,
   embedPending,
   enqueueSourceFetches,
@@ -73,6 +75,11 @@ Usage:
       Run detection for companies that have no board yet (e.g. seeded with a domain only).
   jf discover_companies --list <yc|gcc-journal|wellfound|internshala|hirect> [--max-new <n>] [--dry-run] [--concurrency <n>]
       Crawl a public company list, detect each new company's ATS, save company + boards.
+  jf discover_companies --all
+      Every enabled list (what the server's nightly discovery runs).
+  jf discover_ats --recheck [--limit <n>]
+      Re-detect ATSs for companies not checked in discovery.recheckDays; adds new boards and
+      marks a board stale when the company moved to another ATS and the old board stopped working.
   jf jobs list [--company <name>] [--q <title text>] [--limit <n>] [--all]
       Sorted by match score once \`jf match\` has run. --all includes closed jobs.
   jf profile load [--dir <profile dir>]
@@ -196,6 +203,7 @@ async function main(argv: string[]): Promise<number> {
       count: { type: 'string' },
       'no-preview': { type: 'boolean' },
       state: { type: 'string' },
+      recheck: { type: 'boolean' },
       since: { type: 'string' },
       dump: { type: 'string' },
       verbose: { type: 'boolean', short: 'v' },
@@ -631,13 +639,23 @@ function pageFetcher() {
 
 async function discoverAtsCommand(
   target: string | undefined,
-  values: { name?: string | undefined; save?: boolean | undefined; missing?: boolean | undefined; limit?: string | undefined; 'no-probe'?: boolean | undefined },
+  values: { name?: string | undefined; save?: boolean | undefined; missing?: boolean | undefined; recheck?: boolean | undefined; limit?: string | undefined; 'no-probe'?: boolean | undefined },
   db: Db,
   log: Log,
   config: AppConfig,
 ): Promise<number> {
   const pages = pageFetcher();
   const probe = !values['no-probe'];
+  if (values.recheck) {
+    const s = await runAtsRecheck({ db, pages, log }, config.discovery, values.limit ? { limit: Number(values.limit) } : {});
+    for (const r of s.results) {
+      for (const a of r.added) console.log(`+ ${r.name}: ${a.atsType} ${a.boardToken}`);
+      for (const x of r.stale) console.log(`- ${r.name}: ${x.atsType} ${x.boardToken ?? ''} marked stale (${x.reason})`);
+      if (r.error) console.log(`! ${r.name}: ${r.error}`);
+    }
+    console.log(`${s.checked} checked · ${s.newSources} new boards · ${s.staleSources} stale`);
+    return 0;
+  }
   if (values.missing) {
     const due = await listCompaniesForAtsCheck(db, {
       checkedBefore: new Date(),
@@ -708,13 +726,19 @@ function printDetections(r: DiscoverAtsResult): void {
 }
 
 async function discoverCompaniesCommand(
-  values: { list?: string | undefined; 'max-new'?: string | undefined; 'dry-run'?: boolean | undefined; concurrency?: string | undefined },
+  values: { list?: string | undefined; all?: boolean | undefined; 'max-new'?: string | undefined; 'dry-run'?: boolean | undefined; concurrency?: string | undefined },
   env: Env,
   config: AppConfig,
   db: Db,
   log: Log,
 ): Promise<number> {
-  if (!values.list) throw new UsageError(`--list is required (${Object.keys(COMPANY_LISTS).join(', ')})`);
+  if (values.all) {
+    const s = await runNightlyDiscovery({ db, pages: pageFetcher(), llm: createLLM(env, config, db, log), log }, config.discovery);
+    for (const l of s.lists) console.log(`${l.list}: ${l.candidates} candidates · ${l.existing} known · ${l.added} added (${l.withAts} with a board) · ${l.errors} errors`);
+    console.log(`\n${s.added} companies added · ${s.newSources} new boards (run \`jf fetch\` to ingest them)`);
+    return 0;
+  }
+  if (!values.list) throw new UsageError(`--list is required (${Object.keys(COMPANY_LISTS).join(', ')}), or --all`);
   const source = COMPANY_LISTS[values.list];
   if (!source) throw new UsageError(`unknown list ${values.list} (${Object.keys(COMPANY_LISTS).join(', ')})`);
   const settings: AppConfig['discovery']['lists'][string] = config.discovery.lists[values.list] ?? { enabled: true };

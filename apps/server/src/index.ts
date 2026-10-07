@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, importLinkedInEmployees, launchBrowser, runApplyTick, runSequencer, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, importLinkedInEmployees, runAtsRecheck, runNightlyDiscovery, launchBrowser, runApplyTick, runSequencer, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -137,6 +137,28 @@ export async function bootstrap() {
       }
     });
     log.info({ strategy: config.autopilot.strategy }, 'autopilot scheduled hourly');
+  }
+
+  if (config.discovery.nightly) {
+    // Phase 13: crawl company lists nightly and re-check ATSs daily (each company monthly).
+    // Read-only public pages, so it runs in dev mode too.
+    const pages = () => createPageFetcher({ limiter });
+    const enqueueFetch = (ids: string[]) => enqueueSourceFetches(boss, ids);
+    const loops: [string, string, () => Promise<unknown>][] = [
+      ['discovery.nightly', '41 3 * * *', async () => runNightlyDiscovery({ db, pages: pages(), llm: await llmLazy().catch(() => undefined), log, enqueueFetch }, config.discovery)],
+      ['discovery.recheck', '13 4 * * *', async () => runAtsRecheck({ db, pages: pages(), log, enqueueFetch }, config.discovery)],
+    ];
+    for (const [name, cron, fn] of loops) {
+      if (!(await boss.getQueue(name).catch(() => null))) await boss.createQueue(name, { retryLimit: 0, expireInSeconds: 3 * 60 * 60 });
+      await boss.schedule(name, cron);
+      await boss.work(name, { localConcurrency: 1, batchSize: 1 }, async () => {
+        const r = await fn();
+        log.info({ loop: name, result: r }, 'discovery loop ran');
+        return r;
+      });
+    }
+  } else {
+    for (const name of ['discovery.nightly', 'discovery.recheck']) await boss.unschedule(name).catch(() => {});
   }
 
   const facts = findUp('profile/facts.yaml');

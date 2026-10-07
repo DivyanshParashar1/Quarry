@@ -239,6 +239,7 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.log ? { log: opts.log } : {}),
     ...(opts.pages ? { pages: opts.pages } : {}),
     ...(opts.llm ? { llm: opts.llm } : {}),
+    ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
   });
 
   app.all('/api/*', async (_req, reply) => reply.status(404).send({ error: 'not_found' }));
