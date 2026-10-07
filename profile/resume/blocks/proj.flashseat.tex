@@ -1,0 +1,7 @@
+\resumeProjectHeading
+    {\textbf{FlashSeat - High-Concurrency Seat Booking System} $|$ \emph{TypeScript, Fastify, PostgreSQL, Redis, Docker, k6}}{\href{https://github.com/DivyanshParashar1/FlashSeat}{Github}}
+    \resumeItemListStart
+      \resumeItem{Engineered a seat-booking API with dual concurrency strategies: pessimistic \texttt{SELECT ... FOR UPDATE} and \textbf{version-column optimistic locking}, benchmarked under \textbf{k6} (500 VUs, 10:1 contention) to sustain \textbf{0 double-bookings}, $\sim$\textbf{450 RPS}, and \textbf{p95 hold latency $<$180\,ms}.}
+      \resumeItem{Hardened the \textbf{Razorpay} payment flow with \textbf{HMAC-verified webhooks} and idempotency enforced by a composite unique constraint plus a processed-events ledger, verified across \textbf{1,000+ replayed webhook deliveries} and simulated hold-expiry race conditions.}
+      \resumeItem{Built a \textbf{Redis}-backed waiting-room queue and \textbf{Server-Sent Events} seat-update channel on a Dockerized \textbf{Cloud Run} service, admitting $\sim$\textbf{200 users/sec} into the booking flow and fanning out seat-state changes in \textbf{$<$100\,ms}.}
+    \resumeItemListEnd

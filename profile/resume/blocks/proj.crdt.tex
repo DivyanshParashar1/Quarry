@@ -1,0 +1,7 @@
+\resumeProjectHeading
+    {\textbf{CRDT Collaborative Editor - Real-Time Multi-User Text Sync} $|$ \emph{TypeScript, Node.js, WebSockets}}{\href{https://github.com/DivyanshParashar1/crdt_based_editor}{Github}}
+    \resumeItemListStart
+      \resumeItem{Implemented a \textbf{CRDT} text-editing engine from scratch using the \textbf{Replicated Growable Array} algorithm with \textbf{Lamport clocks}, per-client identifiers, and tombstone deletion, yielding commutative operations that converge to identical state across replicas with \textbf{no server-side arbitration}.}
+      \resumeItem{Built a bidirectional \textbf{WebSocket} sync layer sustaining \textbf{50+ concurrent editors} at \textbf{$<$100ms} end-to-end latency, with envelope-based \textbf{protocol versioning} and a message queue that replays buffered operations on reconnect to survive network drops.}
+      \resumeItem{Designed a \textbf{transport-agnostic} architecture in strict \textbf{TypeScript}, isolating CRDT logic, protocol, and transport behind interfaces, with \textbf{discriminated unions} and runtime type guards validating \textbf{100\%} of deserialization paths.}
+    \resumeItemListEnd

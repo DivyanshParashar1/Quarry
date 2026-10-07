@@ -1,0 +1,147 @@
+# Resume content manifest.
+# Each block is a self-contained .tex fragment under blocks/. The tailor
+# plugin groups blocks by `section`, applies the section wrapper described
+# in `sections`, and inserts them in `sections_order`.
+#
+# The LLM only ever (a) picks `included_block_ids` and (b) rewrites bullets
+# or the tech_stack_line of a project. It never writes LaTeX structure.
+
+sections_order: [education, experience, projects, skills, extras]
+
+# Section wrappers. The assembler emits:
+#   {header}
+#   {inner_start}
+#     {block1}{separator}{block2}...
+#   {inner_end}
+# per section that has at least one selected block.
+sections:
+  education:
+    header: "\\section{Education}"
+    inner_start: "\\resumeSubHeadingListStart"
+    inner_end: "\\resumeSubHeadingListEnd"
+    separator: ""
+  experience:
+    header: "\\section{Experience}"
+    inner_start: "\\resumeSubHeadingListStart"
+    inner_end: "\\resumeSubHeadingListEnd"
+    separator: ""
+  projects:
+    header: "\\section{Projects}\n    \\vspace{-5pt}"
+    inner_start: "\\resumeSubHeadingListStart"
+    inner_end: "\\resumeSubHeadingListEnd"
+    # Between adjacent projects the original resume adds \vspace{-13pt}; the
+    # assembler appends it after every project block except the last.
+    separator: "\\vspace{-13pt}"
+  skills:
+    header: "\\section{Technical Skills}"
+    inner_start: ""
+    inner_end: ""
+    separator: ""
+  extras:
+    header: "\\section{Extracurriculars}"
+    inner_start: "\\resumeSubHeadingListStart"
+    inner_end: "\\resumeSubHeadingListEnd"
+    separator: ""
+
+# The <center>...</center> header block. Always included; sits above the
+# first section and is not part of sections_order.
+header_block: header
+
+blocks:
+  - id: header
+    file: blocks/header.tex
+    section: header
+    always_include: true
+
+  - id: edu.rgipt
+    file: blocks/edu.rgipt.tex
+    section: education
+    title: RGIPT — B.Tech CSD
+    always_include: true
+
+  - id: exp.screenify
+    file: blocks/exp.screenify.tex
+    section: experience
+    title: Screenify (Founding Engineer Intern)
+    always_include: true
+    tags: [backend, multi-agent, llm, gcp, cloud-run, docker, jwt, rbac, vue, vertex-ai]
+    bullets:
+      - id: exp.screenify.b1
+        tags: [perf, multi-agent, async, firestore]
+      - id: exp.screenify.b2
+        tags: [backend, multi-agent, vertex-ai, auth, rbac]
+      - id: exp.screenify.b3
+        tags: [docker, cloud-run, vue, frontend]
+
+  - id: exp.orangecat
+    file: blocks/exp.orangecat.tex
+    section: experience
+    title: Orangecat (SWE Intern)
+    always_include: true
+    tags: [backend, rest, llm, agents, tree-sitter, react, streaming]
+    bullets:
+      - id: exp.orangecat.b1
+        tags: [backend, rest, llm, tree-sitter, sql]
+      - id: exp.orangecat.b2
+        tags: [multi-agent, react, streaming, frontend]
+
+  - id: proj.flashseat
+    file: blocks/proj.flashseat.tex
+    section: projects
+    title: FlashSeat
+    tags: [backend, concurrency, postgres, redis, docker, k6, payments, cloud-run, sse]
+    tech_stack_line: TypeScript, Fastify, PostgreSQL, Redis, Docker, k6
+    bullets:
+      - id: proj.flashseat.b1
+        tags: [concurrency, postgres, locking, k6, performance]
+      - id: proj.flashseat.b2
+        tags: [payments, webhooks, hmac, idempotency]
+      - id: proj.flashseat.b3
+        tags: [redis, sse, cloud-run, realtime]
+
+  - id: proj.crdt
+    file: blocks/proj.crdt.tex
+    section: projects
+    title: CRDT Collaborative Editor
+    tags: [typescript, crdt, websockets, realtime, distributed, protocol-design]
+    tech_stack_line: TypeScript, Node.js, WebSockets
+    bullets:
+      - id: proj.crdt.b1
+        tags: [crdt, distributed, algorithms]
+      - id: proj.crdt.b2
+        tags: [websockets, realtime, networking]
+      - id: proj.crdt.b3
+        tags: [typescript, architecture, type-safety]
+
+  - id: proj.drillmirror
+    file: blocks/proj.drillmirror.tex
+    section: projects
+    title: DrillMirror
+    tags: [python, ml, ontology, owl, scikit-learn, groq, agents, anomaly-detection]
+    tech_stack_line: Python, OWL, Scikit-learn, Groq
+    bullets:
+      - id: proj.drillmirror.b1
+        tags: [ml, anomaly-detection, scikit-learn]
+      - id: proj.drillmirror.b2
+        tags: [ontology, owl, llm, agents]
+      - id: proj.drillmirror.b3
+        tags: [agents, product]
+
+  - id: skills.default
+    file: blocks/skills.default.tex
+    section: skills
+    title: Technical Skills
+    always_include: true
+
+  - id: extra.tpc
+    file: blocks/extra.tpc.tex
+    section: extras
+    title: Training & Placement Coordinator
+    always_include: true
+
+# Soft budget the selector targets; the shrink loop prunes further if the
+# compiled PDF exceeds one page.
+budget:
+  experience_blocks: { min: 1, max: 3 }
+  project_blocks:    { min: 2, max: 3 }
+  total_bullets_hint: 14
