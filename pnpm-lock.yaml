@@ -172,6 +172,9 @@ importers:
       pdf-parse:
         specifier: ^1.1.1
         version: 1.1.4
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -489,6 +492,9 @@ importers:
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -496,6 +502,9 @@ importers:
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
