@@ -57,7 +57,7 @@ async function addJob(db: DB, companyId: string, company: string, id: string, ti
  * covered by the plugin's own tests.
  */
 function stubTailorPlugin(result: TailoredResume) {
-  return defineTailorPlugin<{}>({
+  return defineTailorPlugin<Record<string, never>>({
     manifest: {
       id: 'tailor-resume-latex',
       version: '0.0.0-test',
@@ -67,7 +67,7 @@ function stubTailorPlugin(result: TailoredResume) {
       permissions: { domains: [], llm: false },
       sideEffects: 'none',
     },
-    async tailor(_ctx: PluginContext<{}>, _job: Job, _profile: Profile) {
+    async tailor(_ctx: PluginContext<Record<string, never>>, _job: Job, _profile: Profile) {
       return result;
     },
   });

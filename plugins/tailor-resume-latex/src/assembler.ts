@@ -24,7 +24,6 @@ export function assembleTex(input: AssembleInput): string {
   const { resume, includedBlockIds } = input;
   const { manifest, preamble, fragments, blocksById } = resume;
 
-  const included = new Set(includedBlockIds);
   const rewritesByBullet = new Map((input.bulletRewrites ?? []).map((r) => [r.bullet_id, r]));
   const techByBlock = new Map((input.techStackRewrites ?? []).map((r) => [r.block_id, r]));
 
@@ -85,9 +84,8 @@ export function assembleTex(input: AssembleInput): string {
 
   // ---- emit sections in order ------------------------------------------------------
   const headerBlockId = manifest.header_block;
-  const headerTex = included.has(headerBlockId) || true // header is always rendered
-    ? rewrittenFragments.get(headerBlockId)!.trimEnd()
-    : '';
+  // The header is always rendered, whether or not the selection lists it.
+  const headerTex = rewrittenFragments.get(headerBlockId)!.trimEnd();
 
   const sectionChunks: string[] = [];
   for (const section of manifest.sections_order) {
