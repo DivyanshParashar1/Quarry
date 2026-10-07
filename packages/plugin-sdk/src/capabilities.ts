@@ -22,6 +22,12 @@ export interface GmailMessageMeta {
   headers: Record<string, string>;
 }
 
+/** Decoded bodies of a message (the first text/html and text/plain parts). */
+export interface GmailMessageBody {
+  html: string | null;
+  text: string | null;
+}
+
 export interface GmailMessageRef {
   id: string;
   threadId: string;
@@ -40,4 +46,6 @@ export interface GmailHandle {
   /** Gmail search syntax, e.g. `rfc822msgid:<id>` or `in:inbox after:1700000000`. */
   search?(q: string, max?: number): Promise<GmailMessageRef[]>;
   getMessage?(id: string): Promise<GmailMessageMeta>;
+  /** Full decoded body (read scope). Used by the job-alert source to parse alert emails. */
+  getMessageBody?(id: string): Promise<GmailMessageBody>;
 }

@@ -43,6 +43,7 @@ export function scopeGmail(full: GmailHandle | undefined, manifest: PluginManife
     if (!full.search || !full.getMessage) throw new PluginError('Gmail client cannot read');
     h.search = full.search.bind(full);
     h.getMessage = full.getMessage.bind(full);
+    if (full.getMessageBody) h.getMessageBody = full.getMessageBody.bind(full);
   }
   return Object.freeze(h);
 }

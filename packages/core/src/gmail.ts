@@ -78,5 +78,33 @@ export async function createGmailClient(
         headers,
       };
     },
+    async getMessageBody(id) {
+      const res = await limited(() => api.users.messages.get({ userId: 'me', id, format: 'full' }));
+      return extractBodies(res.data.payload ?? undefined);
+    },
   };
+}
+
+interface GmailPart {
+  mimeType?: string | null;
+  body?: { data?: string | null } | null;
+  parts?: GmailPart[] | null;
+}
+
+/** First text/html and text/plain bodies in a (possibly nested multipart) Gmail payload. */
+export function extractBodies(payload: GmailPart | undefined): { html: string | null; text: string | null } {
+  let html: string | null = null;
+  let text: string | null = null;
+  const walk = (p: GmailPart | undefined) => {
+    if (!p) return;
+    const data = p.body?.data;
+    if (data) {
+      const decoded = Buffer.from(data, 'base64url').toString('utf8');
+      if (p.mimeType === 'text/html' && html === null) html = decoded;
+      else if (p.mimeType === 'text/plain' && text === null) text = decoded;
+    }
+    for (const c of p.parts ?? []) walk(c);
+  };
+  walk(payload);
+  return { html, text };
 }

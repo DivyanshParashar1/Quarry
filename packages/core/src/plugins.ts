@@ -133,6 +133,8 @@ export interface ContextDeps {
   dns?: DnsResolver;
   /** Full client; narrowed to the manifest's gmail scopes before a plugin sees it. */
   gmail?: GmailHandle;
+  /** Receives ctx.emit() calls; the runner persists them as events. */
+  onEvent?: (kind: string, data: Record<string, unknown>) => void;
 }
 
 /** Build the capability-scoped context a plugin runs with. Nothing else from the core leaks in. */
@@ -163,6 +165,7 @@ export function buildContext<C>(loaded: LoadedPlugin, deps: ContextDeps): Plugin
     log,
     signal: deps.signal,
     dryRun: deps.dryRun,
+    ...(deps.onEvent ? { emit: (kind: string, data: Record<string, unknown>) => deps.onEvent!(`plugin.${loaded.manifest.id}.${kind}`, data) } : {}),
   };
 }
 

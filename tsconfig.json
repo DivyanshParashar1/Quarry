@@ -62,6 +62,9 @@
     },
     {
       "path": "./plugins/tailor-resume-latex"
+    },
+    {
+      "path": "./plugins/source-gmail-alerts"
     }
   ]
 }

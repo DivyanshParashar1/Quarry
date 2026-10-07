@@ -30,6 +30,8 @@ import {
   loadProfile,
   QUEUES,
   registerSourceWorker,
+  ALERT_SOURCE_ID,
+  runAlertSource,
   runAutopilot,
   runMatch,
   runTailor,
@@ -53,8 +55,14 @@ Usage:
       CSV header: name,ats_type,board_token[,domain,tags,location,notes]
       tags are ';'-separated. Re-importing is idempotent.
   jf companies list
-  jf fetch [--plugin <id>] [--company <name>] [--concurrency <n>] [--verbose]
-      Fetch every active board (or a subset) through the job queue.
+  jf fetch [--plugin <id>] [--company <name>] [--concurrency <n>] [--no-alerts] [--verbose]
+      Fetch every active board (or a subset) through the job queue. When Gmail is
+      connected, job-alert emails (LinkedIn, Naukri, Wellfound, YC, Instahyre,
+      Internshala, Unstop) are read too, unless --no-alerts or --plugin/--company narrow it.
+  jf gmail alerts [--since <ISO date>] [--dump <messageId>]
+      Read job-alert emails only. --dump prints one message's HTML (to build a fixture).
+  jf gmail subscribe-template
+      Print the job-alert searches to set up on each portal (from preferences.yaml).
   jf discover_ats <domain|company name> [--name <company>] [--save] [--no-probe]
       Detect a company's ATS from its careers pages (robots.txt respected), falling
       back to ATS API probes by name. --save writes the company + detected boards.
@@ -149,6 +157,9 @@ async function main(argv: string[]): Promise<number> {
       save: { type: 'boolean' },
       missing: { type: 'boolean' },
       'no-probe': { type: 'boolean' },
+      'no-alerts': { type: 'boolean' },
+      since: { type: 'string' },
+      dump: { type: 'string' },
       verbose: { type: 'boolean', short: 'v' },
       help: { type: 'boolean', short: 'h' },
     },
@@ -205,7 +216,32 @@ async function main(argv: string[]): Promise<number> {
       return await discoverCompaniesCommand(values, env, config, db, log);
     }
 
-    if (cmd === 'fetch') return await fetchCommand(values, db, env.DATABASE_URL, env.MODE, log, config);
+    if (cmd === 'fetch') {
+      const code = await fetchCommand(values, db, env.DATABASE_URL, env.MODE, log, config);
+      if (values['no-alerts'] || values.company || (values.plugin && values.plugin !== ALERT_SOURCE_ID)) return code;
+      const gmail = await createGmail(env, new DomainRateLimiter()).catch(() => undefined);
+      if (!gmail) {
+        if (values.plugin === ALERT_SOURCE_ID) throw new CmdError('Gmail is not connected; run `jf gmail auth`');
+        return code;
+      }
+      const alerts = await alertsCommand(gmail, values, db, log, config);
+      return code === 0 || alerts === 0 ? 0 : 1;
+    }
+    if (cmd === 'gmail' && sub === 'alerts') {
+      const gmail = await createGmail(env, new DomainRateLimiter());
+      if (!gmail) throw new CmdError('Gmail is not connected; run `jf gmail auth`');
+      if (values.dump) {
+        const body = await gmail.getMessageBody!(values.dump);
+        process.stdout.write(body.html ?? body.text ?? '');
+        return 0;
+      }
+      return await alertsCommand(gmail, values, db, log, config);
+    }
+    if (cmd === 'gmail' && sub === 'subscribe-template') {
+      const p = await getActiveProfile(db);
+      console.log(subscribeTemplate(p?.preferences.roles ?? [], p?.preferences.locations ?? []));
+      return 0;
+    }
 
     if (cmd === 'profile' && sub === 'load') {
       const dir = resolve(values.dir ?? profileDir());
@@ -642,6 +678,55 @@ async function discoverCompaniesCommand(
   );
   if (s.errors.length && !s.companies.length) console.log(`errors: ${s.errors.slice(0, 5).join('; ')}`);
   return s.errors.length && !s.added ? 1 : 0;
+}
+
+async function alertsCommand(
+  gmail: NonNullable<Awaited<ReturnType<typeof createGmail>>>,
+  values: { since?: string | undefined },
+  db: Db,
+  log: Log,
+  config: AppConfig,
+): Promise<number> {
+  if (values.since && Number.isNaN(Date.parse(values.since))) throw new UsageError('--since must be an ISO date');
+  const s = await runAlertSource(
+    { db, registry: createRegistry(config), log, limiter: new DomainRateLimiter(), dryRun: true, gmail },
+    values.since ? { since: new Date(values.since) } : {},
+  );
+  console.log(
+    `job alerts (${gmail.address}, since ${s.since}): ${s.ok ? 'ok' : `FAILED: ${s.error}`} · ${s.postings} postings · ` +
+      `${s.jobsCreated} new jobs · ${s.jobsUpdated} seen · ${s.companiesCreated} new companies · ${s.parseFailures} parse failures`,
+  );
+  return s.ok ? 0 : 1;
+}
+
+/** Portal-side alert setup, so the inbox gets a steady flow (PLAN Phase 7). */
+export function subscribeTemplate(roles: string[], locations: string[]): string {
+  const r = roles.length ? roles : ['Software Engineer', 'Software Engineer Intern', 'SDE'];
+  const l = locations.length ? locations : ['India', 'Bengaluru', 'Hyderabad', 'Pune'];
+  const q = (s: string) => encodeURIComponent(s);
+  const lines = [
+    'Set up these job alerts so new postings land in the Gmail account JobForge reads.',
+    'Use daily frequency where offered. Run `jf fetch` (or let the server poll) afterwards.',
+    '',
+    'LinkedIn (Jobs → search → "Set alert" toggle, Daily, email):',
+    ...r.flatMap((role) => l.slice(0, 2).map((loc) => `  https://www.linkedin.com/jobs/search/?keywords=${q(role)}&location=${q(loc)}&f_TPR=r86400`)),
+    '',
+    'Naukri (search → "Create Job Alert"; name it after the role):',
+    ...r.map((role) => `  https://www.naukri.com/${role.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-jobs-in-${l[0]!.toLowerCase().replace(/[^a-z0-9]+/g, '-')}?experience=0`),
+    '',
+    'Wellfound: Profile → Job preferences → turn on "Weekly job digest"; set roles + locations below.',
+    'YC Work at a Startup: workatastartup.com → Profile → "Email me new matching jobs".',
+    'Instahyre: Settings → Notifications → enable "Job opportunities" emails.',
+    'Internshala: Preferences → choose categories (Software Development, Web Development) and cities, enable email alerts.',
+    'Unstop: Profile → Preferences → enable job & internship recommendations by email.',
+    '',
+    `Roles: ${r.join(', ')}`,
+    `Locations: ${l.join(', ')}`,
+    '',
+    'Gmail tip: create a filter (from:(linkedin.com OR naukri.com OR wellfound.com OR workatastartup.com OR instahyre.com',
+    'OR internshala.com OR unstop.com) → Skip Inbox, apply label "job-alerts") to keep your inbox clean; JobForge searches all mail.',
+  ];
+  return lines.join('\n');
 }
 
 class UsageError extends Error {}

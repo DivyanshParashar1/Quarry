@@ -215,3 +215,8 @@ export async function discoveredCountSince(db: DB, since: Date): Promise<number>
   );
   return r?.n ?? 0;
 }
+
+/** Every company's id + name (for in-memory name matching; a few thousand rows at most). */
+export async function listAllCompanies(db: DB): Promise<{ id: string; name: string; domain: string | null }[]> {
+  return db.select({ id: companies.id, name: companies.name, domain: companies.domain }).from(companies).orderBy(asc(companies.name));
+}

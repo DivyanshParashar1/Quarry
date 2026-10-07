@@ -79,7 +79,7 @@ export function fixtureHttp(routes: Record<string, FixtureRouteSpec>, domains: r
 export function testContext<C>(
   config: C,
   http: ScopedHttp = fixtureHttp({}, []),
-  extra: Partial<Pick<PluginContext<C>, 'llm' | 'embed' | 'gmail' | 'dns' | 'dryRun'>> = {},
+  extra: Partial<Pick<PluginContext<C>, 'llm' | 'embed' | 'gmail' | 'dns' | 'dryRun' | 'emit' | 'browser'>> = {},
 ): PluginContext<C> {
   return {
     config,
@@ -113,6 +113,8 @@ export interface FakeMessage {
   raw: string;
   headers: Record<string, string>;
   body: string;
+  /** HTML body, for alert-style messages. */
+  html?: string;
 }
 
 /**
@@ -134,7 +136,7 @@ export function fakeGmail(address = 'me@example.com') {
     messages: FakeMessage[];
     sent: () => FakeMessage[];
     /** Simulate someone writing into a thread (a reply or a bounce). */
-    receive(m: { threadId: string; from: string; subject: string; body?: string; headers?: Record<string, string>; at?: Date }): FakeMessage;
+    receive(m: { threadId: string; from: string; subject: string; body?: string; html?: string; headers?: Record<string, string>; at?: Date }): FakeMessage;
     failNextSend?: Error | undefined;
   } = {
     address,
@@ -159,6 +161,7 @@ export function fakeGmail(address = 'me@example.com') {
         raw: '',
         headers,
         body: r.body ?? '',
+        ...(r.html !== undefined ? { html: r.html } : {}),
         ...(r.at ? { internalDate: r.at } : {}),
       });
     },
@@ -172,6 +175,7 @@ export function fakeGmail(address = 'me@example.com') {
             if (t === 'in:inbox') return m.labelIds.includes('INBOX');
             if (t.startsWith('after:')) return m.internalDate.getTime() / 1000 > Number(t.slice(6));
             if (t === '-from:me') return !m.labelIds.includes('SENT');
+            if (t.startsWith('from:')) return (m.headers.from ?? '').toLowerCase().includes(t.slice(5).toLowerCase());
             throw new Error(`fakeGmail: unsupported search term ${t}`);
           }),
         )
@@ -182,6 +186,11 @@ export function fakeGmail(address = 'me@example.com') {
       const m = messages.find((x) => x.id === id);
       if (!m) throw new Error(`no message ${id}`);
       return { id: m.id, threadId: m.threadId, labelIds: m.labelIds, internalDate: m.internalDate, snippet: m.body.slice(0, 120), headers: m.headers };
+    },
+    async getMessageBody(id) {
+      const m = messages.find((x) => x.id === id);
+      if (!m) throw new Error(`no message ${id}`);
+      return { html: m.html ?? null, text: m.body || null };
     },
   };
   return handle;

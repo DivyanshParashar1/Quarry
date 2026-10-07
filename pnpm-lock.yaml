@@ -74,6 +74,9 @@ importers:
       '@jobforge/source-ashby':
         specifier: workspace:*
         version: link:../../plugins/source-ashby
+      '@jobforge/source-gmail-alerts':
+        specifier: workspace:*
+        version: link:../../plugins/source-gmail-alerts
       '@jobforge/source-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/source-greenhouse
@@ -160,6 +163,9 @@ importers:
       '@jobforge/source-ashby':
         specifier: workspace:*
         version: link:../../plugins/source-ashby
+      '@jobforge/source-gmail-alerts':
+        specifier: workspace:*
+        version: link:../../plugins/source-gmail-alerts
       '@jobforge/source-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/source-greenhouse
@@ -289,6 +295,9 @@ importers:
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../llm
+      '@jobforge/source-gmail-alerts':
+        specifier: workspace:*
+        version: link:../../plugins/source-gmail-alerts
       '@jobforge/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
@@ -449,6 +458,22 @@ importers:
         version: 5.9.3
 
   plugins/source-ashby:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-gmail-alerts:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*

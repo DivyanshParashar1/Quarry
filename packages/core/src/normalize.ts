@@ -69,6 +69,16 @@ export function normalizeCompanyName(name: string): string {
   );
 }
 
+const REGIONAL_WORDS = /\b(india|bharat|gcc|global capability (center|centre)|(technology|development|innovation|engineering) (center|centre)|r d)\b/g;
+
+/**
+ * Looser key for matching an employer named in a job alert ("Walmart Global
+ * Tech India", "Target Corporation India") to a company we already track.
+ */
+export function companyMatchKey(name: string): string {
+  return collapse(normalizeCompanyName(name).replace(REGIONAL_WORDS, ' '));
+}
+
 export function normalizeLocation(loc: string): string {
   return collapse(
     decodeEntities(loc)

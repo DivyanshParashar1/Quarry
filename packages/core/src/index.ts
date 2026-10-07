@@ -14,3 +14,4 @@ export * from './outreach.js';
 export * from './tailor-runner.js';
 export * from './autopilot.js';
 export * from './discovery/index.js';
+export * from './alert-runner.js';

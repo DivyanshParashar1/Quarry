@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -27,6 +27,16 @@ export async function bootstrap() {
   const tailorDeps = lazyTailorDeps({ env, config, db, log, registry, limiter });
   const autopilotDeps = lazyAutopilotDeps({ env, config, db, log, outreachDeps, tailorDeps });
   const loops = await registerOutreachWorkers(boss, outreachDeps, { live: env.MODE === 'live', gmailConnected: !!gmail, log });
+  if (gmail) {
+    // Job-alert emails (Phase 7): read-only, so it runs in dev mode too.
+    if (!(await boss.getQueue('source.alerts').catch(() => null))) await boss.createQueue('source.alerts', { retryLimit: 0, expireInSeconds: 10 * 60 });
+    await boss.schedule('source.alerts', '*/30 * * * *');
+    await boss.work('source.alerts', { localConcurrency: 1, batchSize: 1 }, async () => {
+      const s = await runAlertSource({ db, registry, log, limiter, dryRun: env.MODE !== 'live', gmail });
+      log.info({ alerts: s }, 'job-alert poll finished');
+      return s;
+    });
+  }
   if (config.autopilot.enabled && env.MODE === 'live') {
     // Hourly autopilot run; pg-boss handles exactly-once scheduling across restarts.
     await boss.schedule('autopilot.hourly', '0 * * * *');

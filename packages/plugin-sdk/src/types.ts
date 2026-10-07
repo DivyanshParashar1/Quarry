@@ -48,6 +48,11 @@ export interface PluginContext<C> {
   log: Logger;
   signal: AbortSignal;
   dryRun: boolean;
+  /**
+   * Append an audit event (stored as `plugin.<id>.<kind>` in `events`). Present
+   * when the caller records events; never put secrets or full message bodies here.
+   */
+  emit?(kind: string, data: Record<string, unknown>): void;
 }
 
 // ---------------------------------------------------------------------------

@@ -21,6 +21,7 @@
     "@jobforge/matcher-default": "workspace:*",
     "@jobforge/shared": "workspace:*",
     "@jobforge/source-ashby": "workspace:*",
+    "@jobforge/source-gmail-alerts": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
     "@jobforge/source-smartrecruiters": "workspace:*",
