@@ -1,0 +1,105 @@
+{
+ "offset": 5,
+ "limit": 5,
+ "totalFound": 7,
+ "content": [
+  {
+   "id": "744000000005",
+   "name": "Software Engineer",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000005",
+   "jobAdId": "ja-5",
+   "defaultJobAd": true,
+   "refNumber": "REF1005V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-15T08:30:00.000Z",
+   "location": {
+    "city": "Bengaluru",
+    "region": "ka",
+    "country": "in",
+    "remote": false,
+    "fullLocation": "Bengaluru, KA, IN"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "associate",
+    "label": "Associate"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000005",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  },
+  {
+   "id": "744000000006",
+   "name": "Associate Software Engineer",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000006",
+   "jobAdId": "ja-6",
+   "defaultJobAd": true,
+   "refNumber": "REF1006V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-16T08:30:00.000Z",
+   "location": {
+    "city": "Hyderabad",
+    "region": "ts",
+    "country": "in",
+    "remote": false,
+    "fullLocation": "Hyderabad, TS, IN"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000006",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  }
+ ]
+}

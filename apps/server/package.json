@@ -23,6 +23,8 @@
     "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-greenhouse": "workspace:*",
     "@jobforge/source-lever": "workspace:*",
+    "@jobforge/source-smartrecruiters": "workspace:*",
+    "@jobforge/source-workday": "workspace:*",
     "@jobforge/tailor-resume-latex": "workspace:*",
     "@jobforge/tracker-gmail": "workspace:*",
     "fastify": "^5.12.5",

@@ -10,6 +10,8 @@ const SOURCE_ATS: Record<string, string> = {
   'source-greenhouse': 'greenhouse',
   'source-lever': 'lever',
   'source-ashby': 'ashby',
+  'source-workday': 'workday',
+  'source-smartrecruiters': 'smartrecruiters',
 };
 
 const ok = (data: unknown): CallToolResult => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
@@ -81,8 +83,8 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
     'run_source',
     {
       title: 'Run source',
-      description: 'Queue a fetch of job boards. pluginId: source-greenhouse | source-lever | source-ashby (omit for all); company narrows to one company.',
-      inputSchema: { pluginId: z.enum(['source-greenhouse', 'source-lever', 'source-ashby']).optional(), company: z.string().optional() },
+      description: 'Queue a fetch of job boards. pluginId: source-greenhouse | source-lever | source-ashby | source-workday | source-smartrecruiters (omit for all); company narrows to one company.',
+      inputSchema: { pluginId: z.enum(['source-greenhouse', 'source-lever', 'source-ashby', 'source-workday', 'source-smartrecruiters']).optional(), company: z.string().optional() },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     (a) => run(() => api.send('POST', '/api/sources/run', { ...(a.pluginId ? { atsType: SOURCE_ATS[a.pluginId] } : {}), ...(a.company ? { company: a.company } : {}) })),
@@ -164,10 +166,10 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
     'add_company',
     {
       title: 'Add company',
-      description: 'Add a company and (optionally) its job board. atsType + boardToken, e.g. greenhouse/airbnb, lever/netflix, ashby/linear.',
+      description: 'Add a company and (optionally) its job board. atsType + boardToken, e.g. greenhouse/airbnb, lever/netflix, ashby/linear, workday/walmart.wd5/WalmartExternal, smartrecruiters/Visa.',
       inputSchema: {
         name: z.string().min(1),
-        atsType: z.enum(['greenhouse', 'lever', 'ashby', 'careers_page', 'other']).optional(),
+        atsType: z.enum(['greenhouse', 'lever', 'ashby', 'workday', 'smartrecruiters', 'successfactors', 'taleo', 'careers_page', 'other']).optional(),
         boardToken: z.string().min(1).optional(),
         domain: z.string().optional(),
       },

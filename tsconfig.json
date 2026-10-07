@@ -53,6 +53,15 @@
     },
     {
       "path": "./plugins/enricher-contacts-pattern"
+    },
+    {
+      "path": "./plugins/source-workday"
+    },
+    {
+      "path": "./plugins/source-smartrecruiters"
+    },
+    {
+      "path": "./plugins/tailor-resume-latex"
     }
   ]
 }

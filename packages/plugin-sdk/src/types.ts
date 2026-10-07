@@ -24,6 +24,8 @@ export interface ScopedHttp {
   request(url: string, init?: HttpRequestInit): Promise<Response>;
   /** `request` + status check + JSON parse. Throws `HttpError` on non-2xx. */
   getJson<T = unknown>(url: string, init?: HttpRequestInit): Promise<T>;
+  /** `request` + status check, returning the body as text (HTML/XML pages). Throws `HttpError` on non-2xx. */
+  getText(url: string, init?: HttpRequestInit): Promise<string>;
 }
 
 // Placeholders for capabilities that land in later phases. Kept as opaque
@@ -58,6 +60,11 @@ export interface SourceTarget {
   companyId: string;
   companyName: string;
   boardToken: string;
+  /**
+   * Per-target overrides from `company_sources.config` (e.g. a Workday search
+   * text). Each source plugin validates the keys it understands; others are ignored.
+   */
+  options?: Record<string, unknown>;
 }
 
 export const remotePolicySchema = z.enum(['remote', 'hybrid', 'onsite']);
@@ -78,6 +85,11 @@ export const rawPostingSchema = z.object({
   /** HTML (already entity-decoded) or plain text; the core converts it to markdown. */
   descriptionHtml: z.string().nullable(),
   postedAt: z.date().nullable(),
+  /**
+   * Employer name, for sources that are not tied to one company (job-alert
+   * emails). Company-scoped sources leave it unset; the core uses the target's company.
+   */
+  companyName: z.string().min(1).optional(),
   payload: z.unknown(),
 });
 export type RawPosting = z.infer<typeof rawPostingSchema>;

@@ -15,6 +15,8 @@ export interface CompanyInput {
   tags?: string[] | undefined;
   location?: string | null | undefined;
   notes?: string | null | undefined;
+  /** Provenance for discovered companies, e.g. `list:yc`. Only set on insert. */
+  discoveredVia?: string | null | undefined;
 }
 
 /** Insert or update by unique name. Empty incoming fields never overwrite existing values. */
@@ -27,6 +29,7 @@ export async function upsertCompany(db: DB, c: CompanyInput): Promise<{ id: stri
       tags: c.tags ?? [],
       location: c.location ?? null,
       notes: c.notes ?? null,
+      ...(c.discoveredVia ? { discoveredVia: c.discoveredVia, discoveredAt: new Date() } : {}),
     })
     .onConflictDoUpdate({
       target: companies.name,
@@ -44,11 +47,23 @@ export async function upsertCompany(db: DB, c: CompanyInput): Promise<{ id: stri
 
 export async function upsertCompanySource(
   db: DB,
-  s: { companyId: string; atsType: AtsType; boardToken: string },
+  s: {
+    companyId: string;
+    atsType: AtsType;
+    boardToken: string;
+    config?: Record<string, unknown> | undefined;
+    detectedBy?: string | undefined;
+  },
 ): Promise<{ id: string; created: boolean }> {
   const [inserted] = await db
     .insert(companySources)
-    .values(s)
+    .values({
+      companyId: s.companyId,
+      atsType: s.atsType,
+      boardToken: s.boardToken,
+      config: s.config ?? {},
+      detectedBy: s.detectedBy ?? null,
+    })
     .onConflictDoNothing()
     .returning({ id: companySources.id });
   if (inserted) return { id: inserted.id, created: true };
@@ -72,6 +87,8 @@ export interface SourceTargetRow {
   atsType: AtsType;
   boardToken: string;
   status: 'active' | 'paused' | 'error';
+  /** company_sources.config — per-target plugin options. */
+  options: Record<string, unknown>;
 }
 
 export async function listSourceTargets(
@@ -91,12 +108,13 @@ export async function listSourceTargets(
       atsType: companySources.atsType,
       boardToken: companySources.boardToken,
       status: companySources.status,
+      options: companySources.config,
     })
     .from(companySources)
     .innerJoin(companies, eq(companies.id, companySources.companyId))
     .where(and(...conds))
     .orderBy(asc(companies.name));
-  return rows.map((r) => ({ ...r, boardToken: r.boardToken! }));
+  return rows.map((r) => ({ ...r, boardToken: r.boardToken!, options: (r.options ?? {}) as Record<string, unknown> }));
 }
 
 export async function markSourceResult(db: DB, companySourceId: string, error: string | null): Promise<void> {

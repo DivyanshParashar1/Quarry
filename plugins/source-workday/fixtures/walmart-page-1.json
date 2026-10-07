@@ -1,0 +1,34 @@
+{
+ "total": 0,
+ "jobPostings": [
+  {
+   "title": "Software Engineer III",
+   "externalPath": "/job/Bangalore/Software-Engineer-III_R-2000120",
+   "locationsText": "Bangalore, Karnataka, India",
+   "postedOn": "Posted Today",
+   "bulletFields": [
+    "R-2000120"
+   ]
+  },
+  {
+   "title": "Software Engineer II",
+   "externalPath": "/job/Chennai/Software-Engineer-II_R-2000121",
+   "locationsText": "Chennai, Tamil Nadu, India",
+   "postedOn": "Posted Yesterday",
+   "bulletFields": [
+    "R-2000121"
+   ]
+  },
+  {
+   "title": "Senior Software Engineer",
+   "externalPath": "/job/Gurgaon/Senior-Software-Engineer_R-2000122",
+   "locationsText": "Gurgaon, Haryana, India",
+   "postedOn": "Posted 3 Days Ago",
+   "bulletFields": [
+    "R-2000122"
+   ]
+  }
+ ],
+ "facets": [],
+ "userAuthenticated": false
+}

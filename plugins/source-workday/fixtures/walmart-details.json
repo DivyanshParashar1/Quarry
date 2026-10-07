@@ -1,0 +1,491 @@
+{
+ "/job/Bangalore/Software-Engineer-III_R-2000100": {
+  "jobPostingInfo": {
+   "id": "abc0000",
+   "title": "Software Engineer III",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 0.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bangalore, Karnataka, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Today",
+   "startDate": "2026-09-01",
+   "timeType": "Full time",
+   "jobReqId": "R-2000100",
+   "jobPostingId": "Software-Engineer-III_R-2000100",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bangalore/Software-Engineer-III_R-2000100",
+   "canApply": true,
+   "remoteType": "Hybrid"
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Chennai/Software-Engineer-II_R-2000101": {
+  "jobPostingInfo": {
+   "id": "abc0001",
+   "title": "Software Engineer II",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 1.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Chennai, Tamil Nadu, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Yesterday",
+   "startDate": "2026-09-02",
+   "timeType": "Full time",
+   "jobReqId": "R-2000101",
+   "jobPostingId": "Software-Engineer-II_R-2000101",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Chennai/Software-Engineer-II_R-2000101",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Gurgaon/Senior-Software-Engineer_R-2000102": {
+  "jobPostingInfo": {
+   "id": "abc0002",
+   "title": "Senior Software Engineer",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 2.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Gurgaon, Haryana, India",
+   "additionalLocations": [],
+   "postedOn": "Posted 3 Days Ago",
+   "startDate": "2026-09-03",
+   "timeType": "Full time",
+   "jobReqId": "R-2000102",
+   "jobPostingId": "Senior-Software-Engineer_R-2000102",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Gurgaon/Senior-Software-Engineer_R-2000102",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Sunnyvale/Data-Scientist-III_R-2000103": {
+  "jobPostingInfo": {
+   "id": "abc0003",
+   "title": "Data Scientist III",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 3.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Sunnyvale, CA, United States",
+   "additionalLocations": [
+    "Chennai, Tamil Nadu, India"
+   ],
+   "postedOn": "Posted 30+ Days Ago",
+   "startDate": "2026-09-04",
+   "timeType": "Full time",
+   "jobReqId": "R-2000103",
+   "jobPostingId": "Data-Scientist-III_R-2000103",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Sunnyvale/Data-Scientist-III_R-2000103",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bentonville/Software-Engineer-Intern---2027_R-2000104": {
+  "jobPostingInfo": {
+   "id": "abc0004",
+   "title": "Software Engineer Intern - 2027",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 4.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bentonville, AR, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted Today",
+   "startDate": "2026-09-05",
+   "timeType": "Full time",
+   "jobReqId": "R-2000104",
+   "jobPostingId": "Software-Engineer-Intern---2027_R-2000104",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bentonville/Software-Engineer-Intern---2027_R-2000104",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bangalore/Staff-Software-Engineer_R-2000105": {
+  "jobPostingInfo": {
+   "id": "abc0005",
+   "title": "Staff Software Engineer",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 5.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bangalore, Karnataka, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Yesterday",
+   "startDate": "2026-09-06",
+   "timeType": "Full time",
+   "jobReqId": "R-2000105",
+   "jobPostingId": "Staff-Software-Engineer_R-2000105",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bangalore/Staff-Software-Engineer_R-2000105",
+   "canApply": true,
+   "remoteType": "Hybrid"
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Chennai/SDE-II---Payments_R-2000106": {
+  "jobPostingInfo": {
+   "id": "abc0006",
+   "title": "SDE II - Payments",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 6.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Chennai, Tamil Nadu, India",
+   "additionalLocations": [],
+   "postedOn": "Posted 3 Days Ago",
+   "startDate": "2026-09-07",
+   "timeType": "Full time",
+   "jobReqId": "R-2000106",
+   "jobPostingId": "SDE-II---Payments_R-2000106",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Chennai/SDE-II---Payments_R-2000106",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Gurgaon/Product-Manager-II_R-2000107": {
+  "jobPostingInfo": {
+   "id": "abc0007",
+   "title": "Product Manager II",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 7.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Gurgaon, Haryana, India",
+   "additionalLocations": [],
+   "postedOn": "Posted 30+ Days Ago",
+   "startDate": "2026-09-08",
+   "timeType": "Full time",
+   "jobReqId": "R-2000107",
+   "jobPostingId": "Product-Manager-II_R-2000107",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Gurgaon/Product-Manager-II_R-2000107",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Sunnyvale/Software-Engineer---Platform_R-2000108": {
+  "jobPostingInfo": {
+   "id": "abc0008",
+   "title": "Software Engineer - Platform",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 8.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Sunnyvale, CA, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted Today",
+   "startDate": "2026-09-09",
+   "timeType": "Full time",
+   "jobReqId": "R-2000108",
+   "jobPostingId": "Software-Engineer---Platform_R-2000108",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Sunnyvale/Software-Engineer---Platform_R-2000108",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bentonville/Software-Engineer-III---Search_R-2000109": {
+  "jobPostingInfo": {
+   "id": "abc0009",
+   "title": "Software Engineer III - Search",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 9.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bentonville, AR, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted Yesterday",
+   "startDate": "2026-09-10",
+   "timeType": "Full time",
+   "jobReqId": "R-2000109",
+   "jobPostingId": "Software-Engineer-III---Search_R-2000109",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bentonville/Software-Engineer-III---Search_R-2000109",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bangalore/Software-Engineer-III_R-2000110": {
+  "jobPostingInfo": {
+   "id": "abc0010",
+   "title": "Software Engineer III",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 10.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bangalore, Karnataka, India",
+   "additionalLocations": [
+    "Chennai, Tamil Nadu, India"
+   ],
+   "postedOn": "Posted 3 Days Ago",
+   "startDate": "2026-09-11",
+   "timeType": "Full time",
+   "jobReqId": "R-2000110",
+   "jobPostingId": "Software-Engineer-III_R-2000110",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bangalore/Software-Engineer-III_R-2000110",
+   "canApply": true,
+   "remoteType": "Hybrid"
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Chennai/Software-Engineer-II_R-2000111": {
+  "jobPostingInfo": {
+   "id": "abc0011",
+   "title": "Software Engineer II",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 11.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Chennai, Tamil Nadu, India",
+   "additionalLocations": [],
+   "postedOn": "Posted 30+ Days Ago",
+   "startDate": "2026-09-12",
+   "timeType": "Full time",
+   "jobReqId": "R-2000111",
+   "jobPostingId": "Software-Engineer-II_R-2000111",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Chennai/Software-Engineer-II_R-2000111",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Gurgaon/Senior-Software-Engineer_R-2000112": {
+  "jobPostingInfo": {
+   "id": "abc0012",
+   "title": "Senior Software Engineer",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 12.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Gurgaon, Haryana, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Today",
+   "startDate": "2026-09-13",
+   "timeType": "Full time",
+   "jobReqId": "R-2000112",
+   "jobPostingId": "Senior-Software-Engineer_R-2000112",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Gurgaon/Senior-Software-Engineer_R-2000112",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Sunnyvale/Data-Scientist-III_R-2000113": {
+  "jobPostingInfo": {
+   "id": "abc0013",
+   "title": "Data Scientist III",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 13.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Sunnyvale, CA, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted Yesterday",
+   "startDate": "2026-09-14",
+   "timeType": "Full time",
+   "jobReqId": "R-2000113",
+   "jobPostingId": "Data-Scientist-III_R-2000113",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Sunnyvale/Data-Scientist-III_R-2000113",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bentonville/Software-Engineer-Intern---2027_R-2000114": {
+  "jobPostingInfo": {
+   "id": "abc0014",
+   "title": "Software Engineer Intern - 2027",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 14.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bentonville, AR, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted 3 Days Ago",
+   "startDate": "2026-09-15",
+   "timeType": "Full time",
+   "jobReqId": "R-2000114",
+   "jobPostingId": "Software-Engineer-Intern---2027_R-2000114",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bentonville/Software-Engineer-Intern---2027_R-2000114",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bangalore/Staff-Software-Engineer_R-2000115": {
+  "jobPostingInfo": {
+   "id": "abc0015",
+   "title": "Staff Software Engineer",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 15.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bangalore, Karnataka, India",
+   "additionalLocations": [],
+   "postedOn": "Posted 30+ Days Ago",
+   "startDate": "2026-09-16",
+   "timeType": "Full time",
+   "jobReqId": "R-2000115",
+   "jobPostingId": "Staff-Software-Engineer_R-2000115",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bangalore/Staff-Software-Engineer_R-2000115",
+   "canApply": true,
+   "remoteType": "Hybrid"
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Chennai/SDE-II---Payments_R-2000116": {
+  "jobPostingInfo": {
+   "id": "abc0016",
+   "title": "SDE II - Payments",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 16.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Chennai, Tamil Nadu, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Today",
+   "startDate": "2026-09-17",
+   "timeType": "Full time",
+   "jobReqId": "R-2000116",
+   "jobPostingId": "SDE-II---Payments_R-2000116",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Chennai/SDE-II---Payments_R-2000116",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Gurgaon/Product-Manager-II_R-2000117": {
+  "jobPostingInfo": {
+   "id": "abc0017",
+   "title": "Product Manager II",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 17.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Gurgaon, Haryana, India",
+   "additionalLocations": [
+    "Chennai, Tamil Nadu, India"
+   ],
+   "postedOn": "Posted Yesterday",
+   "startDate": "2026-09-18",
+   "timeType": "Full time",
+   "jobReqId": "R-2000117",
+   "jobPostingId": "Product-Manager-II_R-2000117",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Gurgaon/Product-Manager-II_R-2000117",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Sunnyvale/Software-Engineer---Platform_R-2000118": {
+  "jobPostingInfo": {
+   "id": "abc0018",
+   "title": "Software Engineer - Platform",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 18.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Sunnyvale, CA, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted 3 Days Ago",
+   "startDate": "2026-09-19",
+   "timeType": "Full time",
+   "jobReqId": "R-2000118",
+   "jobPostingId": "Software-Engineer---Platform_R-2000118",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Sunnyvale/Software-Engineer---Platform_R-2000118",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bentonville/Software-Engineer-III---Search_R-2000119": {
+  "jobPostingInfo": {
+   "id": "abc0019",
+   "title": "Software Engineer III - Search",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 19.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bentonville, AR, United States",
+   "additionalLocations": [],
+   "postedOn": "Posted 30+ Days Ago",
+   "startDate": "2026-09-20",
+   "timeType": "Full time",
+   "jobReqId": "R-2000119",
+   "jobPostingId": "Software-Engineer-III---Search_R-2000119",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bentonville/Software-Engineer-III---Search_R-2000119",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Bangalore/Software-Engineer-III_R-2000120": {
+  "jobPostingInfo": {
+   "id": "abc0020",
+   "title": "Software Engineer III",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 20.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Bangalore, Karnataka, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Today",
+   "startDate": "2026-09-21",
+   "timeType": "Full time",
+   "jobReqId": "R-2000120",
+   "jobPostingId": "Software-Engineer-III_R-2000120",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Bangalore/Software-Engineer-III_R-2000120",
+   "canApply": true,
+   "remoteType": "Hybrid"
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Chennai/Software-Engineer-II_R-2000121": {
+  "jobPostingInfo": {
+   "id": "abc0021",
+   "title": "Software Engineer II",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 21.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Chennai, Tamil Nadu, India",
+   "additionalLocations": [],
+   "postedOn": "Posted Yesterday",
+   "startDate": "2026-09-22",
+   "timeType": "Full time",
+   "jobReqId": "R-2000121",
+   "jobPostingId": "Software-Engineer-II_R-2000121",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Chennai/Software-Engineer-II_R-2000121",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ },
+ "/job/Gurgaon/Senior-Software-Engineer_R-2000122": {
+  "jobPostingInfo": {
+   "id": "abc0022",
+   "title": "Senior Software Engineer",
+   "jobDescription": "<p><b>What you'll do:</b> build things for team 22.</p><ul><li>Java &amp; Kotlin</li><li>Distributed systems</li></ul>",
+   "location": "Gurgaon, Haryana, India",
+   "additionalLocations": [],
+   "postedOn": "Posted 3 Days Ago",
+   "startDate": "2026-09-23",
+   "timeType": "Full time",
+   "jobReqId": "R-2000122",
+   "jobPostingId": "Senior-Software-Engineer_R-2000122",
+   "externalUrl": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/Gurgaon/Senior-Software-Engineer_R-2000122",
+   "canApply": true,
+   "remoteType": null
+  },
+  "hiringOrganization": {
+   "name": "Walmart"
+  },
+  "similarJobs": []
+ }
+}

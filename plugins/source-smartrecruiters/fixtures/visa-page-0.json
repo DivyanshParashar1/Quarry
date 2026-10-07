@@ -1,0 +1,252 @@
+{
+ "offset": 0,
+ "limit": 5,
+ "totalFound": 7,
+ "content": [
+  {
+   "id": "744000000000",
+   "name": "Software Engineer",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000000",
+   "jobAdId": "ja-0",
+   "defaultJobAd": true,
+   "refNumber": "REF1000V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-10T08:30:00.000Z",
+   "location": {
+    "city": "Bengaluru",
+    "region": "ka",
+    "country": "in",
+    "remote": false,
+    "fullLocation": "Bengaluru, KA, IN"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000000",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  },
+  {
+   "id": "744000000001",
+   "name": "Associate Software Engineer",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000001",
+   "jobAdId": "ja-1",
+   "defaultJobAd": true,
+   "refNumber": "REF1001V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-11T08:30:00.000Z",
+   "location": {
+    "city": "Hyderabad",
+    "region": "ts",
+    "country": "in",
+    "remote": false,
+    "fullLocation": "Hyderabad, TS, IN"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "associate",
+    "label": "Associate"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000001",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  },
+  {
+   "id": "744000000002",
+   "name": "Senior Data Engineer",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000002",
+   "jobAdId": "ja-2",
+   "defaultJobAd": true,
+   "refNumber": "REF1002V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-12T08:30:00.000Z",
+   "location": {
+    "city": "Pune",
+    "region": "mh",
+    "country": "in",
+    "remote": true,
+    "fullLocation": "Pune, MH, IN"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000002",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  },
+  {
+   "id": "744000000003",
+   "name": "Software Development Engineer Intern",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000003",
+   "jobAdId": "ja-3",
+   "defaultJobAd": true,
+   "refNumber": "REF1003V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-13T08:30:00.000Z",
+   "location": {
+    "city": "Singapore",
+    "region": "",
+    "country": "sg",
+    "remote": false,
+    "fullLocation": "Singapore, SG"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "associate",
+    "label": "Associate"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000003",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  },
+  {
+   "id": "744000000004",
+   "name": "Backend Engineer (Java)",
+   "uuid": "0f3c1a2b-0000-4000-8000-000000000004",
+   "jobAdId": "ja-4",
+   "defaultJobAd": true,
+   "refNumber": "REF1004V",
+   "company": {
+    "identifier": "Visa",
+    "name": "Visa"
+   },
+   "releasedDate": "2026-09-14T08:30:00.000Z",
+   "location": {
+    "city": "Remote",
+    "region": "",
+    "country": "in",
+    "remote": true,
+    "fullLocation": "Remote, IN"
+   },
+   "industry": {
+    "id": "financial_services",
+    "label": "Financial Services"
+   },
+   "department": {
+    "id": "123",
+    "label": "Technology"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "customField": [],
+   "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000004",
+   "creator": {
+    "name": "Recruiter"
+   },
+   "language": {
+    "code": "en",
+    "label": "English"
+   }
+  }
+ ]
+}

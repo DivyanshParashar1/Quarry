@@ -80,6 +80,12 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
+      '@jobforge/source-smartrecruiters':
+        specifier: workspace:*
+        version: link:../../plugins/source-smartrecruiters
+      '@jobforge/source-workday':
+        specifier: workspace:*
+        version: link:../../plugins/source-workday
       '@jobforge/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
@@ -160,6 +166,12 @@ importers:
       '@jobforge/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
+      '@jobforge/source-smartrecruiters':
+        specifier: workspace:*
+        version: link:../../plugins/source-smartrecruiters
+      '@jobforge/source-workday':
+        specifier: workspace:*
+        version: link:../../plugins/source-workday
       '@jobforge/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
@@ -469,6 +481,38 @@ importers:
         version: 5.9.3
 
   plugins/source-lever:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-smartrecruiters:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/source-workday:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*

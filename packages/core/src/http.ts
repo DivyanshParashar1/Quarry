@@ -1,5 +1,5 @@
 import type { Logger } from '@jobforge/shared';
-import { DomainNotAllowedError, HttpError, type HttpRequestInit, type ScopedHttp } from '@jobforge/plugin-sdk';
+import { DomainNotAllowedError, HttpError, hostAllowed, type HttpRequestInit, type ScopedHttp } from '@jobforge/plugin-sdk';
 import { systemClock, type Clock, type DomainRateLimiter, type RateLimit } from './rate-limiter.js';
 
 export const USER_AGENT = 'JobForge/0.1 (self-hosted personal job search)';
@@ -33,13 +33,12 @@ export function createScopedHttp(opts: ScopedHttpOptions): ScopedHttp {
   const clock = opts.clock ?? systemClock;
   const retries = opts.retries ?? 3;
   const baseDelayMs = opts.baseDelayMs ?? 500;
-  const allowed = new Set(opts.domains);
 
   function checkHost(url: URL): void {
     if (url.protocol !== 'https:') {
       throw new DomainNotAllowedError(`${url.protocol}//${url.host}`, opts.pluginId);
     }
-    if (!allowed.has(url.hostname)) throw new DomainNotAllowedError(url.hostname, opts.pluginId);
+    if (!hostAllowed(url.hostname, opts.domains)) throw new DomainNotAllowedError(url.hostname, opts.pluginId);
   }
 
   async function once(url: URL, init: HttpRequestInit): Promise<Response> {
@@ -95,11 +94,19 @@ export function createScopedHttp(opts: ScopedHttpOptions): ScopedHttp {
 
   return {
     request,
+    async getText(rawUrl: string, init?: HttpRequestInit): Promise<string> {
+      const res = await request(rawUrl, { ...init, headers: { accept: 'text/html,application/xhtml+xml,*/*', ...init?.headers } });
+      if (!res.ok) {
+        await res.body?.cancel();
+        throw new HttpError(`${init?.method ?? 'GET'} ${rawUrl} -> ${res.status}`, rawUrl, res.status);
+      }
+      return res.text();
+    },
     async getJson<T>(rawUrl: string, init?: HttpRequestInit): Promise<T> {
       const res = await request(rawUrl, init);
       if (!res.ok) {
         await res.body?.cancel();
-        throw new HttpError(`GET ${rawUrl} -> ${res.status}`, rawUrl, res.status);
+        throw new HttpError(`${init?.method ?? 'GET'} ${rawUrl} -> ${res.status}`, rawUrl, res.status);
       }
       try {
         return (await res.json()) as T;

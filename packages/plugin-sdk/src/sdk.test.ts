@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { pluginManifestSchema, decodeEntities, HttpError } from './index.js';
+import { pluginManifestSchema, decodeEntities, HttpError, hostAllowed, parseRelativePosted, matchesLocationFilter, remotePolicyFromText } from './index.js';
 
 const base = {
   id: 'source-x',
@@ -17,11 +17,20 @@ describe('pluginManifestSchema', () => {
     expect(pluginManifestSchema.safeParse(base).success).toBe(true);
   });
 
-  it('rejects wildcard and scheme-prefixed domains', () => {
-    for (const d of ['*.example.com', 'https://api.example.com', 'API.example.com', 'localhost']) {
+  it('rejects bare/mid wildcards and scheme-prefixed domains', () => {
+    for (const d of ['*.com', '*', 'api.*.example.com', 'https://api.example.com', 'API.example.com', 'localhost']) {
       const r = pluginManifestSchema.safeParse({ ...base, permissions: { domains: [d] } });
       expect(r.success, d).toBe(false);
     }
+  });
+
+  it('accepts a leading-label wildcard and matches only subdomains', () => {
+    expect(pluginManifestSchema.safeParse({ ...base, permissions: { domains: ['*.example.com'] } }).success).toBe(true);
+    expect(hostAllowed('a.example.com', ['*.example.com'])).toBe(true);
+    expect(hostAllowed('a.b.example.com', ['*.example.com'])).toBe(true);
+    expect(hostAllowed('example.com', ['*.example.com'])).toBe(false);
+    expect(hostAllowed('badexample.com', ['*.example.com'])).toBe(false);
+    expect(hostAllowed('api.example.com', ['api.example.com'])).toBe(true);
   });
 
   it('rejects an actor without external side effects', () => {
@@ -50,5 +59,29 @@ describe('HttpError.permanent', () => {
     expect(new HttpError('x', 'u', 429).permanent).toBe(false);
     expect(new HttpError('x', 'u', 503).permanent).toBe(false);
     expect(new HttpError('x', 'u', null).permanent).toBe(false);
+  });
+});
+
+describe('source helpers', () => {
+  const now = new Date('2026-10-07T12:00:00Z');
+  it('parses relative posted strings', () => {
+    expect(parseRelativePosted('Posted Today', now)?.toISOString()).toBe('2026-10-07T00:00:00.000Z');
+    expect(parseRelativePosted('Posted Yesterday', now)?.toISOString()).toBe('2026-10-06T00:00:00.000Z');
+    expect(parseRelativePosted('Posted 3 Days Ago', now)?.toISOString()).toBe('2026-10-04T00:00:00.000Z');
+    expect(parseRelativePosted('Posted 30+ Days Ago', now)?.toISOString()).toBe('2026-09-07T00:00:00.000Z');
+    expect(parseRelativePosted('2 weeks ago', now)?.toISOString()).toBe('2026-09-23T00:00:00.000Z');
+    expect(parseRelativePosted('whenever', now)).toBeNull();
+  });
+  it('filters locations by substring, keeping unknowns', () => {
+    expect(matchesLocationFilter(['Bengaluru, India'], ['india'])).toBe(true);
+    expect(matchesLocationFilter(['Austin, TX'], ['india'])).toBe(false);
+    expect(matchesLocationFilter([], ['india'])).toBe(true);
+    expect(matchesLocationFilter(['Austin, TX'], [])).toBe(true);
+  });
+  it('infers remote policy from text', () => {
+    expect(remotePolicyFromText('Hybrid')).toBe('hybrid');
+    expect(remotePolicyFromText('Fully Remote')).toBe('remote');
+    expect(remotePolicyFromText('On-site')).toBe('onsite');
+    expect(remotePolicyFromText('Bengaluru')).toBeNull();
   });
 });

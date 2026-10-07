@@ -24,7 +24,7 @@ describe('parseCompaniesCsv', () => {
         'Name,ATS_Type,Board_Token,Tags,Domain',
         'Acme,greenhouse,acme,startup; fintech,acme.com',
         'NoBoard,lever,,,',
-        'Bad,workday,x,,',
+        'Bad,icims,x,,',
         ',greenhouse,y,,',
         'Plain,,,,',
       ].join('\n'),
@@ -42,6 +42,27 @@ describe('parseCompaniesCsv', () => {
     expect(errors[0]).toMatch(/^line 3: board_token/);
     expect(errors[1]).toMatch(/^line 4: ats_type/);
     expect(errors[2]).toMatch(/^line 5: name/);
+  });
+});
+
+describe('parseCompaniesCsv (Phase 6 columns)', () => {
+  it('folds workday_tenant/site and smartrecruiters_company_id into ats_type + board_token', () => {
+    const { rows, errors } = parseCompaniesCsv(
+      [
+        'name,ats_type,board_token,workday_tenant,workday_site,smartrecruiters_company_id',
+        'Walmart Global Tech,,,walmart.wd5,WalmartExternal,',
+        'NVIDIA,workday,https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite,,,',
+        'Visa,,,,,Visa',
+        'Broken,,,walmart,,',
+      ].join('\n'),
+    );
+    expect(rows.map((r) => [r.name, r.ats_type, r.board_token])).toEqual([
+      ['Walmart Global Tech', 'workday', 'walmart.wd5/WalmartExternal'],
+      ['NVIDIA', 'workday', 'nvidia.wd5/NVIDIAExternalCareerSite'],
+      ['Visa', 'smartrecruiters', 'Visa'],
+    ]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/^line 5: workday_tenant: invalid Workday board token/);
   });
 });
 

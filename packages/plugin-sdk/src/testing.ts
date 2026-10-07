@@ -1,40 +1,77 @@
 import { readFileSync } from 'node:fs';
 import pino from 'pino';
 import { HttpError, DomainNotAllowedError } from './errors.js';
-import type { PluginContext, ScopedHttp, SourceTarget } from './types.js';
+import type { HttpRequestInit, PluginContext, ScopedHttp, SourceTarget } from './types.js';
+import { hostAllowed } from './manifest.js';
 import type { GmailHandle } from './capabilities.js';
 
 export interface FixtureRoute {
   status?: number;
-  /** Path to a JSON fixture file, or an inline body. */
+  /** Path to a fixture file (served verbatim), or an inline body (JSON-encoded unless `text`). */
   file?: string;
   body?: unknown;
+  /** Raw text body (HTML, XML). */
+  text?: string;
+  /** Defaults to application/json, or text/html for `text` / non-.json files. */
+  contentType?: string;
+  /** Extra response headers (e.g. `location` for a redirect). */
+  headers?: Record<string, string>;
 }
 
+/** A route can depend on the request (e.g. a POST body carrying a page offset). */
+export type FixtureRouteSpec = FixtureRoute | ((init: HttpRequestInit) => FixtureRoute | undefined);
+
 /**
- * A ScopedHttp that serves recorded fixtures by exact URL. Unknown URLs fail
- * loudly so a test can never fall through to the network.
+ * A ScopedHttp that serves recorded fixtures by exact URL (or `"POST <url>"` for
+ * POSTs). Unknown URLs fail loudly so a test can never fall through to the network.
  */
-export function fixtureHttp(routes: Record<string, FixtureRoute>, domains: readonly string[]): ScopedHttp & {
+export function fixtureHttp(routes: Record<string, FixtureRouteSpec>, domains: readonly string[]): ScopedHttp & {
   calls: string[];
+  /** Request bodies, in call order (undefined for body-less requests). */
+  bodies: (string | undefined)[];
 } {
   const calls: string[] = [];
-  const request = async (url: string): Promise<Response> => {
+  const bodies: (string | undefined)[] = [];
+  const request = async (url: string, init: HttpRequestInit = {}): Promise<Response> => {
     const host = new URL(url).hostname;
-    if (!domains.includes(host)) throw new DomainNotAllowedError(host, 'test');
+    if (!hostAllowed(host, domains)) throw new DomainNotAllowedError(host, 'test');
     calls.push(url);
-    const route = routes[url];
-    if (!route) throw new Error(`no fixture for ${url}`);
-    const body = route.file !== undefined ? readFileSync(route.file, 'utf8') : JSON.stringify(route.body ?? null);
-    return new Response(body, { status: route.status ?? 200, headers: { 'content-type': 'application/json' } });
+    bodies.push(init.body);
+    const method = init.method ?? 'GET';
+    const spec = (method !== 'GET' ? routes[`${method} ${url}`] : undefined) ?? routes[url];
+    const route = typeof spec === 'function' ? spec(init) : spec;
+    if (!route) throw new Error(`no fixture for ${method} ${url}`);
+    let body: string;
+    let type = route.contentType;
+    if (route.file !== undefined) {
+      body = readFileSync(route.file, 'utf8');
+      type ??= route.file.endsWith('.json') ? 'application/json' : route.file.endsWith('.xml') ? 'application/xml' : 'text/html';
+    } else if (route.text !== undefined) {
+      body = route.text;
+      type ??= 'text/html';
+    } else {
+      body = JSON.stringify(route.body ?? null);
+    }
+    const status = route.status ?? 200;
+    return new Response(status === 204 || status === 304 ? null : body, {
+      status,
+      headers: { 'content-type': type ?? 'application/json', ...route.headers },
+    });
+  };
+  const check = async (url: string, init?: HttpRequestInit): Promise<Response> => {
+    const res = await request(url, init);
+    if (!res.ok) throw new HttpError(`${init?.method ?? 'GET'} ${url} -> ${res.status}`, url, res.status);
+    return res;
   };
   return {
     calls,
+    bodies,
     request,
-    async getJson<T>(url: string): Promise<T> {
-      const res = await request(url);
-      if (!res.ok) throw new HttpError(`GET ${url} -> ${res.status}`, url, res.status);
-      return (await res.json()) as T;
+    async getJson<T>(url: string, init?: HttpRequestInit): Promise<T> {
+      return (await (await check(url, init)).json()) as T;
+    },
+    async getText(url: string, init?: HttpRequestInit): Promise<string> {
+      return (await check(url, init)).text();
     },
   };
 }
@@ -54,8 +91,8 @@ export function testContext<C>(
   };
 }
 
-export function testTarget(boardToken: string, companyName = 'TestCo'): SourceTarget {
-  return { companySourceId: 'cs-1', companyId: 'c-1', companyName, boardToken };
+export function testTarget(boardToken: string, companyName = 'TestCo', options?: Record<string, unknown>): SourceTarget {
+  return { companySourceId: 'cs-1', companyId: 'c-1', companyName, boardToken, ...(options ? { options } : {}) };
 }
 
 export async function collect<T>(it: AsyncIterable<T>): Promise<T[]> {

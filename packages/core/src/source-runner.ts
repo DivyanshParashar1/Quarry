@@ -19,6 +19,8 @@ export const SOURCE_PLUGIN_FOR_ATS: Partial<Record<AtsType, string>> = {
   greenhouse: 'source-greenhouse',
   lever: 'source-lever',
   ashby: 'source-ashby',
+  workday: 'source-workday',
+  smartrecruiters: 'source-smartrecruiters',
 };
 
 export interface SourceRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {
@@ -83,6 +85,7 @@ export async function runSourceTarget(deps: SourceRunDeps, row: SourceTargetRow)
     companyId: row.companyId,
     companyName: row.companyName,
     boardToken: row.boardToken,
+    ...(row.options && Object.keys(row.options).length ? { options: row.options } : {}),
   };
 
   try {

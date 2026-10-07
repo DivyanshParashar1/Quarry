@@ -1,0 +1,499 @@
+{
+ "744000000000": {
+  "id": "744000000000",
+  "name": "Software Engineer",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000000",
+  "jobAdId": "ja-0",
+  "defaultJobAd": true,
+  "refNumber": "REF1000V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-10T08:30:00.000Z",
+  "location": {
+   "city": "Bengaluru",
+   "region": "ka",
+   "country": "in",
+   "remote": false,
+   "fullLocation": "Bengaluru, KA, IN"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "mid_senior_level",
+   "label": "Mid-Senior Level"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000000",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000000-software-engineer",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000000-software-engineer?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 0.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ },
+ "744000000001": {
+  "id": "744000000001",
+  "name": "Associate Software Engineer",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000001",
+  "jobAdId": "ja-1",
+  "defaultJobAd": true,
+  "refNumber": "REF1001V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-11T08:30:00.000Z",
+  "location": {
+   "city": "Hyderabad",
+   "region": "ts",
+   "country": "in",
+   "remote": false,
+   "fullLocation": "Hyderabad, TS, IN"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "associate",
+   "label": "Associate"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000001",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000001-associate-software-engineer",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000001-associate-software-engineer?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 1.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ },
+ "744000000002": {
+  "id": "744000000002",
+  "name": "Senior Data Engineer",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000002",
+  "jobAdId": "ja-2",
+  "defaultJobAd": true,
+  "refNumber": "REF1002V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-12T08:30:00.000Z",
+  "location": {
+   "city": "Pune",
+   "region": "mh",
+   "country": "in",
+   "remote": true,
+   "fullLocation": "Pune, MH, IN"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "mid_senior_level",
+   "label": "Mid-Senior Level"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000002",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000002-senior-data-engineer",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000002-senior-data-engineer?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 2.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ },
+ "744000000003": {
+  "id": "744000000003",
+  "name": "Software Development Engineer Intern",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000003",
+  "jobAdId": "ja-3",
+  "defaultJobAd": true,
+  "refNumber": "REF1003V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-13T08:30:00.000Z",
+  "location": {
+   "city": "Singapore",
+   "region": "",
+   "country": "sg",
+   "remote": false,
+   "fullLocation": "Singapore, SG"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "associate",
+   "label": "Associate"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000003",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000003-software-development-engineer-intern",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000003-software-development-engineer-intern?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 3.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ },
+ "744000000004": {
+  "id": "744000000004",
+  "name": "Backend Engineer (Java)",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000004",
+  "jobAdId": "ja-4",
+  "defaultJobAd": true,
+  "refNumber": "REF1004V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-14T08:30:00.000Z",
+  "location": {
+   "city": "Remote",
+   "region": "",
+   "country": "in",
+   "remote": true,
+   "fullLocation": "Remote, IN"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "mid_senior_level",
+   "label": "Mid-Senior Level"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000004",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000004-backend-engineer-(java)",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000004-backend-engineer-(java)?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 4.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ },
+ "744000000005": {
+  "id": "744000000005",
+  "name": "Software Engineer",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000005",
+  "jobAdId": "ja-5",
+  "defaultJobAd": true,
+  "refNumber": "REF1005V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-15T08:30:00.000Z",
+  "location": {
+   "city": "Bengaluru",
+   "region": "ka",
+   "country": "in",
+   "remote": false,
+   "fullLocation": "Bengaluru, KA, IN"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "associate",
+   "label": "Associate"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000005",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000005-software-engineer",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000005-software-engineer?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 5.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ },
+ "744000000006": {
+  "id": "744000000006",
+  "name": "Associate Software Engineer",
+  "uuid": "0f3c1a2b-0000-4000-8000-000000000006",
+  "jobAdId": "ja-6",
+  "defaultJobAd": true,
+  "refNumber": "REF1006V",
+  "company": {
+   "identifier": "Visa",
+   "name": "Visa"
+  },
+  "releasedDate": "2026-09-16T08:30:00.000Z",
+  "location": {
+   "city": "Hyderabad",
+   "region": "ts",
+   "country": "in",
+   "remote": false,
+   "fullLocation": "Hyderabad, TS, IN"
+  },
+  "industry": {
+   "id": "financial_services",
+   "label": "Financial Services"
+  },
+  "department": {
+   "id": "123",
+   "label": "Technology"
+  },
+  "function": {
+   "id": "information_technology",
+   "label": "Information Technology"
+  },
+  "typeOfEmployment": {
+   "id": "permanent",
+   "label": "Full-time"
+  },
+  "experienceLevel": {
+   "id": "mid_senior_level",
+   "label": "Mid-Senior Level"
+  },
+  "customField": [],
+  "ref": "https://api.smartrecruiters.com/v1/companies/Visa/postings/744000000006",
+  "creator": {
+   "name": "Recruiter"
+  },
+  "language": {
+   "code": "en",
+   "label": "English"
+  },
+  "postingUrl": "https://jobs.smartrecruiters.com/Visa/744000000006-associate-software-engineer",
+  "applyUrl": "https://jobs.smartrecruiters.com/Visa/744000000006-associate-software-engineer?oga=true",
+  "jobAd": {
+   "sections": {
+    "companyDescription": {
+     "title": "Company Description",
+     "text": "<p>Visa is a world leader in payments.</p>"
+    },
+    "jobDescription": {
+     "title": "Job Description",
+     "text": "<p>Build payment systems for team 6.</p><ul><li>Java</li><li>Kafka</li></ul>"
+    },
+    "qualifications": {
+     "title": "Qualifications",
+     "text": "<ul><li>B.Tech 2027 or earlier</li></ul>"
+    },
+    "additionalInformation": {
+     "title": "Additional Information",
+     "text": "<p>Hybrid work.</p>"
+    }
+   }
+  }
+ }
+}

@@ -43,6 +43,13 @@
       "when": 1791319655693,
       "tag": "0005_red_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791411323561,
+      "tag": "0006_curved_mimic",
+      "breakpoints": true
     }
   ]
 }

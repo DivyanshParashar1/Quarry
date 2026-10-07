@@ -29,6 +29,11 @@ export const atsTypeEnum = pgEnum('ats_type', [
   'ashby',
   'careers_page',
   'other',
+  // Phase 6/7: GCC-heavy ATSs.
+  'workday',
+  'smartrecruiters',
+  'successfactors',
+  'taleo',
 ]);
 
 export const sourceStatusEnum = pgEnum('source_status', ['active', 'paused', 'error']);
@@ -48,6 +53,12 @@ export const companies = pgTable(
     mxCheckedAt: timestamp('mx_checked_at', { withTimezone: true }),
     emailPattern: text('email_pattern'),
     emailPatternConfidence: real('email_pattern_confidence'),
+    // Phase 6: provenance for discovered companies (null = imported/manual).
+    /** e.g. `list:yc`, `list:gcc-journal`, `csv`, `manual`. */
+    discoveredVia: text('discovered_via'),
+    discoveredAt: timestamp('discovered_at', { withTimezone: true }),
+    /** Last time `discover_ats` looked at this company (hit or miss). */
+    atsCheckedAt: timestamp('ats_checked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -69,6 +80,10 @@ export const companySources = pgTable(
     status: sourceStatusEnum('status').notNull().default('active'),
     lastFetchedAt: timestamp('last_fetched_at', { withTimezone: true }),
     lastError: text('last_error'),
+    /** Per-target plugin options (Workday searchText/locations, ...); passed through as SourceTarget.options. */
+    config: jsonb('config').notNull().default(sql`'{}'::jsonb`),
+    /** How the source was found: csv | discover_ats | manual. */
+    detectedBy: text('detected_by'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
