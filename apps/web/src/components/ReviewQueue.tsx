@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { ReviewCard } from '@/components/ReviewCard';
-import { getJson, type ReviewItem } from '@/lib/api';
+import { ReviewItemCard } from '@/components/ReviewItemCard';
+import { getJson, type ReviewItemAny } from '@/lib/api';
 
 export function ReviewQueue() {
   const q = useQuery({
     queryKey: ['review', 'open'],
-    queryFn: () => getJson<{ items: ReviewItem[] }>('/api/review?status=pending,approved,failed'),
+    queryFn: () => getJson<{ items: ReviewItemAny[] }>('/api/review?status=pending,approved,failed'),
     refetchInterval: 15_000,
   });
   const recent = useQuery({
     queryKey: ['review', 'recent'],
-    queryFn: () => getJson<{ items: ReviewItem[] }>('/api/review?status=executed,rejected,cancelled&limit=20'),
+    queryFn: () => getJson<{ items: ReviewItemAny[] }>('/api/review?status=executed,rejected,cancelled&limit=20'),
   });
   if (q.error) return <p className="p-4 text-sm text-red-600">Could not load the review queue: {q.error.message}</p>;
   const items = q.data?.items ?? [];
@@ -24,14 +24,14 @@ export function ReviewQueue() {
           <p className="text-sm text-muted-foreground">Nothing to review. Draft an email from a job's Outreach section, or run `pnpm jf outreach draft`.</p>
         )}
         {pending.map((i) => (
-          <ReviewCard key={`${i.id}:${i.draft.subject}:${i.draft.body.length}`} item={i} />
+          <ReviewItemCard key={`${i.id}:${i.editedAt ?? ''}`} item={i} />
         ))}
       </section>
       {approved.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold">Approved, waiting to send ({approved.length})</h2>
           {approved.map((i) => (
-            <ReviewCard key={i.id} item={i} />
+            <ReviewItemCard key={i.id} item={i} />
           ))}
         </section>
       )}
@@ -46,7 +46,7 @@ export function ReviewQueue() {
                 <li key={i.id} className="flex gap-2 text-muted-foreground">
                   <span className="w-20 shrink-0 capitalize">{i.status}</span>
                   <span className="truncate">
-                    {i.draft.toName} · {i.draft.subject}
+                    {summary(i)}
                     {i.decisionNote ? ` · ${i.decisionNote}` : ''}
                   </span>
                 </li>
@@ -56,4 +56,10 @@ export function ReviewQueue() {
       )}
     </div>
   );
+}
+
+function summary(i: ReviewItemAny): string {
+  const d = i.draft as { toName?: string; subject?: string; note?: string; title?: string };
+  if (d.title) return d.title;
+  return `${d.toName ?? i.contactName ?? ''} · ${d.subject ?? d.note?.slice(0, 60) ?? i.kind}`;
 }

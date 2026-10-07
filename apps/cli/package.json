@@ -17,6 +17,7 @@
     "@jobforge/db": "workspace:*",
     "@jobforge/embeddings": "workspace:*",
     "@jobforge/enricher-contacts-pattern": "workspace:*",
+    "@jobforge/enricher-linkedin-employees": "workspace:*",
     "@jobforge/llm": "workspace:*",
     "@jobforge/matcher-default": "workspace:*",
     "@jobforge/shared": "workspace:*",

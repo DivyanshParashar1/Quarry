@@ -17,7 +17,8 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `dryRun` defaults to true outside an explicit `--live` flag or `MODE=live`.
 - Secrets live in `.env` or the OS keychain; never log them; never store them in `events`.
 - Respect per-domain rate limits on every outbound request. Respect `robots.txt` for careers-page scraping.
-- Outreach caps: default 20 sends/day; never email more than 2 people at the same company in a week without explicit override.
+- Outreach throttles (PLAN-phases-6-13, user-approved): no global daily cap and no per-company weekly cap by default (both stay available as opt-in config). Always enforced: a person is never asked twice within `perContactCooldownDays` (30) across any job/channel; a job gets at most its batch's referral cap (10); sender technical limits (Gmail `senderDailyLimit`, LinkedIn `dailyConnectionCap` 25/day).
+- LinkedIn automation only with `LINKEDIN_ENABLED=true` AND a live run, on the user's dedicated account; any checkpoint/captcha/login wall pauses all LinkedIn loops and raises an `attention` review item — no retries.
 
 ## Repo map (quick)
 - `apps/server` — Fastify API + pg-boss workers
@@ -45,5 +46,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `pnpm web:build && pnpm server` → dashboard at http://localhost:3000 (`pnpm web:dev` for Vite on :5173)
 - `pnpm --filter @jobforge/llm smoke -- --provider claude-code|openrouter` — real-provider smoke test (costs money; manual only)
 - Outreach: `pnpm jf gmail auth`, `jf contacts add|enrich`, `jf outreach draft`, `jf review list|approve`, `jf outreach send [--live]`, `jf outreach track` — see `docs/outreach.md`
+- Referrals: `jf referrals fanout|show|approve <jobId>`, `jf linkedin login|status|resume|employees` (Phase 8)
+- Discovery: `jf discover_ats <domain|name> [--save] | --missing`, `jf discover_companies --list yc|gcc-journal|…` (Phase 6)
 - MCP: `.mcp.json` registers `apps/mcp` (needs `pnpm server` running). Never allowlist the `approve` tool.
 - DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)

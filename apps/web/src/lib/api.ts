@@ -113,16 +113,51 @@ export interface EmailDraft {
   body: string;
   factIds: string[];
   gmailThreadId: string | null;
+  resumeBulletId?: string | null;
 }
+
+/** Phase 8/9: a LinkedIn connection request with a note. */
+export interface LinkedInNoteDraft {
+  channel: 'linkedin';
+  profileUrl: string;
+  toName: string;
+  note: string;
+  jobUrl: string | null;
+  confidence: number | null;
+}
+
+/** Phase 9: something a human must fix (e.g. a LinkedIn checkpoint). */
+export interface AttentionDraft {
+  title: string;
+  message: string;
+  reason: string;
+  url: string | null;
+}
+
+export type AnyDraft = EmailDraft | LinkedInNoteDraft | AttentionDraft | Record<string, unknown>;
+
+export const isLinkedInDraft = (d: AnyDraft): d is LinkedInNoteDraft => (d as LinkedInNoteDraft).channel === 'linkedin';
+export const isEmailDraft = (d: AnyDraft): d is EmailDraft => typeof (d as EmailDraft).to === 'string' && typeof (d as EmailDraft).body === 'string';
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'executed' | 'failed' | 'cancelled';
 
-export interface ReviewItem {
-  id: string;
-  kind: 'application' | 'outreach' | 'followup';
-  status: ReviewStatus;
+export type ReviewKind = 'application' | 'outreach' | 'followup' | 'referral_ask' | 'attention';
+
+/** An email review item (the common case); see ReviewItemAny for the other drafts. */
+export interface ReviewItem extends Omit<ReviewItemAny, 'draft' | 'originalDraft'> {
   draft: EmailDraft;
   originalDraft: EmailDraft;
+}
+
+export interface ReviewItemAny {
+  id: string;
+  kind: ReviewKind;
+  pluginId: string;
+  batchId: string | null;
+  decidedBy: string | null;
+  status: ReviewStatus;
+  draft: AnyDraft;
+  originalDraft: AnyDraft;
   overrideCompanyCap: boolean;
   decisionNote: string | null;
   error: string | null;
@@ -311,4 +346,52 @@ export interface ResumeVariant {
   model: string | null;
   error: string | null;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8: referral fan-out
+// ---------------------------------------------------------------------------
+
+export type BatchStatus = 'drafting' | 'pending_review' | 'sending' | 'sent' | 'replied' | 'closed';
+
+export interface ReferralBatch {
+  id: string;
+  jobId: string;
+  requestedCount: number;
+  draftedCount: number;
+  sentCount: number;
+  repliedCount: number;
+  status: BatchStatus;
+  firstSentAt: string | null;
+  repliedAt: string | null;
+  note: string | null;
+}
+
+export interface ReferralItem {
+  id: string;
+  status: ReviewStatus;
+  pluginId: string;
+  channel: 'email' | 'linkedin';
+  contactId: string | null;
+  contactName: string | null;
+  contactRole: string | null;
+  contactEmail: string | null;
+  linkedinUrl: string | null;
+  threadState: 'sent' | 'replied' | 'bounced' | 'closed' | null;
+  decidedBy: string | null;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface ReferralPanelData {
+  batch: ReferralBatch | null;
+  items: ReferralItem[];
+}
+
+export interface FanOutResponse {
+  drafted: { reviewItemId: string; contactId: string; channel: 'email' | 'linkedin' }[];
+  skipped: { contactId: string; name: string; reason: string }[];
+  shortBy: number;
+  foundContacts: number;
+  panel: ReferralPanelData;
 }

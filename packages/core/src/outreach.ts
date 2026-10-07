@@ -206,6 +206,7 @@ export async function editDraft(db: DB, id: string, patch: unknown): Promise<Rev
   const item = await getReviewItem(db, id);
   if (!item) throw new OutreachError(`review item ${id} not found`, 'not_found');
   if (item.status !== 'pending') throw new OutreachError(`only pending items can be edited (this one is ${item.status})`, 'invalid_state');
+  if (item.kind === 'attention') throw new OutreachError('attention items have nothing to edit', 'invalid_state');
   const p = item.pluginId === OUTREACH_ACTOR ? emailDraftPatchSchema.parse(patch) : linkedinNoteDraftPatchSchema.parse(patch);
   const merged = parseDraftFor(item.pluginId, { ...(item.draft as object), ...p });
   const updated = await updatePendingDraft(db, id, merged);
@@ -246,6 +247,13 @@ export async function approveReviewItem(
   const item = await getReviewItem(db, id);
   if (!item) throw new OutreachError(`review item ${id} not found`, 'not_found');
   if (item.status !== 'pending') throw new OutreachError(`item is ${item.status}, not pending`, 'invalid_state');
+  if (item.kind === 'attention') {
+    // "Fixed it": the paused loop resumes the next time it checks (see syncLinkedInAttention).
+    const ok = await transitionReviewItem(db, id, ['pending'], 'approved', { decided: true, decisionNote: opts.note ?? 'resolved' });
+    if (!ok) throw new OutreachError('item changed state while approving', 'invalid_state');
+    await appendEvent(db, { kind: 'review.approved', subjectType: 'review_item', subjectId: id, payload: { kind: 'attention' } });
+    return ok;
+  }
   parseDraftFor(item.pluginId, item.draft);
   if (item.contactId) {
     const c = await getContact(db, item.contactId);

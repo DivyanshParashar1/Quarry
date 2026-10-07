@@ -31,7 +31,7 @@ interface DraftLike {
   id: string;
   status: string;
   kind: string;
-  draft: { to: string; toName: string; subject: string; body: string };
+  draft: { to: string; toName: string; subject: string; body: string; channel?: string; profileUrl?: string; note?: string; title?: string; message?: string; jobUrl?: string };
   contactEmailConfidence?: number | null;
 }
 
@@ -137,10 +137,17 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
       // permission prompt is the confirmation otherwise.
       if (server.server.getClientCapabilities()?.elicitation) {
         const d = item.draft;
+        const message =
+          d.channel === 'linkedin'
+            ? `Send a LinkedIn connection request from your dedicated account?\n\nTo: ${d.toName} <${d.profileUrl}>\n\n${d.note}`
+            : item.kind === 'attention'
+              ? `Mark this as fixed and resume?\n\n${d.title}\n${d.message}`
+              : item.kind === 'application'
+                ? `Submit this job application?\n\n${d.title ?? ''}\n${d.jobUrl ?? ''}`
+                : `Send this email from your Gmail?\n\nTo: ${d.toName} <${d.to}>${item.contactEmailConfidence != null && item.contactEmailConfidence < 1 ? ` (address ${Math.round(item.contactEmailConfidence * 100)}% sure)` : ''}\n` +
+                  `Subject: ${d.subject}\n\n${d.body}${overrideCompanyCap ? '\n\n(Overrides the per-company weekly limit.)' : ''}`;
         const res = await server.server.elicitInput({
-          message:
-            `Send this email from your Gmail?\n\nTo: ${d.toName} <${d.to}>${item.contactEmailConfidence != null && item.contactEmailConfidence < 1 ? ` (address ${Math.round(item.contactEmailConfidence * 100)}% sure)` : ''}\n` +
-            `Subject: ${d.subject}\n\n${d.body}${overrideCompanyCap ? '\n\n(Overrides the per-company weekly limit.)' : ''}`,
+          message,
           requestedSchema: {
             type: 'object',
             properties: { confirm: { type: 'boolean', title: 'Approve and queue for sending' } },
@@ -178,6 +185,29 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     (a) => run(() => api.send('POST', '/api/companies', a)),
+  );
+
+  server.registerTool(
+    'fan_out_referrals',
+    {
+      title: 'Fan out referral asks',
+      description:
+        'Draft N short referral asks (default 10) to distinct people at the job\'s company — email, or LinkedIn when there is no usable address. Respects the per-contact cooldown. Drafts only: nothing is sent until the user approves.',
+      inputSchema: { jobId: z.string().uuid(), count: z.number().int().min(1).max(50).optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    },
+    ({ jobId, count }) => run(() => api.send('POST', `/api/jobs/${jobId}/referrals/fanout`, count ? { count } : {})),
+  );
+
+  server.registerTool(
+    'referral_status',
+    {
+      title: 'Referral batch status',
+      description: "A job's referral batch: each ask, its channel (email/LinkedIn), and whether it was approved, sent, or replied.",
+      inputSchema: { jobId: z.string().uuid() },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    ({ jobId }) => run(() => api.get(`/api/jobs/${jobId}/referrals`)),
   );
 
   server.registerTool(

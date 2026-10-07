@@ -115,10 +115,10 @@ function reviewTable(rows: ReviewListRow[]): string {
     { header: 'ID', value: (r) => r.id.slice(0, 8) },
     { header: 'KIND', value: (r) => r.kind },
     { header: 'STATUS', value: (r) => r.status },
-    { header: 'TO', value: (r) => `${r.contactName ?? ''} <${(r.draft as { to?: string }).to ?? ''}>`, max: 40 },
+    { header: 'TO', value: (r) => `${r.contactName ?? ''} <${(r.draft as { to?: string; profileUrl?: string }).to ?? (r.draft as { profileUrl?: string }).profileUrl ?? ''}>`, max: 40 },
     { header: 'CONF', value: (r) => pct(r.contactEmailConfidence) },
     { header: 'COMPANY', value: (r) => r.companyName ?? '', max: 18 },
-    { header: 'SUBJECT', value: (r) => (r.draft as { subject?: string }).subject ?? '', max: 40 },
+    { header: 'SUBJECT', value: (r) => (r.draft as { subject?: string; note?: string; title?: string }).subject ?? (r.draft as { title?: string }).title ?? (r.draft as { note?: string }).note ?? '', max: 40 },
     { header: 'NOTE', value: (r) => r.error ?? r.decisionNote ?? '', max: 40 },
   ]);
 }
@@ -133,8 +133,17 @@ export async function reviewCommand(sub: string | undefined, arg: string | undef
   const id = await resolveIdPrefix(c.db, 'review_items', arg);
   if (sub === 'show') {
     const item = (await getReviewItem(c.db, id))!;
-    const d = item.draft as { to: string; toName: string; subject: string; body: string; factIds: string[] };
-    c.out(`${item.kind} · ${item.status}${item.error ? ` · ${item.error}` : ''}\nTo: ${d.toName} <${d.to}>\nSubject: ${d.subject}\nFacts: ${d.factIds.join(', ') || '-'}\n\n${d.body}`);
+    const head = `${item.kind} · ${item.status}${item.error ? ` · ${item.error}` : ''}`;
+    const raw = item.draft as Record<string, unknown>;
+    if (raw.channel === 'linkedin') {
+      const d = raw as { toName: string; profileUrl: string; note: string; jobUrl: string | null };
+      c.out(`${head}\nLinkedIn: ${d.toName} <${d.profileUrl}>\nJob: ${d.jobUrl ?? '-'}\n\n${d.note}`);
+    } else if (item.kind === 'attention') {
+      c.out(`${head}\n${String(raw.title)}\n\n${String(raw.message)}`);
+    } else {
+      const d = raw as { to: string; toName: string; subject: string; body: string; factIds: string[] };
+      c.out(`${head}\nTo: ${d.toName} <${d.to}>\nSubject: ${d.subject}\nFacts: ${d.factIds.join(', ') || '-'}\n\n${d.body}`);
+    }
     return 0;
   }
   if (sub === 'edit') {

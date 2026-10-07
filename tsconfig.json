@@ -71,6 +71,9 @@
     },
     {
       "path": "./plugins/source-taleo"
+    },
+    {
+      "path": "./plugins/enricher-linkedin-employees"
     }
   ]
 }

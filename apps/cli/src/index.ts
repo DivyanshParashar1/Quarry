@@ -47,6 +47,7 @@ import { createRegistry } from './plugins.js';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
+import { linkedinCommand, referralsCommand } from './referral-cmds.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -106,6 +107,18 @@ Outreach (nothing is sent without an approved review item; dry run unless --live
   jf outreach followups           Draft due follow-ups for review.
   jf outreach track               Check Gmail for replies and bounces.
   jf outreach threads
+
+Referrals (Phase 8; no global send cap — a person is asked at most once per cooldown, a job at most N times):
+  jf referrals fanout <jobId> [--count <n>] [--live]
+      Draft N referral asks to distinct people at the company (email, or LinkedIn
+      when there's no usable address). With --live + LINKEDIN_ENABLED=true, finds
+      more engineers on LinkedIn first when the company has too few contacts.
+  jf referrals show <jobId>        Batch status: each ask, its channel, send/reply state.
+  jf referrals approve <jobId>     Approve every pending ask in the job's batch.
+  jf linkedin login | status | resume
+      Save the dedicated account's session (headed browser, encrypted at rest) /
+      show health / clear a pause after fixing a checkpoint.
+  jf linkedin employees --company <name> [--limit <n>] [--live]
 Ids can be shortened to their first 8 characters.
 `;
 
@@ -158,6 +171,7 @@ async function main(argv: string[]): Promise<number> {
       missing: { type: 'boolean' },
       'no-probe': { type: 'boolean' },
       'no-alerts': { type: 'boolean' },
+      count: { type: 'string' },
       since: { type: 'string' },
       dump: { type: 'string' },
       verbose: { type: 'boolean', short: 'v' },
@@ -308,6 +322,8 @@ async function main(argv: string[]): Promise<number> {
 
     const cmdCtx = { env, config, db, log, out: (s: string) => console.log(s) };
     if (cmd === 'contacts') return await contactsCommand(sub, values, cmdCtx);
+    if (cmd === 'referrals') return await referralsCommand(sub, arg, values, cmdCtx);
+    if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx);
     if (cmd === 'review') return await reviewCommand(sub, arg, values, cmdCtx);
     if (cmd === 'outreach') return await outreachCommand(sub, values, cmdCtx);
     if (cmd === 'gmail' && sub === 'auth') {

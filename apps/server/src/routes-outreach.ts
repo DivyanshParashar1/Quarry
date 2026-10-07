@@ -84,7 +84,7 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     const q = z
       .object({
         status: csv(z.enum(['pending', 'approved', 'rejected', 'executed', 'failed', 'cancelled'])),
-        kind: csv(z.enum(['application', 'outreach', 'followup'])),
+        kind: csv(z.enum(['application', 'outreach', 'followup', 'referral_ask', 'attention'])),
         limit: z.coerce.number().int().min(1).max(500).default(100),
       })
       .strict()

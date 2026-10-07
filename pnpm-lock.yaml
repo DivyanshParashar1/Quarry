@@ -62,6 +62,9 @@ importers:
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/enricher-linkedin-employees':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-linkedin-employees
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../../packages/llm
@@ -157,6 +160,9 @@ importers:
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/enricher-linkedin-employees':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-linkedin-employees
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../../packages/llm

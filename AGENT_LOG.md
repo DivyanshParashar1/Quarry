@@ -139,3 +139,63 @@ section. Each phase also gets a `CHANGELOG.md` entry.
 - A LinkedIn alert job id could be enriched later by the Playwright session (Phase 8/9)
   to fetch the description, which would let the matcher score alert-only jobs properly.
 
+## Phase 8 — referral fan-out
+
+### Decisions
+- **Caps.** Followed the plan's user-approved override: the global daily cap and the
+  per-company weekly cap default to *off* (`null`) but remain available as opt-in
+  config, so nothing that relied on them breaks. The always-on product throttles are
+  the 30-day per-contact cooldown and the per-job referral cap; Gmail gets a
+  *technical* `senderDailyLimit` of 400/day (consumer Gmail starts rejecting around
+  500/day). I updated the matching hard-rule line in `CLAUDE.md`.
+- **Cooldown counts queued asks too.** A contact with a *pending or approved* ask (for
+  any job) can't be queued again, otherwise two fan-outs run back to back would both
+  draft the same person. Executed asks block for 30 days.
+- **Limits are re-checked at send time**: an approved item that became invalid
+  (someone else's ask for that person went out first) fails with the reason instead
+  of sending.
+- **One batch per job** (unique index). Re-running the fan-out tops the batch up to its
+  requested count without duplicating anyone — this is what makes it resumable.
+- **Channel choice:** email if the address confidence ≥ 0.3 (`referralMinEmailConfidence`),
+  else LinkedIn if we know the profile, else the person is skipped with a reason.
+- **"10 distinct contacts mixed email + LinkedIn"** — the LinkedIn half needs the Phase 9
+  actor; the fan-out already drafts LinkedIn items (validated LinkedIn-note drafts),
+  and email items go through the existing send loop, which now only picks items whose
+  actor is `actor-gmail-outreach`.
+- **Referral email cites one resume bullet** taken from the job's tailored `.tex`
+  (`\resumeItem{…}` → plain text), so the ask matches what the referrer will forward.
+  Falls back to profile facts. The bullet id is validated (repair retry otherwise) and
+  the posting URL is appended if the LLM dropped it.
+- **Browser capability design:** plugins get a Playwright-compatible `BrowserPage`
+  subset through a core wrapper that enforces the manifest's domains on every
+  navigation and the per-domain rate limit — the same allowlist idea as ScopedHttp.
+  Tests use a scripted `fakeBrowser`; no real browser runs in CI.
+- **Session at rest:** AES-256-GCM, file mode 600; key from `JOBFORGE_SESSION_KEY`, else
+  the OS keychain via the `security` (macOS) / `secret-tool` (Linux) CLIs, else a 600
+  key file in `~/.config/jobforge/` (weakest; used in this sandbox since there's no
+  keychain). No keychain npm dependency.
+- **Blocks pause everything and raise a review item.** I added a review kind
+  `attention`: approving it means "I fixed it, resume". The cool-down doubles on each
+  block (capped at a week) and resets on resume.
+- **Autopilot hook deferred to Phase 12** — the plan's `fanOutReferrals(jobId)` exists
+  and is used by CLI/server/MCP; the autopilot calls it once the Phase 12 state machine
+  exists, to avoid writing the integration twice.
+
+### Issues noticed
+- The `contacts` unique key is (company, lower(name)). Two different people with the
+  same name at one company (common in India: "Rahul Sharma") collapse into one
+  contact. LinkedIn imports could key on the profile URL instead — worth a migration.
+- Bounced pattern-guessed addresses mark the contact `bounced` forever even though the
+  enricher now stores ranked alternatives; see the idea below.
+- I could not run Playwright against LinkedIn here (no network, no account). The
+  selectors and the markup parser are educated guesses — expect to adjust them on the
+  first headed run (`BROWSER_HEADLESS=false`).
+
+### Ideas
+- On a bounce, automatically try the next `email_candidates` address (the ask never
+  arrived, so the cooldown shouldn't apply to that one).
+- Rank referral targets by team match: compare the contact's `department` with the job
+  title/description (e.g. "Payments") using the existing embeddings.
+- Show "asked N days ago for <job>" on contacts in the Outreach panel so the cooldown is
+  visible before the fan-out skips someone.
+

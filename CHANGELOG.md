@@ -234,3 +234,28 @@ Known gaps: fixtures for Workday/SmartRecruiters are synthetic (no network acces
 Dependencies: none added. (`@jobforge/source-gmail-alerts` is a dev dependency of `@jobforge/core` for its runner test.)
 
 Known gaps: all fixtures are synthetic; the "5 SuccessFactors + 3 Taleo tenants return postings" and "real inbox" acceptance runs need live access and real tenant ids.
+
+## [Phase 8] — Per-job referral fan-out (10+ contacts per job)
+
+- **Policy change (user-approved in PLAN-phases-6-13):** no global daily send cap and no per-company weekly cap by default. `outreach.dailyCap` / `perCompanyPerWeek` are now `null` (opt-in). Always enforced: `perContactCooldownDays` (30 — a person is never asked twice across any job or channel, counting pending/approved asks too), `perJobReferralCap` (10, overridable per batch), and the sender's technical limit `senderDailyLimit` (400, Gmail). `CLAUDE.md` updated.
+- `packages/db` — migrations `0007` + `0008`: `contacts.role_hint`, `seniority_hint`, `department`, `email_candidates`; `companies.linkedin_id`, `linkedin_slug`; review kinds `referral_ask` and `attention`; `job_referral_batches` (one per job: requested/drafted/sent/replied counts, status `drafting → pending_review → sending → sent → replied | closed`); `review_items.batch_id`; `outreach_threads.channel` (`email | linkedin`). `referral-repo.ts`: batches, `lastAskedAt`, `contactsAskedSince`, `committedAsksForJob`, `markBatchReplied` (stops only that batch's follow-ups), hints/LinkedIn identity setters.
+- `packages/plugin-sdk`
+  - `OutreachActionInput.kind` gains `referral_ask` with `resumeBullets`; `ContactRef` gains role/department/LinkedIn hints; `EmailDraft.resumeBulletId`; `linkedinNoteDraftSchema` (≤ 300 chars) and `LinkedInSendResult`; `EmployeeEnrichment`; `CompanyEnrichment` candidates.
+  - Browser capability: `BrowserPage` (a Playwright-compatible subset) + `BrowserHandle`, `SessionBlockedError`; `fakeBrowser` (scripted pages, click handlers, action log) for tests.
+  - `linkedin.ts`: `assertNotBlocked` (checkpoint/captcha/authwall/restricted/limit/999), `classifyHeadline` (role/seniority/team), `parsePeopleSearch`, `parseCompanyId`/`Slug`, `peopleSearchUrl`, `canonicalProfileUrl`.
+- `packages/core`
+  - Outreach engine: per-contact cooldown and per-job cap checked at approval *and* right before sending (an approved item that became invalid fails with the reason); the optional caps only apply when configured; referral asks open threads; sends bump batch counts; a reply on any batch thread marks the batch `replied`, cancels that batch's follow-ups, and emits `referral.replied` for the Phase 12 sequencer. Drafts are validated per actor (email vs LinkedIn note).
+  - `referrals.ts`: `fanOutReferrals(jobId, {count})` (one batch per job, ranks reachable engineers → managers → leaders → recruiters, email when confidence ≥ `referralMinEmailConfidence` else LinkedIn, skips cooldowns, optionally finds more people first; resumable — reruns top up without duplicates), `approveBatch` ("one click"), `referralPanel`, resume bullets extracted from the job's tailored `.tex` (fallback: profile facts).
+  - `browser.ts`: Playwright launch (lazy import) + `scopeBrowser` (manifest domains on every goto and after clicks, per-domain rate limit). `session-store.ts`: AES-256-GCM session file (mode 600), key from `JOBFORGE_SESSION_KEY`, the OS keychain (`security`/`secret-tool`), or a 600 key file.
+  - `linkedin.ts`: gate (`LINKEDIN_ENABLED` + live), health state with doubling cool-down, `pauseLinkedIn` → `attention` review item, `resumeLinkedIn`, `importLinkedInEmployees` (contacts with `source = linkedin` + hints, then email inference), shared browser factory.
+- `plugins/enricher-contacts-pattern` — ranked candidate addresses per contact (`candidatesPerContact`, default 3) and `patternCandidates` per company; persisted to `contacts.email_candidates`.
+- `plugins/enricher-linkedin-employees` — company search → company id → people search per keyword (`currentCompany` filter), human-ish pauses/mouse/scroll, `searchIntervalSeconds` (60) between searches, 1 navigation / 15 s; dry run never opens LinkedIn; stops on any challenge page.
+- `plugins/actor-gmail-outreach` — `referral_ask` prompt: ≤ 90 words, names the role, cites exactly one resume bullet (validated id; repair retry otherwise), always carries the posting URL.
+- `apps/cli` — `jf referrals fanout|show|approve <jobId>`, `jf linkedin login|status|resume|employees`; review list/show render LinkedIn notes and attention items.
+- `apps/server` — `GET /api/jobs/:id/referrals`, `POST …/referrals/fanout`, `POST …/referrals/approve`, `GET /api/linkedin/status`, `POST /api/linkedin/resume`; review list accepts the new kinds; `attention` approval = "fixed, resume".
+- `apps/web` — per-job **Referrals** panel (batch counters, each ask with channel/status/reply, per-row approve, "Approve all N" with confirmation, top-up); review queue dispatches LinkedIn-note and attention cards.
+- `apps/mcp` — `fan_out_referrals`, `referral_status`; `approve` confirmation text covers LinkedIn notes, attention items and applications.
+
+Dependencies added: `playwright` (in `packages/core`; listed in PLAN.md §2).
+
+Known gaps: the LinkedIn markup and the alert/ATS fixtures are synthetic; autopilot's `fanOutReferrals` hook is wired in Phase 12 together with the sequencer.

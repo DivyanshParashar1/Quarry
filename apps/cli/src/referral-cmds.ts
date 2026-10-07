@@ -1,0 +1,180 @@
+import { dirname } from 'node:path';
+import { findUp } from '@jobforge/shared';
+import { findCompanyByName, getBatchForJob, resolveIdPrefix } from '@jobforge/db';
+import {
+  approveBatch,
+  fanOutReferrals,
+  importLinkedInEmployees,
+  launchBrowser,
+  linkedinBrowserFactory,
+  linkedinHealth,
+  linkedinPaused,
+  linkedinSessionStore,
+  referralPanel,
+  resumeLinkedIn,
+  type LinkedInDeps,
+} from '@jobforge/core';
+import { DomainRateLimiter } from '@jobforge/core';
+import { table } from './format.js';
+import { createRegistry } from './plugins.js';
+import { outreachDeps } from './runtime.js';
+import { CmdError, type CmdCtx } from './outreach-cmds.js';
+
+export interface ReferralValues {
+  count?: string | undefined;
+  live?: boolean | undefined;
+  company?: string | undefined;
+  limit?: string | undefined;
+}
+
+export function repoRoot(): string {
+  const ws = findUp('pnpm-workspace.yaml');
+  return ws ? dirname(ws) : process.cwd();
+}
+
+/** LinkedIn runs only with LINKEDIN_ENABLED=true AND a live run (--live or MODE=live). */
+export function linkedinDeps(c: CmdCtx, live: boolean): LinkedInDeps & { closeBrowser: () => Promise<void> } {
+  const factory = linkedinBrowserFactory(c.env, repoRoot());
+  return {
+    db: c.db,
+    registry: createRegistry(c.config),
+    log: c.log,
+    limiter: new DomainRateLimiter(),
+    dryRun: !live,
+    linkedin: c.config.linkedin,
+    enabled: c.env.LINKEDIN_ENABLED && live,
+    openBrowser: factory.open,
+    closeBrowser: factory.close,
+  };
+}
+
+export async function referralsCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues, c: CmdCtx): Promise<number> {
+  const live = !!v.live || c.env.MODE === 'live';
+  if (sub === 'fanout') {
+    if (!arg) throw new CmdError('usage: jf referrals fanout <jobId> [--count <n>] [--live]');
+    const jobId = await resolveIdPrefix(c.db, 'jobs', arg);
+    const deps = await outreachDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live, llm: true });
+    const li = linkedinDeps(c, live);
+    try {
+      const r = await fanOutReferrals(
+        {
+          ...deps,
+          linkedinAvailable: c.env.LINKEDIN_ENABLED,
+          findMoreContacts: async (companyId, _jobId, wanted) => {
+            const imp = await importLinkedInEmployees(li, companyId, { maxProfiles: Math.max(wanted * 2, c.config.linkedin.profilesPerCompany) });
+            if (imp.skipped) c.out(`LinkedIn search skipped: ${imp.skipped}`);
+            if (imp.error) c.out(`LinkedIn search failed: ${imp.error}`);
+            return imp.contactsCreated;
+          },
+        },
+        jobId,
+        v.count ? { count: Number(v.count) } : {},
+      );
+      c.out(
+        `batch ${r.batch.id.slice(0, 8)} · ${r.batch.draftedCount}/${r.batch.requestedCount} asks drafted ` +
+          `(${r.drafted.filter((d) => d.channel === 'email').length} email, ${r.drafted.filter((d) => d.channel === 'linkedin').length} LinkedIn new this run)` +
+          (r.foundContacts ? ` · ${r.foundContacts} new contacts from LinkedIn` : '') +
+          (r.shortBy ? ` · short by ${r.shortBy}` : ''),
+      );
+      for (const s of r.skipped.slice(0, 15)) c.out(`  - skipped ${s.name}: ${s.reason}`);
+      if (r.drafted.length) c.out('Review them in the dashboard or `jf referrals approve <jobId>`.');
+      return 0;
+    } finally {
+      await li.closeBrowser();
+    }
+  }
+
+  if (sub === 'show') {
+    if (!arg) throw new CmdError('usage: jf referrals show <jobId>');
+    const p = await referralPanel(c.db, await resolveIdPrefix(c.db, 'jobs', arg));
+    if (!p.batch) {
+      c.out('No referral batch for this job yet. `jf referrals fanout <jobId>` creates one.');
+      return 0;
+    }
+    const b = p.batch;
+    c.out(`batch ${b.id.slice(0, 8)} · ${b.status} · requested ${b.requestedCount} · drafted ${b.draftedCount} · sent ${b.sentCount} · replied ${b.repliedCount}`);
+    c.out(
+      table(p.items, [
+        { header: 'ID', value: (r) => r.id.slice(0, 8) },
+        { header: 'CHANNEL', value: (r) => r.channel },
+        { header: 'CONTACT', value: (r) => r.contactName ?? '', max: 24 },
+        { header: 'ROLE', value: (r) => r.contactRole ?? '', max: 30 },
+        { header: 'STATUS', value: (r) => r.status },
+        { header: 'THREAD', value: (r) => r.threadState ?? '' },
+        { header: 'NOTE', value: (r) => r.error ?? '', max: 40 },
+      ]),
+    );
+    return 0;
+  }
+
+  if (sub === 'approve') {
+    if (!arg) throw new CmdError('usage: jf referrals approve <jobId>');
+    const jobId = await resolveIdPrefix(c.db, 'jobs', arg);
+    const batch = await getBatchForJob(c.db, jobId);
+    if (!batch) throw new CmdError('no referral batch for this job');
+    const r = await approveBatch(c.db, c.config.outreach, batch.id);
+    c.out(`approved ${r.approved.length} ask(s)${r.failed.length ? `; ${r.failed.length} refused:` : ''}`);
+    for (const f of r.failed) c.out(`  - ${f.reviewItemId.slice(0, 8)}: ${f.error}`);
+    c.out('Emails go out via `jf outreach send --live` (or the server loop); LinkedIn notes via `jf linkedin send --live`.');
+    return r.failed.length && !r.approved.length ? 1 : 0;
+  }
+  throw new CmdError('usage: jf referrals fanout|show|approve <jobId>');
+}
+
+export async function linkedinCommand(sub: string | undefined, v: ReferralValues, c: CmdCtx): Promise<number> {
+  if (sub === 'login') {
+    const store = await linkedinSessionStore(c.env, repoRoot());
+    c.out(`Opening a browser. Log in to your dedicated LinkedIn account; the session is saved encrypted to ${store.path} (key: ${store.keySource}).`);
+    const browser = await launchBrowser({ headless: false, ...(store.exists() ? { storageState: (await store.load()) ?? undefined } : {}) });
+    try {
+      const page = await browser.newPage();
+      await page.goto('https://www.linkedin.com/login');
+      const deadline = Date.now() + 10 * 60_000;
+      while (Date.now() < deadline) {
+        if (/linkedin\.com\/(feed|mynetwork|in\/)/.test(page.url())) break;
+        await page.waitForTimeout(2000);
+      }
+      if (!/linkedin\.com\/(feed|mynetwork|in\/)/.test(page.url())) throw new CmdError('timed out waiting for the LinkedIn feed (10 minutes)');
+      await store.save(await browser.storageState!());
+      await resumeLinkedIn(c.db, c.config.linkedin, 'logged in');
+      c.out('Saved. Subsequent runs are headless.');
+      return 0;
+    } finally {
+      await browser.close?.();
+    }
+  }
+  if (sub === 'status') {
+    const store = await linkedinSessionStore(c.env, repoRoot());
+    const h = await linkedinHealth(c.db, c.config.linkedin);
+    const paused = await linkedinPaused(c.db, c.config.linkedin);
+    c.out(
+      [
+        `enabled: ${c.env.LINKEDIN_ENABLED ? 'yes' : 'no (set LINKEDIN_ENABLED=true)'} · mode ${c.env.MODE}`,
+        `session: ${store.exists() ? `saved (${store.path}, key from ${store.keySource})` : 'none — run `jf linkedin login`'}`,
+        `health: ${paused ?? 'ok'}${h.reason ? ` (last: ${h.reason} at ${h.url})` : ''}`,
+      ].join('\n'),
+    );
+    return 0;
+  }
+  if (sub === 'resume') {
+    await resumeLinkedIn(c.db, c.config.linkedin, 'resumed from CLI');
+    c.out('LinkedIn loops resumed.');
+    return 0;
+  }
+  if (sub === 'employees') {
+    if (!v.company) throw new CmdError('usage: jf linkedin employees --company <name> [--limit <n>] [--live]');
+    const company = await findCompanyByName(c.db, v.company);
+    if (!company) throw new CmdError(`unknown company ${v.company}`);
+    const live = !!v.live || c.env.MODE === 'live';
+    const li = linkedinDeps(c, live);
+    try {
+      const r = await importLinkedInEmployees(li, company.id, v.limit ? { maxProfiles: Number(v.limit) } : {});
+      if (r.skipped) c.out(`skipped: ${r.skipped}`);
+      else c.out(`${r.ok ? 'ok' : `FAILED: ${r.error}`} · ${r.profiles} profiles · ${r.contactsCreated} new contacts · ${r.emailsInferred} emails inferred`);
+      return r.ok || r.skipped ? 0 : 1;
+    } finally {
+      await li.closeBrowser();
+    }
+  }
+  throw new CmdError('usage: jf linkedin login|status|resume|employees|send|track');
+}

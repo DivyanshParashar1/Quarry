@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, linkedinBrowserFactory, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -51,6 +51,19 @@ export async function bootstrap() {
     log.info('autopilot scheduled hourly');
   }
 
+  const ws = findUp('pnpm-workspace.yaml');
+  const linkedinBrowser = linkedinBrowserFactory(env, ws ? dirname(ws) : process.cwd());
+  const linkedinDeps = async () => ({
+    db,
+    registry,
+    log,
+    limiter,
+    dryRun: env.MODE !== 'live',
+    linkedin: config.linkedin,
+    enabled: env.LINKEDIN_ENABLED && env.MODE === 'live',
+    openBrowser: linkedinBrowser.open,
+  });
+
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
@@ -65,6 +78,8 @@ export async function bootstrap() {
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     config,
     pages: () => createPageFetcher({ limiter }),
+    linkedinDeps,
+    linkedinEnabled: env.LINKEDIN_ENABLED,
     ...(facts ? { profileDir: dirname(facts) } : {}),
     ...(resumeManifest ? { resumeDir: dirname(resumeManifest) } : {}),
   });
@@ -84,6 +99,7 @@ export async function bootstrap() {
   const shutdown = async (signal: string) => {
     log.info({ signal }, 'shutting down');
     await api.close();
+    await linkedinBrowser.close();
     await boss.stop({ graceful: true, timeout: 30_000 });
     await close();
     process.exit(0);

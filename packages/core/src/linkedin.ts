@@ -16,7 +16,9 @@ import {
 } from '@jobforge/db';
 import { loadCompanyRef, enrichContacts } from './contacts-runner.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
-import type { RawBrowser } from './browser.js';
+import { join } from 'node:path';
+import { launchBrowser, type RawBrowser } from './browser.js';
+import { resolveSessionKey, SessionStore } from './session-store.js';
 
 // LinkedIn runtime (Phase 8/9). Everything LinkedIn goes through here so the
 // gate (LINKEDIN_ENABLED + live), the health/pause state, and the "a human
@@ -201,4 +203,41 @@ export async function importLinkedInEmployees(deps: LinkedInDeps, companyId: str
 export async function pendingLinkedInAttention(db: DB): Promise<number> {
   const items = await listReviewItems(db, { status: ['pending'], kind: ['attention'], limit: 50 });
   return items.filter((i) => i.pluginId === 'linkedin').length;
+}
+
+// ---------------------------------------------------------------------------
+// Session + browser wiring shared by the CLI and the server
+// ---------------------------------------------------------------------------
+
+export interface LinkedInEnv {
+  LINKEDIN_ENABLED: boolean;
+  LINKEDIN_STATE_PATH?: string | undefined;
+  JOBFORGE_SESSION_KEY?: string | undefined;
+  BROWSER_HEADLESS: boolean;
+}
+
+export async function linkedinSessionStore(env: LinkedInEnv, repoRoot: string): Promise<SessionStore> {
+  const path = env.LINKEDIN_STATE_PATH ?? join(repoRoot, 'data', 'linkedin', 'state.enc');
+  return new SessionStore(path, await resolveSessionKey('linkedin-session', { envKey: env.JOBFORGE_SESSION_KEY }));
+}
+
+/**
+ * A lazily-launched, shared browser on the saved LinkedIn session. Throws a
+ * login SessionBlockedError when no session has been saved yet.
+ */
+export function linkedinBrowserFactory(env: LinkedInEnv, repoRoot: string): { open: () => Promise<RawBrowser>; close: () => Promise<void> } {
+  let browser: Promise<RawBrowser> | null = null;
+  return {
+    open: () =>
+      (browser ??= (async () => {
+        const store = await linkedinSessionStore(env, repoRoot);
+        const state = await store.load();
+        if (!state) throw new SessionBlockedError('no saved LinkedIn session; run `jf linkedin login`', 'login', 'https://www.linkedin.com/login');
+        return launchBrowser({ headless: env.BROWSER_HEADLESS, storageState: state });
+      })()),
+    async close() {
+      if (browser) await (await browser.catch(() => null))?.close?.();
+      browser = null;
+    },
+  };
 }
