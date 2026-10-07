@@ -121,6 +121,12 @@ export const appConfigSchema = z
         maxAutoApprovedAsksPerDay: z.number().int().min(0).default(200),
         /** Never auto-submit applications by default: the apply item waits for you. */
         autoApproveApplications: z.boolean().default(false),
+        /**
+         * Phase 14 backpressure: while this many review items are pending, the
+         * sequencer admits no new jobs and fans out no new asks (everything
+         * already in flight keeps moving). null = never pause.
+         */
+        maxPendingReviews: z.number().int().min(1).nullable().default(300),
       })
       .strict()
       .default({}),

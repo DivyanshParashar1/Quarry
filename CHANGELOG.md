@@ -356,3 +356,10 @@ Known gaps: "20+ real jobs across all states" needs live data; the full flow is 
 Dependencies: none.
 
 Known gaps: "10–30 new companies/week, each with a working source" needs the live crawl (egress is blocked here). The Greenhouse → Workday move and the no-duplicates property are covered in `continuous.db.test.ts`.
+
+## [Phase 14, partial] — Review-queue backpressure
+
+- `config.yaml` — `autopilot.maxPendingReviews` (default 300, `null` = never pause).
+- `packages/core/sequencer.ts` — when at least that many review items are pending, the tick still expires, syncs, advances and queues applications for jobs already in flight, but admits no new jobs and fans out no new asks. The summary / `autopilot.sequence` event carry `paused: "review_queue_full (N pending ≥ max)"`; the Applications page shows it after "Run sequencer now".
+
+The other Phase 14 items (plugin process isolation, funnel analytics, daily digest email) are not started.

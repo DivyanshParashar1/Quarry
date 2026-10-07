@@ -29,7 +29,7 @@ export function ApplicationsPage({ onOpenJob }: { onOpenJob: (id: string) => voi
     refetchInterval: 30_000,
   });
   const run = useMutation({
-    mutationFn: () => send<{ admitted: number; steps: unknown[] }>('/api/autopilot/sequence', 'POST', {}),
+    mutationFn: () => send<{ admitted: number; steps: unknown[]; paused?: string }>('/api/autopilot/sequence', 'POST', {}),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['applications'] }),
   });
   const toggle = (s: PipelineState) => setStates((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
@@ -47,7 +47,7 @@ export function ApplicationsPage({ onOpenJob }: { onOpenJob: (id: string) => voi
           {run.isPending ? 'Running…' : 'Run sequencer now'}
         </Button>
       </div>
-      {run.data && <p className="text-xs text-muted-foreground">{run.data.admitted} admitted · {run.data.steps.length} steps</p>}
+      {run.data && <p className="text-xs text-muted-foreground">{run.data.admitted} admitted · {run.data.steps.length} steps{run.data.paused ? ` · new fan-outs paused: ${run.data.paused}` : ''}</p>}
       {run.error && <p className="text-xs text-red-600">{run.error.message}</p>}
       {q.error && <p className="text-sm text-red-600">Could not load: {q.error.message}</p>}
       {q.data && q.data.rows.length === 0 && <p className="text-sm text-muted-foreground">Nothing in the pipeline yet. The autopilot (strategy: referrals) admits top matches each hour, or run it now.</p>}

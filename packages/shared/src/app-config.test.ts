@@ -34,6 +34,7 @@ describe('config.yaml', () => {
         autoApproveReferrals: true,
         maxAutoApprovedAsksPerDay: 200,
         autoApproveApplications: false,
+        maxPendingReviews: 300,
       },
       deadlines: { minMatchScore: 60, staleDays: 14, batchSize: 20, expireMinConfidence: 0.6, expireGraceDays: 1, nightly: false },
       linkedin: {

@@ -13,6 +13,7 @@ import {
   listBatchItems,
   pipelineStateCounts,
   releaseLease,
+  reviewCounts,
   sql,
   transitionPipeline,
   transitionReviewItem,
@@ -65,6 +66,8 @@ export interface SequencerStep {
 
 export interface SequencerSummary {
   skipped?: string;
+  /** Set when new admissions / fan-outs were held back this tick (review-queue backpressure). */
+  paused?: string;
   admitted: number;
   steps: SequencerStep[];
   counts: Record<PipelineState, number>;
@@ -76,20 +79,34 @@ export async function runSequencer(deps: SequencerDeps, opts: { limit?: number }
   if (!(await tryLease(deps.db, 'autopilot.sequence', owner, 30 * 60_000))) return { skipped: 'locked', admitted: 0, steps: [], counts: counts0 };
   const steps: SequencerStep[] = [];
   let admitted = 0;
+  let paused: string | undefined;
   try {
     const now = deps.now?.() ?? new Date();
     await expireClosed(deps, steps);
     await syncApplications(deps, steps);
     await checkWaits(deps, now, steps);
     await queueApplications(deps, steps);
-    admitted = await admitCandidates(deps, opts.limit, steps);
-    await fanOutCandidates(deps, steps);
+    paused = await backpressure(deps);
+    if (paused) {
+      deps.log.warn({ reason: paused }, 'sequencer: new fan-outs paused');
+    } else {
+      admitted = await admitCandidates(deps, opts.limit, steps);
+      await fanOutCandidates(deps, steps);
+    }
     await queueApplications(deps, steps); // jobs that skipped straight to ready_to_apply
-    await appendEvent(deps.db, { kind: 'autopilot.sequence', payload: { admitted, steps: steps.length } });
+    await appendEvent(deps.db, { kind: 'autopilot.sequence', payload: { admitted, steps: steps.length, ...(paused ? { paused } : {}) } });
   } finally {
     await releaseLease(deps.db, 'autopilot.sequence', owner);
   }
-  return { admitted, steps, counts: await pipelineStateCounts(deps.db) };
+  return { admitted, steps, counts: await pipelineStateCounts(deps.db), ...(paused ? { paused } : {}) };
+}
+
+/** Phase 14: hold new work back while the review queue is backed up. */
+async function backpressure(deps: SequencerDeps): Promise<string | undefined> {
+  const max = deps.policy.maxPendingReviews;
+  if (max === null) return undefined;
+  const { pending } = await reviewCounts(deps.db);
+  return pending >= max ? `review_queue_full (${pending} pending ≥ ${max})` : undefined;
 }
 
 async function step(deps: SequencerDeps, steps: SequencerStep[], row: PipelineRow, to: PipelineState, reason: string, meta: Record<string, unknown> = {}, note?: string): Promise<boolean> {

@@ -379,3 +379,52 @@ section. Each phase also gets a `CHANGELOG.md` entry.
   review manual-friendly.
 - Feed list-source drift into the banner by source: "YC added 120 today" tells you
   which parser broke.
+
+## Phase 14 (stretch) — only backpressure
+
+### Decisions
+- Did only **review-queue backpressure** out of Phase 14. The plan says Phase 14 starts
+  "only after 6–13 are stable", and stability needs real-world runs this session
+  can't do. Backpressure is small and lowers risk: it stops autopilot from burying you
+  in pending items while you're away.
+- Threshold `autopilot.maxPendingReviews: 300` by default. Auto-approved asks are
+  never "pending", so in practice this counts low-confidence drafts and application
+  items. Only *new* work pauses; jobs already in the pipeline keep moving, so nothing
+  stalls half-way.
+- Skipped on purpose:
+  - plugin process isolation: a large refactor with real crash-containment trade-offs,
+    which deserves a review with you first;
+  - the digest email: it sends real email, which needs your go-ahead.
+  - funnel analytics: the data is all in `events`/`plugin_runs`, so it's a good
+    next session.
+
+---
+
+## Overall status (end of the overnight run)
+
+Phases 6–13 are implemented and committed one phase (or sub-phase) at a time on
+`claude/sharp-ritchie-w8teol`, plus Phase 14 backpressure. The final run passed:
+`pnpm typecheck`, `pnpm lint` and `JOBFORGE_REQUIRE_DB=1 pnpm test` (375 passed,
+2 skipped, all against real Postgres).
+
+### What you need to verify live (couldn't be done here; egress was blocked)
+1. **Re-record fixtures** for Workday, SmartRecruiters, SuccessFactors, Taleo, the
+   Gmail alert senders, LinkedIn pages, and the Greenhouse/Lever/Ashby application
+   forms. All of them are synthetic (each fixture dir has a README).
+2. Run `pnpm db:migrate` (migrations 0006–0010).
+3. Discovery: `pnpm jf discover_ats` on a few known companies, then
+   `pnpm jf discover_companies --list yc`. Check what was added on the Companies tab.
+   Then set `discovery.nightly: true` if you're happy with the results.
+4. LinkedIn: create the session through the first-run login (`docs/linkedin.md`), then
+   try one connection request with `--live` before trusting the volume settings.
+5. Auto-apply: run one dry-run apply per ATS and look at the screenshots before you
+   approve a real submission.
+6. Deadline inference: run `pnpm jf llm check` with a provider that supports web
+   search, then infer deadlines for a handful of jobs and spot-check them.
+7. Policy changes from the plan are now in code:
+   - no global or per-company caps;
+   - 30-day per-contact cooldown;
+   - 10 asks per job;
+   - sender limit of 400/day;
+   - 25 LinkedIn connection requests/day.
+   Re-read `config.yaml` defaults before you go live with `--live`/`MODE=live`.

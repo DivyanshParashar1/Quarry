@@ -127,6 +127,14 @@ describe.skipIf(!adminUrl)('autopilot sequencer (postgres)', () => {
   });
   afterAll(async () => t?.drop());
 
+  it('backpressure: a full review queue holds back new admissions', async () => {
+    // maxPendingReviews 0 = "the queue is already full" without seeding review items.
+    const s = await runSequencer({ ...deps, policy: { ...deps.policy, maxPendingReviews: 0 } });
+    expect(s.paused).toMatch(/^review_queue_full/);
+    expect(s.admitted).toBe(0);
+    expect(s.counts.candidate + s.counts.referral_pending).toBe(0);
+  });
+
   it('admits gated jobs, fans out, auto-approves confident asks', async () => {
     const s = await runSequencer(deps);
     expect(s.admitted).toBe(3);
