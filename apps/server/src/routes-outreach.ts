@@ -15,6 +15,7 @@ import {
   listSourceTargets,
   listThreads,
   pipelineStatus,
+  pipelineStateCounts,
   reviewCounts,
   threadCounts,
   matchStats,
@@ -34,6 +35,8 @@ import {
   runAutopilot,
   runTailor,
   runDeadlines,
+  runSequencer,
+  type SequencerDeps,
   type AutopilotRunDeps,
   type DeadlineDeps,
   type OutreachDeps,
@@ -49,6 +52,9 @@ export interface OutreachRouteOptions {
   tailorDeps?: () => Promise<TailorRunDeps>;
   /** Built lazily; shares the LLM / Gmail with outreach. */
   autopilotDeps?: () => Promise<AutopilotRunDeps>;
+  /** Phase 12 sequencer (used by /api/autopilot/run when strategy = referrals). */
+  sequencerDeps?: () => Promise<SequencerDeps>;
+  strategy?: 'referrals' | 'single_email';
   /** Phase 10: deadline estimator deps (LLM). */
   deadlineDeps?: () => Promise<DeadlineDeps>;
   /** Enqueue source fetches (the server's pg-boss); absent in tests that don't need it. */
@@ -76,6 +82,8 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
   app.get('/api/pipeline', async () => {
     const profile = await getActiveProfile(db);
     return {
+      /** Phase 12: jobs per sequencer state. */
+      states: await pipelineStateCounts(db),
       jobs: await matchStats(db, profile?.version ?? null),
       review: await reviewCounts(db),
       threads: await threadCounts(db),
@@ -253,6 +261,8 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
   app.post('/api/autopilot/run', async (req, reply) => {
     if (!o.autopilotDeps) return reply.status(503).send({ error: 'unavailable', message: 'autopilot is not configured on this server' });
     const b = z.object({ limit: z.number().int().min(1).max(100).optional() }).strict().parse(req.body ?? {});
+    // Phase 12: the default strategy is the referral-first sequencer.
+    if (o.sequencerDeps && o.strategy !== 'single_email') return runSequencer(await o.sequencerDeps(), b.limit !== undefined ? { limit: b.limit } : {});
     const deps = await o.autopilotDeps();
     return runAutopilot(deps, b.limit !== undefined ? { limit: b.limit } : {});
   });

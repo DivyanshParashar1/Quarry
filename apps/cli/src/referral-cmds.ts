@@ -1,9 +1,11 @@
 import { dirname } from 'node:path';
 import { findUp } from '@jobforge/shared';
-import { findCompanyByName, getBatchForJob, resolveIdPrefix } from '@jobforge/db';
+import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@jobforge/db';
 import {
+  advanceJob,
   approveBatch,
   draftApplication,
+  expireJob,
   fanOutReferrals,
   runApplyTick,
   importLinkedInEmployees,
@@ -17,11 +19,12 @@ import {
   resumeLinkedIn,
   runLinkedInSendTick,
   type LinkedInDeps,
+  type SequencerDeps,
 } from '@jobforge/core';
 import { DomainRateLimiter } from '@jobforge/core';
 import { table } from './format.js';
 import { createRegistry } from './plugins.js';
-import { outreachDeps } from './runtime.js';
+import { outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, type CmdCtx } from './outreach-cmds.js';
 
 export interface ReferralValues {
@@ -247,4 +250,76 @@ export async function applyCommand(sub: string | undefined, arg: string | undefi
   } finally {
     await holder.browser?.close?.();
   }
+}
+
+/** Phase 12 sequencer deps for the CLI (LinkedIn search only when enabled and live). */
+export async function sequencerDeps(c: CmdCtx, live: boolean): Promise<SequencerDeps & { close: () => Promise<void> }> {
+  const out = await outreachDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live, gmail: true, llm: true });
+  const li = linkedinDeps(c, live);
+  const holder: { browser: Awaited<ReturnType<typeof launchBrowser>> | null } = { browser: null };
+  return {
+    db: c.db,
+    log: c.log,
+    policy: c.config.autopilot,
+    outreachPolicy: c.config.outreach,
+    fanOutDeps: {
+      ...out,
+      linkedinAvailable: c.env.LINKEDIN_ENABLED,
+      ...(li.enabled
+        ? { findMoreContacts: async (companyId: string, _j: string, wanted: number) => (await importLinkedInEmployees(li, companyId, { maxProfiles: Math.max(wanted * 2, c.config.linkedin.profilesPerCompany) })).contactsCreated }
+        : {}),
+    },
+    tailorDeps: tailorDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live }),
+    applyDeps: { ...out, openBrowser: async () => (holder.browser ??= await launchBrowser({ headless: c.env.BROWSER_HEADLESS })) },
+    async close() {
+      await li.closeBrowser();
+      await holder.browser?.close?.();
+    },
+  };
+}
+
+export async function pipelineCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues & { reason?: string | undefined; state?: string | undefined }, c: CmdCtx): Promise<number> {
+  const live = !!v.live || c.env.MODE === 'live';
+  if (!sub || sub === 'list') {
+    const states = v.state ? (v.state.split(',') as PipelineState[]) : undefined;
+    const r = await listApplications(c.db, { ...(states ? { states } : {}), ...(v.company ? { company: v.company } : {}), limit: v.limit ? Number(v.limit) : 100 });
+    const counts = await pipelineStateCounts(c.db);
+    c.out(Object.entries(counts).map(([k, n]) => `${k}: ${n}`).join(' · '));
+    c.out(
+      table(r.rows, [
+        { header: 'JOB', value: (x) => x.jobId.slice(0, 8) },
+        { header: 'COMPANY', value: (x) => x.company, max: 20 },
+        { header: 'TITLE', value: (x) => x.title, max: 40 },
+        { header: 'STATE', value: (x) => x.state },
+        { header: 'SINCE', value: (x) => x.enteredStateAt.toISOString().slice(0, 16).replace('T', ' ') },
+        { header: 'ASKS', value: (x) => (x.batch ? `${x.batch.sent}/${x.batch.requested} sent, ${x.batch.replied} replied` : '') },
+        { header: 'APPLY', value: (x) => x.applicationStatus ?? ((x.metadata as { manualApply?: boolean }).manualApply ? 'manual' : '') },
+        { header: 'WHY', value: (x) => String((x.metadata as { reason?: string }).reason ?? ''), max: 28 },
+      ]),
+    );
+    return 0;
+  }
+  if (sub === 'show') {
+    if (!arg) throw new CmdError('usage: jf pipeline show <jobId>');
+    for (const e of await jobTimeline(c.db, await resolveIdPrefix(c.db, 'jobs', arg))) c.out(`${e.at.toISOString().slice(0, 16).replace('T', ' ')}  ${e.summary}`);
+    return 0;
+  }
+  if (sub === 'advance') {
+    if (!arg) throw new CmdError('usage: jf pipeline advance <jobId> [--live]');
+    const d = await sequencerDeps(c, live);
+    try {
+      const r = await advanceJob(d, await resolveIdPrefix(c.db, 'jobs', arg));
+      c.out(`job ${r.jobId.slice(0, 8)} is now ${r.state}`);
+      return 0;
+    } finally {
+      await d.close();
+    }
+  }
+  if (sub === 'expire') {
+    if (!arg) throw new CmdError('usage: jf pipeline expire <jobId> --reason <text>');
+    const r = await expireJob(c.db, await resolveIdPrefix(c.db, 'jobs', arg), v.reason ?? 'expired by hand');
+    c.out(`job ${r.jobId.slice(0, 8)} expired`);
+    return 0;
+  }
+  throw new CmdError('usage: jf pipeline list [--state s1,s2] [--company] | show <jobId> | advance <jobId> | expire <jobId> --reason <text>');
 }

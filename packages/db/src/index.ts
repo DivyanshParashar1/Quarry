@@ -14,3 +14,4 @@ export * from './resume-repo.js';
 export * from './discovery-repo.js';
 export * from './referral-repo.js';
 export * from './deadline-repo.js';
+export * from './pipeline-repo.js';

@@ -301,3 +301,38 @@ section. Each phase also gets a `CHANGELOG.md` entry.
 - Store ATS question → answer pairs the human typed, and offer them as `answers` entries
   next time a similar label shows up.
 
+## Phase 12 — sequencer
+
+### Decisions
+- **New module, old loop kept.** The sequencer lives in `sequencer.ts`; the Phase 4.5
+  one-email autopilot stays available as `autopilot.strategy: single_email`. The
+  default strategy is `referrals`.
+- **The wait clock starts at the first ask that actually went out** (`batch.firstSentAt`),
+  not when asks were drafted — otherwise asks stuck in review would "time out" before
+  anyone received them. If nothing was ever sent, the wait counts from entering the
+  state, and the reason says `wait_elapsed_no_ask_sent`.
+- **Auto-approval of asks has its own budget** (`maxAutoApprovedAsksPerDay`, 200). The
+  older `maxAutoApprovesPerDay` (10) would throttle a 10-asks-per-job pipeline to one job
+  a day, which contradicts the plan's volume goal. Low-confidence drafts stay pending.
+- **Applications are never auto-submitted by default** (`autoApproveApplications: false`):
+  the plan says "queue apply review item"; submitting a job application on your behalf
+  without a look felt like the wrong default even in autopilot.
+- **Expiry respects in-flight applications**: a job whose application is approved
+  isn't expired just because its posting closed in the meantime.
+- **Unsupported ATS → `manualApply` flag** (stays `ready_to_apply`); "Mark applied" /
+  `advance_job` records that you applied by hand.
+- Transitions use a row lock + `where state in (...)`, and the whole tick runs under an
+  app_state lease, so overlapping cron runs can't double-step a job.
+
+### Issues noticed
+- Contacts are shared across a company's jobs, and the 30-day cooldown means the second
+  job at the same company in a month usually has nobody left to ask → it goes straight
+  to `ready_to_apply` (`no_referral_contacts`) unless LinkedIn search finds new people.
+  That's the plan's rules working as written, but worth knowing: at 10 asks/job, a
+  company needs 10 fresh people per job per month.
+
+### Ideas
+- Prefer re-using a referrer who already replied positively at the same company (a
+  "warm" contact) instead of cold-asking new people for the second job — would need a
+  cooldown exception for people who said yes.
+

@@ -318,3 +318,25 @@ Deferred per plan: Workday / SuccessFactors / Taleo auto-apply (manual apply wit
 Dependencies: none new.
 
 Known gaps: real submissions (one per ATS) need your live run; the newer React-based Greenhouse forms (job-boards.greenhouse.io) and Ashby's custom select controls may need selector work — the classic Greenhouse embed form is used for that reason.
+
+## [Phase 12] — Autopilot sequencing: referral-first, apply-on-deadline
+
+- `packages/db` — migration `0010`: `job_pipeline_state` (`job_id` PK, `state` enum `candidate | referral_pending | ready_to_apply | applied | expired | failed`, `entered_state_at`, `metadata jsonb`). `pipeline-repo.ts`: `enterPipeline` (idempotent), `transitionPipeline` (row-locked, only from the expected states, writes a `pipeline.transition` event), `updatePipelineMetadata`, `jobsInState`, `pipelineStateCounts`, `listApplications`, `jobTimeline` (transitions + job events + every review item's events, in order).
+- `packages/core/sequencer.ts` — `runSequencer` (one tick, under a lease):
+  1. expire non-terminal jobs whose posting closed (`deadline_passed` / `posting_closed`) unless an approved application is about to go out;
+  2. `ready_to_apply` → `applied` / `failed` / `expired` from the application review item (submitted / failed / rejected by you);
+  3. `referral_pending` → `ready_to_apply` on a reply (`referral_replied`), an imminent inferred deadline (`deadline_imminent`, Phase 10 predicate), or `referralWaitDays` after the first ask actually went out (`wait_elapsed`);
+  4. queue the application (Phase 11) — or flag `manualApply` when the posting isn't Greenhouse/Lever/Ashby;
+  5. admit top-ranked jobs that pass the match + tailor gates, up to `maxConcurrentJobs` in flight;
+  6. `candidate` → `referral_pending`: fan out (Phase 8) and auto-approve asks whose draft confidence clears `confidenceFloor.outreach` (budget `maxAutoApprovedAsksPerDay`); no reachable contacts → straight to `ready_to_apply` (`no_referral_contacts`).
+  Resumable: every step is state-guarded and the side steps are idempotent (one batch per job that tops up; one application per job + profile), so a run killed mid fan-out finishes on the next tick without duplicate asks.
+  `advanceJob` (manual push one step; `ready_to_apply` → `applied` = applied by hand) and `expireJob(reason)`.
+- `config.yaml` — `autopilot.strategy: referrals | single_email` (default `referrals`), `referralWaitDays` (2), `deadlineImminentDays` (3), `maxConcurrentJobs` (50), `referralsPerJob` (null = `outreach.perJobReferralCap`), `autoApproveReferrals` (true), `maxAutoApprovedAsksPerDay` (200), `autoApproveApplications` (false). No global send cap.
+- `apps/cli` — `jf autopilot` runs one sequencer tick under `strategy: referrals` (the old loop under `single_email`); `jf pipeline list [--state] [--company] | show <jobId> | advance <jobId> | expire <jobId> --reason`.
+- `apps/server` — `GET /api/applications`, `GET /api/applications/:jobId/timeline`, `POST /api/jobs/:id/advance`, `POST /api/jobs/:id/expire`, `POST /api/autopilot/sequence`; `/api/autopilot/run` and the hourly cron follow the strategy; `/api/pipeline` includes per-state counts.
+- `apps/web` — **Applications** tab: state filter chips with counts, company filter, each job's state, why, asks sent/replied, deadline, application status, manual Advance / Mark applied / Expire, expandable timeline, "Run sequencer now".
+- `apps/mcp` — `pipeline_status` now includes per-state counts; new `advance_job(jobId)` and `expire_job(jobId, reason)`.
+
+Dependencies: none.
+
+Known gaps: "20+ real jobs across all states" needs live data; the full flow is exercised end to end in `sequencer.db.test.ts` (admit → fan-out → send → reply / deadline / wait → apply → applied / expired, plus the kill-and-resume case).

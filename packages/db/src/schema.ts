@@ -540,3 +540,32 @@ export const resumeVariants = pgTable(
     jobIdx: index('resume_variants_job_idx').on(t.jobId, t.createdAt),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Phase 12: autopilot sequencing (referral-first, apply-on-deadline)
+// ---------------------------------------------------------------------------
+
+export const pipelineStateEnum = pgEnum('pipeline_state', ['candidate', 'referral_pending', 'ready_to_apply', 'applied', 'expired', 'failed']);
+
+/**
+ * One row per job the sequencer has taken on. Transitions are guarded
+ * (`where state = from`) so a restarted run never repeats a step; the full
+ * history lives in `events` (kind = pipeline.transition, subject = job).
+ */
+export const jobPipelineState = pgTable(
+  'job_pipeline_state',
+  {
+    jobId: uuid('job_id')
+      .primaryKey()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    state: pipelineStateEnum('state').notNull(),
+    enteredStateAt: timestamp('entered_state_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Last transition reason, counts, review item ids, manual flags. */
+    metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    stateIdx: index('job_pipeline_state_state_idx').on(t.state, t.enteredStateAt),
+  }),
+);

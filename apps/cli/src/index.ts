@@ -34,6 +34,7 @@ import {
   runAlertSource,
   runAutopilot,
   runDeadlines,
+  runSequencer,
   runMatch,
   runTailor,
   SOURCE_PLUGIN_FOR_ATS,
@@ -48,7 +49,7 @@ import { createRegistry } from './plugins.js';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
-import { applyCommand, linkedinCommand, referralsCommand } from './referral-cmds.js';
+import { applyCommand, linkedinCommand, pipelineCommand, referralsCommand, sequencerDeps } from './referral-cmds.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -87,10 +88,15 @@ Usage:
       Every bullet traces to a profile fact; invented numbers/terms are dropped.
       Requires \`latexmk\` (TeX Live) on PATH.
   jf autopilot [--limit <n>] [--live]
-      LLM-in-the-loop: walk top-ranked jobs, tailor + draft, auto-approve the
-      high-confidence ones. Low-confidence items are left pending in the review
-      queue. Dry run by default; --live writes decisions and lets the send loop
-      pick them up (per MODE=live).
+      autopilot.strategy = referrals (default, Phase 12): one sequencer tick —
+      admit top matches that pass the match + tailor gates, fan out referral asks
+      (confident ones auto-approved), wait for a reply / referralWaitDays / a near
+      deadline, then queue the application; expire closed jobs.
+      strategy = single_email: the Phase 4.5 one-email-per-job loop.
+  jf pipeline list [--state s1,s2] [--company <name>] | show <jobId>
+      Every job the sequencer took on, its state, asks and application; show = timeline.
+  jf pipeline advance <jobId> [--live] | expire <jobId> --reason <text>
+      Manual override: push a job one step (ready_to_apply → applied = applied by hand), or give up on it.
   jf deadlines [--job <id>] [--limit <n>] [--rescore]
       Estimate application close dates (LLM + web search, cited) for well-matched
       open jobs; re-runs estimates older than deadlines.staleDays; closes jobs whose
@@ -189,6 +195,7 @@ async function main(argv: string[]): Promise<number> {
       'no-alerts': { type: 'boolean' },
       count: { type: 'string' },
       'no-preview': { type: 'boolean' },
+      state: { type: 'string' },
       since: { type: 'string' },
       dump: { type: 'string' },
       verbose: { type: 'boolean', short: 'v' },
@@ -333,7 +340,20 @@ async function main(argv: string[]): Promise<number> {
       return await tailorCommand(sub, env, config, db, log);
     }
 
+    if (cmd === 'autopilot' && config.autopilot.strategy === 'referrals') {
+      const d = await sequencerDeps({ env, config, db, log, out: (x) => console.log(x) }, !!values.live || env.MODE === 'live');
+      try {
+        const s = await runSequencer(d, values.limit ? { limit: Number(values.limit) } : {});
+        if (s.skipped) console.log(`skipped: ${s.skipped}`);
+        console.log(`sequencer: ${s.admitted} admitted · ${s.steps.length} steps · ${Object.entries(s.counts).map(([k, n]) => `${k} ${n}`).join(', ')}`);
+        for (const x of s.steps) console.log(`  ${x.jobId.slice(0, 8)} ${x.from ?? '∅'} → ${x.to ?? '∅'} (${x.reason})${x.note ? `: ${x.note}` : ''}`);
+        return 0;
+      } finally {
+        await d.close();
+      }
+    }
     if (cmd === 'autopilot') return await autopilotCommand(values, env, config, db, log);
+    if (cmd === 'pipeline') return await pipelineCommand(sub, arg, values, { env, config, db, log, out: (x) => console.log(x) });
 
     if (cmd === 'llm' && sub === 'check') return await llmCheck(env, config, db, log);
 

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, launchBrowser, runApplyTick, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, importLinkedInEmployees, launchBrowser, runApplyTick, runSequencer, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -37,20 +37,6 @@ export async function bootstrap() {
       return s;
     });
   }
-  if (config.autopilot.enabled && env.MODE === 'live') {
-    // Hourly autopilot run; pg-boss handles exactly-once scheduling across restarts.
-    await boss.schedule('autopilot.hourly', '0 * * * *');
-    await boss.work('autopilot.hourly', async () => {
-      try {
-        const summary = await runAutopilot(await autopilotDeps());
-        log.info({ summary: { considered: summary.considered, approved: summary.approved, escalated: summary.escalated, skipped: summary.skipped } }, 'autopilot.hourly run finished');
-      } catch (err) {
-        log.error({ err: err instanceof Error ? err.message : String(err) }, 'autopilot.hourly run failed');
-      }
-    });
-    log.info('autopilot scheduled hourly');
-  }
-
   const ws = findUp('pnpm-workspace.yaml');
   const linkedinBrowser = linkedinBrowserFactory(env, ws ? dirname(ws) : process.cwd());
   const linkedinDeps = async () => ({
@@ -114,6 +100,45 @@ export async function bootstrap() {
     await boss.unschedule('apply.send').catch(() => {});
   }
 
+  // Phase 12: the referral-first sequencer (default autopilot strategy).
+  const sequencerDeps = async () => {
+    const li = await linkedinDeps();
+    const out = await outreachDeps();
+    return {
+      db,
+      log,
+      policy: config.autopilot,
+      outreachPolicy: config.outreach,
+      fanOutDeps: {
+        ...out,
+        linkedinAvailable: env.LINKEDIN_ENABLED,
+        ...(li.enabled
+          ? { findMoreContacts: async (companyId: string, _jobId: string, wanted: number) => (await importLinkedInEmployees(li, companyId, { maxProfiles: Math.max(wanted * 2, config.linkedin.profilesPerCompany) })).contactsCreated }
+          : {}),
+      },
+      tailorDeps: await tailorDeps(),
+      applyDeps: await applyDeps(),
+    };
+  };
+  if (config.autopilot.enabled && env.MODE === 'live') {
+    // Hourly autopilot; pg-boss handles exactly-once scheduling across restarts.
+    await boss.schedule('autopilot.hourly', '0 * * * *');
+    await boss.work('autopilot.hourly', async () => {
+      try {
+        if (config.autopilot.strategy === 'referrals') {
+          const s = await runSequencer(await sequencerDeps());
+          log.info({ sequencer: { admitted: s.admitted, steps: s.steps.length, counts: s.counts } }, 'autopilot.hourly (sequencer) finished');
+        } else {
+          const summary = await runAutopilot(await autopilotDeps());
+          log.info({ summary: { considered: summary.considered, approved: summary.approved, escalated: summary.escalated, skipped: summary.skipped } }, 'autopilot.hourly run finished');
+        }
+      } catch (err) {
+        log.error({ err: err instanceof Error ? err.message : String(err) }, 'autopilot.hourly run failed');
+      }
+    });
+    log.info({ strategy: config.autopilot.strategy }, 'autopilot scheduled hourly');
+  }
+
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
@@ -127,6 +152,7 @@ export async function bootstrap() {
     llm: llmLazy,
     deadlineDeps,
     applyDeps,
+    sequencerDeps,
     screenshotRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'screenshots'),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     config,

@@ -4,6 +4,7 @@ import { FilterBar } from '@/components/FilterBar';
 import { JobDetail } from '@/components/JobDetail';
 import { JobList } from '@/components/JobList';
 import { ProfilePage } from '@/components/ProfilePage';
+import { ApplicationsPage } from '@/components/ApplicationsPage';
 import { ResumeEditor } from '@/components/ResumeEditor';
 import { ReviewQueue } from '@/components/ReviewQueue';
 import { StatsBar } from '@/components/StatsBar';
@@ -22,13 +23,14 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-type Tab = 'jobs' | 'review' | 'profile' | 'resume';
+type Tab = 'jobs' | 'review' | 'applications' | 'profile' | 'resume';
 
 export function App() {
   const [tab, setTab] = useState<Tab>(() => {
     if (window.location.pathname === '/review') return 'review';
     if (window.location.pathname === '/profile') return 'profile';
     if (window.location.pathname === '/resume') return 'resume';
+    if (window.location.pathname === '/applications') return 'applications';
     return 'jobs';
   });
   const pipeline = useQuery({
@@ -51,7 +53,9 @@ export function App() {
           ? '/profile'
           : tab === 'resume'
             ? '/resume'
-            : `/${filtersToSearch(filters, selected)}`;
+            : tab === 'applications'
+              ? '/applications'
+              : `/${filtersToSearch(filters, selected)}`;
     window.history.replaceState(null, '', path);
   }, [filters, selected, tab]);
 
@@ -80,7 +84,7 @@ export function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-base font-semibold tracking-tight">JobForge</h1>
           <nav className="flex gap-1 text-sm">
-            {(['jobs', 'review', 'profile', 'resume'] as const).map((t) => (
+            {(['jobs', 'review', 'applications', 'profile', 'resume'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -104,7 +108,16 @@ export function App() {
         </div>
         <StatsBar stats={stats.data} />
       </header>
-      {tab === 'resume' ? (
+      {tab === 'applications' ? (
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <ApplicationsPage
+            onOpenJob={(id) => {
+              setSelected(id);
+              setTab('jobs');
+            }}
+          />
+        </main>
+      ) : tab === 'resume' ? (
         <main className="min-h-0 flex-1 overflow-y-auto">
           <ResumeEditor />
         </main>

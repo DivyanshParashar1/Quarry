@@ -102,6 +102,25 @@ export const appConfigSchema = z
         maxAutoApprovesPerDay: z.number().int().min(0).max(100).default(10),
         /** How many top-ranked candidates to walk per run. */
         candidateBatch: z.number().int().min(1).max(100).default(20),
+        /**
+         * Phase 12: `referrals` = the sequencer (match → tailor → fan out referral
+         * asks → wait → apply); `single_email` = the Phase 4.5 one-email-per-job loop.
+         */
+        strategy: z.enum(['referrals', 'single_email']).default('referrals'),
+        /** Wait this long after the first ask before moving on to applying (unless someone replies first). */
+        referralWaitDays: z.number().min(0).default(2),
+        /** Apply right away when the inferred deadline is closer than this. */
+        deadlineImminentDays: z.number().min(0).default(3),
+        /** Jobs allowed in referral_pending at once (high: volume is the goal). */
+        maxConcurrentJobs: z.number().int().min(1).default(50),
+        /** Asks per job the sequencer fans out (defaults to outreach.perJobReferralCap when null). */
+        referralsPerJob: z.number().int().min(1).max(50).nullable().default(null),
+        /** Auto-approve referral asks whose draft confidence clears confidenceFloor.outreach. */
+        autoApproveReferrals: z.boolean().default(true),
+        /** Budget for auto-approved referral asks per rolling 24h (an autopilot budget, not a send cap). */
+        maxAutoApprovedAsksPerDay: z.number().int().min(0).default(200),
+        /** Never auto-submit applications by default: the apply item waits for you. */
+        autoApproveApplications: z.boolean().default(false),
       })
       .strict()
       .default({}),

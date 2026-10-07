@@ -13,13 +13,14 @@ import {
   type DB,
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
-import { OutreachError, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+import { OutreachError, type SequencerDeps, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
 import { registerProfileRoutes } from './routes-profile.js';
 import { registerResumeRoutes } from './routes-resume.js';
 import { registerDiscoveryRoutes } from './routes-discovery.js';
 import { registerReferralRoutes } from './routes-referrals.js';
 import { registerApplyRoutes } from './routes-apply.js';
+import { registerPipelineRoutes } from './routes-pipeline.js';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -73,6 +74,7 @@ export interface ApiOptions {
   linkedinEnabled?: boolean;
   deadlineDeps?: () => Promise<DeadlineDeps>;
   applyDeps?: () => Promise<ApplyDeps>;
+  sequencerDeps?: () => Promise<SequencerDeps>;
   /** Where browser screenshots live (served read-only). */
   screenshotRoot?: string;
 }
@@ -209,6 +211,8 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.tailorDeps ? { tailorDeps: opts.tailorDeps } : {}),
     ...(opts.autopilotDeps ? { autopilotDeps: opts.autopilotDeps } : {}),
     ...(opts.deadlineDeps ? { deadlineDeps: opts.deadlineDeps } : {}),
+    ...(opts.sequencerDeps ? { sequencerDeps: opts.sequencerDeps } : {}),
+    strategy: (opts.config ?? parseAppConfig({})).autopilot.strategy,
     ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
     ...(opts.profileDir ? { profileDir: opts.profileDir } : {}),
   });
@@ -220,6 +224,8 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.linkedinDeps ? { linkedinDeps: opts.linkedinDeps } : {}),
     linkedinEnabled: !!opts.linkedinEnabled,
   });
+
+  registerPipelineRoutes(app, { db, ...(opts.sequencerDeps ? { sequencerDeps: opts.sequencerDeps } : {}) });
 
   registerApplyRoutes(app, {
     db,

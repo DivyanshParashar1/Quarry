@@ -399,3 +399,38 @@ export interface FanOutResponse {
   foundContacts: number;
   panel: ReferralPanelData;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 12: sequencer / applications page
+// ---------------------------------------------------------------------------
+
+export const PIPELINE_STATES = ['candidate', 'referral_pending', 'ready_to_apply', 'applied', 'expired', 'failed'] as const;
+export type PipelineState = (typeof PIPELINE_STATES)[number];
+
+export interface ApplicationRow {
+  jobId: string;
+  title: string;
+  company: string;
+  applyUrl: string | null;
+  state: PipelineState;
+  enteredStateAt: string;
+  metadata: { reason?: string; manualApply?: boolean; applyError?: string; applyReviewItemId?: string } & Record<string, unknown>;
+  inferredDeadline: string | null;
+  deadlineConfidence: number | null;
+  closedAt: string | null;
+  batch: { status: string; requested: number; drafted: number; sent: number; replied: number; firstSentAt: string | null } | null;
+  applicationStatus: string | null;
+}
+
+export interface ApplicationsPage {
+  rows: ApplicationRow[];
+  total: number;
+  counts: Record<PipelineState, number>;
+}
+
+export interface TimelineEntry {
+  at: string;
+  kind: string;
+  summary: string;
+  data: Record<string, unknown>;
+}

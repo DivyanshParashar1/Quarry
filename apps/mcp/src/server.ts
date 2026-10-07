@@ -41,7 +41,7 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
 
   server.registerTool(
     'pipeline_status',
-    { title: 'Pipeline status', description: 'Counts per stage (jobs, matches, review queue, outreach threads), the last run of each plugin, and failing boards.', annotations: readOnly },
+    { title: 'Pipeline status', description: 'Counts per stage (jobs, matches, review queue, outreach threads), jobs per sequencer state (candidate, referral_pending, ready_to_apply, applied, expired, failed), the last run of each plugin, and failing boards.', annotations: readOnly },
     () => run(async () => ({ ...(await api.get<object>('/api/pipeline')), stats: await api.get('/api/stats') })),
   );
 
@@ -231,6 +231,29 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
     ({ jobId }) => run(() => api.send('POST', `/api/jobs/${jobId}/apply`, {})),
+  );
+
+  server.registerTool(
+    'advance_job',
+    {
+      title: 'Advance a job in the pipeline',
+      description:
+        'Manual override for the referral-first sequencer: push a job one step (not in pipeline → candidate → fan out referral asks → ready_to_apply → applied, the last meaning the user applied by hand). Drafts only; nothing is sent without approval.',
+      inputSchema: { jobId: z.string().uuid() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
+    ({ jobId }) => run(() => api.send('POST', `/api/jobs/${jobId}/advance`, {})),
+  );
+
+  server.registerTool(
+    'expire_job',
+    {
+      title: 'Give up on a job',
+      description: 'Mark a job expired in the pipeline with a reason (e.g. "role filled", "not interested"). The sequencer stops working on it.',
+      inputSchema: { jobId: z.string().uuid(), reason: z.string().min(1).max(300) },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    ({ jobId, reason }) => run(() => api.send('POST', `/api/jobs/${jobId}/expire`, { reason })),
   );
 
   server.registerTool(

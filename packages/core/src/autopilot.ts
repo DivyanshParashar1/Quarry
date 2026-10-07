@@ -253,14 +253,14 @@ function pickContact(contacts: ContactRow[], alreadyEmailed: Set<string>, minEma
     .at(0);
 }
 
-async function companyIdFor(db: DB, jobId: string): Promise<string> {
+export async function companyIdFor(db: DB, jobId: string): Promise<string> {
   const [row] = await db.execute<{ company_id: string }>(
     sql`select company_id from jobs where id = ${jobId}`,
   );
   return row!.company_id;
 }
 
-async function loadMatchConfidence(db: DB, jobId: string, profileVersion: string): Promise<number | null> {
+export async function loadMatchConfidence(db: DB, jobId: string, profileVersion: string): Promise<number | null> {
   const [row] = await db.execute<{ confidence: number | null }>(
     sql`select confidence from match_results where job_id = ${jobId} and profile_version = ${profileVersion}`,
   );

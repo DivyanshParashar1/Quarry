@@ -71,6 +71,13 @@
       "when": 1791414798585,
       "tag": "0009_ancient_shadowcat",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791415884570,
+      "tag": "0010_exotic_lilith",
+      "breakpoints": true
     }
   ]
 }
