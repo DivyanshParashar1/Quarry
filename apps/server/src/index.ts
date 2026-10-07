@@ -42,6 +42,7 @@ export async function bootstrap() {
   }
 
   const facts = findUp('profile/facts.yaml');
+  const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
     db,
     log,
@@ -53,6 +54,7 @@ export async function bootstrap() {
     llm: lazyLLM({ env, config, db, log }),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     ...(facts ? { profileDir: dirname(facts) } : {}),
+    ...(resumeManifest ? { resumeDir: dirname(resumeManifest) } : {}),
   });
   // Local, single-user tool: bind to loopback only.
   await api.listen({ port: env.PORT, host: '127.0.0.1' });

@@ -55,7 +55,6 @@ export function lazyTailorDeps(o: {
       limiter: o.limiter,
       dryRun: o.env.MODE !== 'live',
       llm: createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }),
-      contact: o.config.resume,
     });
 }
 

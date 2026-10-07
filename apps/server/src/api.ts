@@ -16,6 +16,7 @@ import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logge
 import { OutreachError, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
 import { registerProfileRoutes } from './routes-profile.js';
+import { registerResumeRoutes } from './routes-resume.js';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -59,6 +60,8 @@ export interface ApiOptions {
   llm?: () => Promise<LLMClient>;
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
+  /** Directory containing the resume manifest.yaml + blocks/*.tex. */
+  resumeDir?: string;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -178,6 +181,10 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     db,
     ...(opts.profileDir ? { profileDir: opts.profileDir } : {}),
     ...(opts.llm ? { llm: opts.llm } : {}),
+  });
+
+  registerResumeRoutes(app, {
+    ...(opts.resumeDir ? { resumeDir: opts.resumeDir } : {}),
   });
 
   registerOutreachRoutes(app, {
