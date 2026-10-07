@@ -25,6 +25,7 @@ export const appConfigSchema = z
             tailor: routeSchema.optional(),
             outreach: routeSchema.optional(),
             extract: routeSchema.optional(),
+            research: routeSchema.optional(),
           })
           .strict()
           .default({}),
@@ -101,6 +102,24 @@ export const appConfigSchema = z
         maxAutoApprovesPerDay: z.number().int().min(0).max(100).default(10),
         /** How many top-ranked candidates to walk per run. */
         candidateBatch: z.number().int().min(1).max(100).default(20),
+      })
+      .strict()
+      .default({}),
+    /** Deadline inference (Phase 10). Each estimate is one web-searching LLM call. */
+    deadlines: z
+      .object({
+        /** Only jobs the matcher scored at least this high get an estimate. */
+        minMatchScore: z.number().int().min(0).max(100).default(60),
+        /** Re-estimate after this many days. */
+        staleDays: z.number().int().min(1).default(14),
+        /** Max estimates per run. */
+        batchSize: z.number().int().min(1).max(200).default(20),
+        /** A passed deadline closes the job only at or above this confidence… */
+        expireMinConfidence: z.number().min(0).max(1).default(0.6),
+        /** …and only this many days after the date. */
+        expireGraceDays: z.number().int().min(0).default(1),
+        /** Server: run the estimator daily (costs LLM calls). */
+        nightly: z.boolean().default(false),
       })
       .strict()
       .default({}),

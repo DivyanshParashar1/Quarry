@@ -9,6 +9,8 @@ export interface ProviderRequest {
   model: string;
   maxTokens?: number;
   signal?: AbortSignal;
+  /** Give the model a web-search tool (Phase 10). */
+  webSearch?: boolean;
 }
 
 export interface ProviderResponse {
@@ -17,6 +19,8 @@ export interface ProviderResponse {
   usage: Usage;
   /** The model that actually served the request, when the provider reports it. */
   model: string;
+  /** Whether a search tool was available, and what it cited (webSearch requests only). */
+  webSearch?: { used: boolean; citations: string[] };
 }
 
 export interface LLMProvider {

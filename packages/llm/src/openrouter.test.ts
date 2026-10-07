@@ -82,3 +82,33 @@ describe('extractJson', () => {
     expect(extractJson(input)).toEqual(expected);
   });
 });
+
+describe('openrouter web search (Phase 10)', () => {
+  it('adds the web plugin and returns url_citation annotations', async () => {
+    const body = completion('{"a":1}');
+    (body.choices[0]!.message as Record<string, unknown>).annotations = [
+      { type: 'url_citation', url_citation: { url: 'https://example.com/a', title: 'A' } },
+      { type: 'url_citation', url_citation: { url: 'https://example.com/b' } },
+    ];
+    const f = fakeFetch([{ status: 200, body }]);
+    const p = createOpenRouterProvider({ apiKey: 'k', defaultModel: 'm', fetch: f.fn });
+    const res = await p.complete({ ...req, webSearch: true });
+    expect(f.seen[0]!.body).toMatchObject({ plugins: [{ id: 'web', max_results: 5 }] });
+    expect(res.webSearch).toEqual({ used: true, citations: ['https://example.com/a', 'https://example.com/b'] });
+  });
+
+  it('answers without search when the web plugin is rejected, and says so', async () => {
+    const f = fakeFetch([
+      { status: 402, body: { error: { message: 'web search requires credits' } } },
+      { status: 200, body: completion('{"a":2}') },
+      { status: 200, body: completion('{"a":3}') },
+    ]);
+    const p = createOpenRouterProvider({ apiKey: 'k', defaultModel: 'm', fetch: f.fn });
+    const r1 = await p.complete({ ...req, webSearch: true });
+    expect(r1).toMatchObject({ data: { a: 2 }, webSearch: { used: false, citations: [] } });
+    expect(f.seen[1]!.body.plugins).toBeUndefined();
+    const r2 = await p.complete({ ...req, webSearch: true });
+    expect(f.seen[2]!.body.plugins).toBeUndefined(); // remembered
+    expect(r2.webSearch?.used).toBe(false);
+  });
+});

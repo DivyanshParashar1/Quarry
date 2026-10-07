@@ -13,3 +13,4 @@ export * from './outreach-repo.js';
 export * from './resume-repo.js';
 export * from './discovery-repo.js';
 export * from './referral-repo.js';
+export * from './deadline-repo.js';

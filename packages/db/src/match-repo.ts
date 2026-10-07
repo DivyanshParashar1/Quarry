@@ -179,6 +179,9 @@ export interface RankedJobRow {
   method: MatchMethod | null;
   similarity: number | null;
   reasons: string | null;
+  /** Phase 10 */
+  inferredDeadline: string | null;
+  deadlineConfidence: number | null;
 }
 
 export async function listRankedJobs(db: DB, f: RankedJobFilter): Promise<{ rows: RankedJobRow[]; total: number }> {
@@ -224,6 +227,8 @@ export async function listRankedJobs(db: DB, f: RankedJobFilter): Promise<{ rows
       method: matchResults.method,
       similarity: matchResults.similarity,
       reasons: matchResults.reasons,
+      inferredDeadline: jobs.inferredDeadline,
+      deadlineConfidence: jobs.deadlineConfidence,
     })
     .from(jobs)
     .innerJoin(companies, eq(companies.id, jobs.companyId))
@@ -266,6 +271,9 @@ export interface JobDetail {
   firstSeenAt: Date;
   lastSeenAt: Date;
   closedAt: Date | null;
+  closedReason: string | null;
+  /** Phase 10: inferred application deadline. */
+  deadline: { date: string | null; confidence: number | null; rationale: string | null; sources: string[]; inferredAt: Date | null } | null;
   match: {
     profileVersion: string;
     method: MatchMethod;
@@ -318,6 +326,16 @@ export async function getJobDetail(db: DB, id: string, profileVersion: string | 
     firstSeenAt: job.firstSeenAt,
     lastSeenAt: job.lastSeenAt,
     closedAt: job.closedAt,
+    closedReason: job.closedReason,
+    deadline: job.deadlineInferredAt
+      ? {
+          date: job.inferredDeadline,
+          confidence: job.deadlineConfidence,
+          rationale: job.deadlineRationale,
+          sources: (job.deadlineSources as string[] | null) ?? [],
+          inferredAt: job.deadlineInferredAt,
+        }
+      : null,
     match: m
       ? {
           profileVersion: m.profileVersion,

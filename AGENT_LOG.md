@@ -232,3 +232,34 @@ section. Each phase also gets a `CHANGELOG.md` entry.
 - After an accept, offer to draft a short LinkedIn message (≤ 1000 chars) with the
   resume link — a natural "follow-up" that only exists once connected.
 
+## Phase 10 — deadline inference
+
+### Decisions
+- **Web search is a request flag, not a separate client method.** `LLMRequest.webSearch`
+  plus `LLMResponse.webSearch.used` lets the enricher know whether the answer was
+  actually researched; unsearched answers get their confidence capped (0.35), and
+  searched-but-uncited ones at 0.5.
+- **New `research` LLM task** so deadline estimates can be routed to a model with good
+  search (e.g. an OpenRouter `:online` model) independently of matching/outreach.
+- **Batch year is plugin config** (`plugins.enricher-deadline.batch`, default "2027"):
+  the enricher contract only receives (job, company), not the profile.
+- **Only well-matched jobs get estimates** (LLM-scored ≥ 60 by default): each estimate
+  is a paid, web-searching call.
+- **Expiry needs confidence ≥ 0.6 and a 1-day grace period.** Closing a job is a strong
+  action based on an *estimate*; a 0.3 "industry norm" guess shouldn't close anything.
+- **`jobs.closed_reason`**: previously any re-fetch reopened a closed job. Deadline/
+  manual closures now stick; "gone" closures still reopen when the posting returns.
+- The nightly deadline loop is **off by default** (`deadlines.nightly`) because it costs
+  money; `jf deadlines` / the dashboard button run it on demand.
+
+### Issues noticed
+- The Claude CLI's `--allowedTools` flag name/format may differ between CLI versions
+  (`--allowed-tools` exists too). I used `--allowedTools WebSearch WebFetch`; if the
+  installed CLI rejects it, `jf llm check` won't catch it (it makes no model call) — the
+  first `jf deadlines` run will. Worth a manual smoke test.
+
+### Ideas
+- Feed deadlines into match ranking ("closing soon" boost) so urgent roles surface.
+- Cache estimates per (company, role family, batch): ten Walmart intern postings
+  share one deadline pattern; one search could serve all of them.
+

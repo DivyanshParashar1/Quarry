@@ -68,6 +68,8 @@ export function buildClaudeArgs(req: ProviderRequest): string[] {
     'dontAsk',
     '--no-session-persistence',
     '--strict-mcp-config',
+    // Phase 10: the CLI's built-in web search (pre-approved, since dontAsk denies everything else).
+    ...(req.webSearch ? ['--allowedTools', 'WebSearch', 'WebFetch'] : []),
   ];
 }
 
@@ -94,7 +96,8 @@ export function createClaudeCodeProvider(opts: ClaudeCodeOptions): LLMProvider {
             timeoutMs,
             ...(req.signal ? { signal: req.signal } : {}),
           });
-          return parseClaudeResult(res, req.model);
+          const out = parseClaudeResult(res, req.model);
+          return req.webSearch ? { ...out, webSearch: { used: true, citations: [] } } : out;
         } finally {
           await rm(cwd, { recursive: true, force: true });
         }

@@ -48,7 +48,7 @@ describe('jobforge MCP server', () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
-      expect.arrayContaining(['add_company', 'add_contact', 'approve', 'draft_outreach', 'edit_draft', 'find_emails', 'get_job', 'list_jobs', 'list_resume_variants', 'pipeline_status', 'profile_get', 'profile_update_fact', 'reject', 'review_queue', 'run_autopilot', 'run_source', 'tailor_resume', 'discover_ats', 'discover_companies', 'recent_companies', 'fan_out_referrals', 'referral_status']),
+      expect.arrayContaining(['add_company', 'add_contact', 'approve', 'draft_outreach', 'edit_draft', 'find_emails', 'get_job', 'list_jobs', 'list_resume_variants', 'pipeline_status', 'profile_get', 'profile_update_fact', 'reject', 'review_queue', 'run_autopilot', 'run_source', 'tailor_resume', 'discover_ats', 'discover_companies', 'recent_companies', 'fan_out_referrals', 'referral_status', 'infer_deadline']),
     );
     // Only `approve` may be destructive.
     expect(tools.filter((t) => t.annotations?.destructiveHint).map((t) => t.name)).toEqual(['approve']);

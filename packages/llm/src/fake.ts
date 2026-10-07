@@ -10,7 +10,7 @@ export interface FakeProvider extends LLMProvider {
  */
 export function createFakeProvider(
   handler: (req: ProviderRequest, callIndex: number) => unknown,
-  opts: { name?: string; defaultModel?: string; costUsd?: number } = {},
+  opts: { name?: string; defaultModel?: string; costUsd?: number; webSearch?: { used: boolean; citations: string[] } } = {},
 ): FakeProvider {
   const calls: ProviderRequest[] = [];
   return {
@@ -31,6 +31,7 @@ export function createFakeProvider(
           ...(opts.costUsd !== undefined ? { costUsd: opts.costUsd } : {}),
         },
         model: req.model,
+        ...(req.webSearch ? { webSearch: opts.webSearch ?? { used: true, citations: [] } } : {}),
       };
     },
   };

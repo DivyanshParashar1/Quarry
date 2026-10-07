@@ -37,6 +37,11 @@ export function JobList({ rows, total, selected, onSelect, hasMore, loadingMore,
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="truncate font-medium">{r.title}</span>
+                  {r.inferredDeadline && (r.deadlineConfidence ?? 0) >= 0.4 && (
+                    <span className="shrink-0 text-xs text-amber-700" title="Inferred application deadline">
+                      ⏳ {r.inferredDeadline.slice(5)}
+                    </span>
+                  )}
                   <span className="shrink-0 text-xs text-muted-foreground">{relativeDate(r.postedAt ?? r.firstSeenAt)}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">

@@ -211,6 +211,17 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
   );
 
   server.registerTool(
+    'infer_deadline',
+    {
+      title: 'Infer application deadline',
+      description: "Estimate when applications for a job close, using an LLM with web search; stores the date, confidence, rationale and cited sources on the job (one LLM call).",
+      inputSchema: { jobId: z.string().uuid() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    },
+    ({ jobId }) => run(() => api.send('POST', `/api/jobs/${jobId}/deadline`, {})),
+  );
+
+  server.registerTool(
     'discover_ats',
     {
       title: 'Discover ATS',

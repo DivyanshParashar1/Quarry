@@ -33,7 +33,9 @@ import {
   rejectReviewItem,
   runAutopilot,
   runTailor,
+  runDeadlines,
   type AutopilotRunDeps,
+  type DeadlineDeps,
   type OutreachDeps,
   type TailorRunDeps,
 } from '@jobforge/core';
@@ -47,6 +49,8 @@ export interface OutreachRouteOptions {
   tailorDeps?: () => Promise<TailorRunDeps>;
   /** Built lazily; shares the LLM / Gmail with outreach. */
   autopilotDeps?: () => Promise<AutopilotRunDeps>;
+  /** Phase 10: deadline estimator deps (LLM). */
+  deadlineDeps?: () => Promise<DeadlineDeps>;
   /** Enqueue source fetches (the server's pg-boss); absent in tests that don't need it. */
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
@@ -205,6 +209,14 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     const targets = await listSourceTargets(db, { ...(b.atsType ? { atsTypes: [b.atsType] } : {}), ...(b.company ? { companyName: b.company } : {}) });
     const jobIds = await o.enqueueFetch(targets.map((t) => t.companySourceId));
     return reply.status(202).send({ queued: jobIds.length, boards: targets.map((t) => `${t.companyName} (${t.atsType}:${t.boardToken})`) });
+  });
+
+  app.post('/api/jobs/:id/deadline', async (req) => {
+    const { id } = idParams.parse(req.params);
+    if (!o.deadlineDeps) throw Object.assign(new Error('deadline inference is not configured on this server'), { statusCode: 503 });
+    const s = await runDeadlines(await o.deadlineDeps(), { jobIds: [id], force: true });
+    if (s.failed[0]) throw Object.assign(new Error(s.failed[0].error), { statusCode: 422 });
+    return { ...s, job: await getJobDetail(db, id, null) };
   });
 
   app.get('/api/contacts/:id', async (req, reply) => {

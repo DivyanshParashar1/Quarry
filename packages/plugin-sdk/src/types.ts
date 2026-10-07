@@ -202,3 +202,14 @@ export const stageMethods = {
   actor: ['prepare', 'execute'],
   tracker: ['poll'],
 } as const;
+
+/** Phase 10: what the deadline enricher returns for one job. */
+export interface DeadlineEstimate {
+  /** ISO date (YYYY-MM-DD), or null when no sensible estimate exists. */
+  deadline: string | null;
+  /** 0..1, already penalised when no web search was available or nothing was cited. */
+  confidence: number;
+  rationale: string;
+  sources: string[];
+  searched: boolean;
+}

@@ -4,6 +4,7 @@ import { ExternalLink, X } from 'lucide-react';
 import { OutreachPanel } from '@/components/OutreachPanel';
 import { ResumePanel } from '@/components/ResumePanel';
 import { ReferralPanel } from '@/components/ReferralPanel';
+import { DeadlineCard } from '@/components/DeadlineCard';
 import { ScoreBadge } from '@/components/ScoreBadge';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants, Button } from '@/components/ui/button';
@@ -104,6 +105,8 @@ export function JobDetail({ id, onClose, onOpenReview }: { id: string; onClose: 
           </>
         )}
       </Card>
+
+      <DeadlineCard job={job} />
 
       <ResumePanel jobId={job.id} />
 

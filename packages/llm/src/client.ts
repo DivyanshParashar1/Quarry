@@ -71,6 +71,7 @@ export function createLLMClient(opts: LLMClientOptions): LLMClient & { route(tas
     let usage = emptyUsage();
     let attempts = 0;
     let servedModel = model;
+    let webSearch: { used: boolean; citations: string[] } | undefined;
 
     const call = async (prompt: string): Promise<ProviderResponse> => {
       attempts++;
@@ -81,7 +82,12 @@ export function createLLMClient(opts: LLMClientOptions): LLMClient & { route(tas
         model,
         ...(req.maxTokens !== undefined ? { maxTokens: req.maxTokens } : {}),
         ...(req.signal ? { signal: req.signal } : {}),
+        ...(req.webSearch ? { webSearch: true } : {}),
       });
+      if (req.webSearch) {
+        const w = res.webSearch ?? { used: false, citations: [] };
+        webSearch = { used: (webSearch?.used ?? false) || w.used, citations: [...new Set([...(webSearch?.citations ?? []), ...w.citations])] };
+      }
       usage = addUsage(usage, res.usage);
       servedModel = res.model || model;
       return res;
@@ -121,7 +127,7 @@ export function createLLMClient(opts: LLMClientOptions): LLMClient & { route(tas
         }
       }
       await report(true);
-      return { data: parsed.data, usage, provider: provider.name, model: servedModel };
+      return { data: parsed.data, usage, provider: provider.name, model: servedModel, ...(webSearch ? { webSearch } : {}) };
     } catch (err) {
       await report(false, err instanceof Error ? err.message : String(err));
       throw err;

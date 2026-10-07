@@ -17,11 +17,20 @@ export interface OpenRouterOptions {
   fetch?: typeof globalThis.fetch;
 }
 
+const annotation = z
+  .object({ type: z.string(), url_citation: z.object({ url: z.string() }).passthrough().optional() })
+  .passthrough();
 const completionSchema = z
   .object({
     model: z.string().optional(),
     choices: z
-      .array(z.object({ message: z.object({ content: z.string().nullable().optional() }).passthrough() }).passthrough())
+      .array(
+        z
+          .object({
+            message: z.object({ content: z.string().nullable().optional(), annotations: z.array(annotation).optional() }).passthrough(),
+          })
+          .passthrough(),
+      )
       .min(1),
     usage: z
       .object({
@@ -43,6 +52,8 @@ export function createOpenRouterProvider(opts: OpenRouterOptions): LLMProvider {
   const timeoutMs = opts.timeoutMs ?? 120_000;
   // Models whose providers rejected response_format this process; prompt them instead.
   const promptOnly = new Set<string>();
+  // Set when the web plugin was rejected; later searches answer without it (lower confidence).
+  let webUnavailable = false;
 
   const post = async (body: Record<string, unknown>, signal?: AbortSignal): Promise<Response> => {
     const timeout = AbortSignal.timeout(timeoutMs);
@@ -63,10 +74,13 @@ export function createOpenRouterProvider(opts: OpenRouterOptions): LLMProvider {
     defaultModel: opts.defaultModel,
     complete: (req) =>
       sem.run(async (): Promise<ProviderResponse> => {
+        const searching = !!req.webSearch && !webUnavailable;
         const base = {
           model: req.model,
           max_tokens: req.maxTokens ?? 4096,
           usage: { include: true },
+          // OpenRouter's web plugin works with any model; results come back as url_citation annotations.
+          ...(searching ? { plugins: [{ id: 'web', max_results: 5 }] } : {}),
         };
         const useSchema = opts.structuredOutputs !== 'prompt' && !promptOnly.has(req.model);
         let res: Response;
@@ -92,6 +106,12 @@ export function createOpenRouterProvider(opts: OpenRouterOptions): LLMProvider {
           res = await post({ ...base, messages: promptMessages(req.system, req.prompt, req.jsonSchema) }, req.signal);
         }
 
+        if (!res.ok && searching && (res.status === 400 || res.status === 402 || res.status === 404)) {
+          // No search available: answer without it; the caller sees webSearch.used = false.
+          webUnavailable = true;
+          const { plugins: _p, ...noWeb } = base as typeof base & { plugins?: unknown };
+          res = await post({ ...noWeb, messages: promptMessages(req.system, req.prompt, req.jsonSchema) }, req.signal);
+        }
         if (!res.ok) {
           const text = (await res.text().catch(() => '')).slice(0, 500);
           throw new ProviderError(`openrouter ${res.status}: ${text}`, 'openrouter', res.status === 429 || res.status >= 500);
@@ -113,6 +133,14 @@ export function createOpenRouterProvider(opts: OpenRouterOptions): LLMProvider {
             ...(u.cost !== undefined ? { costUsd: u.cost } : {}),
           },
           model: c.model ?? req.model,
+          ...(req.webSearch
+            ? {
+                webSearch: {
+                  used: searching && !webUnavailable,
+                  citations: (c.choices[0]!.message.annotations ?? []).flatMap((a) => (a.url_citation?.url ? [a.url_citation.url] : [])),
+                },
+              }
+            : {}),
         };
       }),
   };

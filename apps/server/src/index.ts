@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, linkedinBrowserFactory, pollLinkedInTracker, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -84,6 +84,18 @@ export async function bootstrap() {
     for (const name of ['linkedin.send', 'linkedin.track']) await boss.unschedule(name).catch(() => {});
   }
 
+  const llmLazy = lazyLLM({ env, config, db, log });
+  const deadlineDeps = async () => ({ db, registry, log, limiter, dryRun: env.MODE !== 'live', llm: await llmLazy(), policy: config.deadlines });
+  if (config.deadlines.nightly) {
+    if (!(await boss.getQueue('deadlines.nightly').catch(() => null))) await boss.createQueue('deadlines.nightly', { retryLimit: 0, expireInSeconds: 60 * 60 });
+    await boss.schedule('deadlines.nightly', '23 2 * * *');
+    await boss.work('deadlines.nightly', { localConcurrency: 1, batchSize: 1 }, async () => {
+      const r = await runDeadlines(await deadlineDeps());
+      log.info({ deadlines: { estimated: r.estimated, expired: r.expired.length, failed: r.failed.length } }, 'deadline run finished');
+      return r;
+    });
+  }
+
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
@@ -94,7 +106,8 @@ export async function bootstrap() {
     outreachDeps,
     tailorDeps,
     autopilotDeps,
-    llm: lazyLLM({ env, config, db, log }),
+    llm: llmLazy,
+    deadlineDeps,
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     config,
     pages: () => createPageFetcher({ limiter }),

@@ -3,7 +3,8 @@ import type { z } from 'zod';
 // The LLM contract (PLAN.md §5.1). Lives here so plugins (via plugin-sdk) and
 // @jobforge/llm share one definition without depending on each other.
 
-export const LLM_TASKS = ['match', 'tailor', 'outreach', 'extract'] as const;
+/** research (Phase 10): web-search-backed estimates such as application deadlines. */
+export const LLM_TASKS = ['match', 'tailor', 'outreach', 'extract', 'research'] as const;
 export type LLMTask = (typeof LLM_TASKS)[number];
 
 export interface Usage {
@@ -21,6 +22,19 @@ export interface LLMRequest<T> {
   schema: z.ZodType<T>;
   maxTokens?: number;
   signal?: AbortSignal;
+  /**
+   * Phase 10: let the model search the web. Providers that can't search answer
+   * without it and report `webSearch.used = false`, so callers can lower their
+   * confidence in the answer.
+   */
+  webSearch?: boolean;
+}
+
+export interface WebSearchInfo {
+  /** True when the provider actually had a search tool for this call. */
+  used: boolean;
+  /** URLs the provider cited (from its own annotations, when it reports them). */
+  citations: string[];
 }
 
 export interface LLMResponse<T> {
@@ -28,6 +42,8 @@ export interface LLMResponse<T> {
   usage: Usage;
   provider: string;
   model: string;
+  /** Present when the request asked for web search. */
+  webSearch?: WebSearchInfo;
 }
 
 export interface LLMClient {

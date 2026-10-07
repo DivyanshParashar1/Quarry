@@ -65,6 +65,9 @@ importers:
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/enricher-deadline':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-deadline
       '@jobforge/enricher-linkedin-employees':
         specifier: workspace:*
         version: link:../../plugins/enricher-linkedin-employees
@@ -169,6 +172,9 @@ importers:
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/enricher-deadline':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-deadline
       '@jobforge/enricher-linkedin-employees':
         specifier: workspace:*
         version: link:../../plugins/enricher-linkedin-employees
@@ -328,6 +334,9 @@ importers:
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/enricher-deadline':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-deadline
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../llm
@@ -489,6 +498,25 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/enricher-deadline:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@jobforge/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

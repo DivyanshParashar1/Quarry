@@ -17,6 +17,8 @@ export interface JobRow {
   method: MatchMethod | null;
   similarity: number | null;
   reasons: string | null;
+  inferredDeadline?: string | null;
+  deadlineConfidence?: number | null;
 }
 
 export interface JobsPage {
@@ -48,6 +50,8 @@ export interface JobDetail {
   firstSeenAt: string;
   lastSeenAt: string;
   closedAt: string | null;
+  closedReason?: string | null;
+  deadline?: { date: string | null; confidence: number | null; rationale: string | null; sources: string[]; inferredAt: string | null } | null;
   match: {
     profileVersion: string;
     method: MatchMethod;

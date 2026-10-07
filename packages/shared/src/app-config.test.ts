@@ -27,6 +27,7 @@ describe('config.yaml', () => {
         maxAutoApprovesPerDay: 10,
         candidateBatch: 20,
       },
+      deadlines: { minMatchScore: 60, staleDays: 14, batchSize: 20, expireMinConfidence: 0.6, expireGraceDays: 1, nightly: false },
       linkedin: {
         dailyConnectionCap: 25,
         searchIntervalSeconds: 60,

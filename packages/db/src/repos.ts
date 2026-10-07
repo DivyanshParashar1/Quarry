@@ -171,7 +171,10 @@ export async function recordPosting(
         target: jobs.fingerprint,
         set: {
           lastSeenAt: seenAt,
-          closedAt: null,
+          // A job that reappears on a board reopens, unless it was closed on
+          // purpose (deadline passed, or closed by hand).
+          closedAt: sql`case when ${jobs.closedReason} in ('deadline', 'manual') then ${jobs.closedAt} else null end`,
+          closedReason: sql`case when ${jobs.closedReason} in ('deadline', 'manual') then ${jobs.closedReason} else null end`,
           // A changed description invalidates the embedding; the embed step recomputes it.
           embedding: sql`case when excluded.description_md is not null
             and excluded.description_md is distinct from ${jobs.descriptionMd} then null else ${jobs.embedding} end`,
@@ -223,7 +226,7 @@ export async function closeStaleJobs(
 ): Promise<number> {
   const closed = await db
     .update(jobs)
-    .set({ closedAt: new Date() })
+    .set({ closedAt: new Date(), closedReason: 'gone' })
     .where(
       and(
         eq(jobs.companyId, companyId),

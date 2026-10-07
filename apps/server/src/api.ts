@@ -13,7 +13,7 @@ import {
   type DB,
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
-import { OutreachError, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+import { OutreachError, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
 import { registerProfileRoutes } from './routes-profile.js';
 import { registerResumeRoutes } from './routes-resume.js';
@@ -70,6 +70,7 @@ export interface ApiOptions {
   pages?: () => PageFetcher;
   linkedinDeps?: () => Promise<LinkedInDeps>;
   linkedinEnabled?: boolean;
+  deadlineDeps?: () => Promise<DeadlineDeps>;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -203,6 +204,7 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.outreachDeps ? { outreachDeps: opts.outreachDeps } : {}),
     ...(opts.tailorDeps ? { tailorDeps: opts.tailorDeps } : {}),
     ...(opts.autopilotDeps ? { autopilotDeps: opts.autopilotDeps } : {}),
+    ...(opts.deadlineDeps ? { deadlineDeps: opts.deadlineDeps } : {}),
     ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
     ...(opts.profileDir ? { profileDir: opts.profileDir } : {}),
   });

@@ -11,6 +11,7 @@ import taleo from '@jobforge/source-taleo';
 import linkedinEmployees from '@jobforge/enricher-linkedin-employees';
 import linkedinActor from '@jobforge/actor-linkedin-referral';
 import linkedinTracker from '@jobforge/tracker-linkedin';
+import deadlineEnricher from '@jobforge/enricher-deadline';
 import contactsPattern from '@jobforge/enricher-contacts-pattern';
 import gmailOutreach from '@jobforge/actor-gmail-outreach';
 import gmailTracker from '@jobforge/tracker-gmail';
@@ -19,7 +20,7 @@ import tailorResume from '@jobforge/tailor-resume-latex';
 /** Plugins the server runs, configured from config.yaml `plugins.<id>`. */
 export function createRegistry(config?: AppConfig): PluginRegistry {
   const registry = new PluginRegistry();
-  for (const p of [greenhouse, lever, ashby, workday, smartrecruiters, gmailAlerts, successfactors, taleo, linkedinEmployees, linkedinActor, linkedinTracker, contactsPattern, gmailOutreach, gmailTracker, tailorResume]) {
+  for (const p of [greenhouse, lever, ashby, workday, smartrecruiters, gmailAlerts, successfactors, taleo, linkedinEmployees, linkedinActor, linkedinTracker, deadlineEnricher, contactsPattern, gmailOutreach, gmailTracker, tailorResume]) {
     registry.register(p, config?.plugins[p.manifest.id] ?? {});
   }
   return registry;

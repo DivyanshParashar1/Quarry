@@ -277,3 +277,23 @@ Known gaps: the LinkedIn markup and the alert/ATS fixtures are synthetic; autopi
 Dependencies: none new (Playwright arrived in Phase 8).
 
 Known gaps: the "one real connection request" and "accepted connection flips the ask" acceptance runs need your dedicated account; they are exercised here with a scripted fake browser, including an injected security-check page.
+
+## [Phase 10] — Deadline inference (LLM + web search)
+
+- `packages/shared` / `packages/llm`
+  - New LLM task `research` (routable in `config.yaml`). `LLMRequest.webSearch` asks the provider for a search tool; `LLMResponse.webSearch = { used, citations }` reports whether it actually had one.
+  - Claude Code adapter: `webSearch` pre-approves only `WebSearch` and `WebFetch` via `--allowedTools` (everything else stays denied by `--permission-mode dontAsk`).
+  - OpenRouter adapter: adds the `web` plugin (`max_results: 5`) and returns `url_citation` annotations; when the plugin is rejected (400/402/404) it answers without search, reports `used: false`, and remembers that for the process.
+  - `createFakeProvider` can simulate search results.
+- `packages/db` — migration `0009`: `jobs.inferred_deadline date`, `deadline_confidence real`, `deadline_rationale text`, `deadline_sources jsonb`, `deadline_inferred_at timestamptz`, plus `jobs.closed_reason` (`gone | deadline | manual`). A job closed because its deadline passed (or by hand) is **not** reopened when a board lists it again; `closeStaleJobs` now records `gone`. `deadline-repo.ts`: `saveDeadline`, `jobsNeedingDeadline` (LLM-scored ≥ `minMatchScore`, never estimated or older than `staleDays`), `closeExpiredDeadlines`. Job detail and the ranked list carry the deadline.
+- `plugins/enricher-deadline` — prompt per the plan ("Given this company + role + 2027 batch, what is the typical application close date? Use web search. Cite sources."), zod-validated `{deadline: YYYY-MM-DD | null, confidence, rationale, sources[]}` (repair retry on malformed dates); provider citations merged into sources; confidence capped at 0.35 without search and 0.5 when nothing was cited; a null deadline has confidence 0.
+- `packages/core/deadline-runner.ts` — `runDeadlines` (per-job failures don't stop the batch; `job.deadline_inferred` events), `expireDeadlines` (closes jobs whose deadline passed ≥ `expireGraceDays` ago with confidence ≥ `expireMinConfidence`; `job.expired` events), `isDeadlineImminent(job, now, days)` — the Phase 12 "deadline near" predicate (ignores estimates under 40 % confidence).
+- `config.yaml` — `deadlines: { minMatchScore: 60, staleDays: 14, batchSize: 20, expireMinConfidence: 0.6, expireGraceDays: 1, nightly: false }`.
+- `apps/cli` — `jf deadlines [--job <id>] [--limit] [--rescore]`; `jf jobs list` shows a DEADLINE column (`?` for low confidence); `jf llm check` lists the research route.
+- `apps/server` — `POST /api/jobs/:id/deadline`; optional nightly `deadlines.nightly` loop.
+- `apps/web` — job detail **Application deadline** card (date, days left with colour, confidence, expandable rationale with linked sources, Estimate/Re-estimate); the job list shows confident deadlines.
+- `apps/mcp` — `infer_deadline(jobId)`.
+
+Dependencies: none.
+
+Known gaps: the "20 real GCC postings with cited deadlines" acceptance needs real LLM calls with search (costs money; not run here).

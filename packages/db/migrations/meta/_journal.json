@@ -64,6 +64,13 @@
       "when": 1791413767948,
       "tag": "0008_brave_beyonder",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791414798585,
+      "tag": "0009_ancient_shadowcat",
+      "breakpoints": true
     }
   ]
 }

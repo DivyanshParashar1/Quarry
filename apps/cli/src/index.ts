@@ -33,6 +33,7 @@ import {
   ALERT_SOURCE_ID,
   runAlertSource,
   runAutopilot,
+  runDeadlines,
   runMatch,
   runTailor,
   SOURCE_PLUGIN_FOR_ATS,
@@ -90,6 +91,10 @@ Usage:
       high-confidence ones. Low-confidence items are left pending in the review
       queue. Dry run by default; --live writes decisions and lets the send loop
       pick them up (per MODE=live).
+  jf deadlines [--job <id>] [--limit <n>] [--rescore]
+      Estimate application close dates (LLM + web search, cited) for well-matched
+      open jobs; re-runs estimates older than deadlines.staleDays; closes jobs whose
+      confident deadline has passed.
   jf llm check
       Show the provider/model per task and check the provider is reachable (no model call).
 
@@ -324,6 +329,23 @@ async function main(argv: string[]): Promise<number> {
 
     if (cmd === 'llm' && sub === 'check') return await llmCheck(env, config, db, log);
 
+    if (cmd === 'deadlines') {
+      const llm = createLLM(env, config, db, log);
+      const s = await runDeadlines(
+        { db, registry: createRegistry(config), log, llm, limiter: new DomainRateLimiter(), dryRun: env.MODE !== 'live', policy: config.deadlines },
+        {
+          ...(values.job ? { jobIds: [await resolveIdPrefix(db, 'jobs', values.job)], force: true } : {}),
+          ...(values.limit ? { limit: Number(values.limit) } : {}),
+          ...(values.rescore ? { force: true } : {}),
+        },
+      );
+      console.log(
+        `deadlines: ${s.considered} considered · ${s.estimated} estimated (${s.withDate} with a date) · ${s.failed.length} failed · ${s.expired.length} job(s) closed as expired`,
+      );
+      for (const f of s.failed.slice(0, 5)) console.log(`  - ${f.jobId.slice(0, 8)}: ${f.error}`);
+      return s.failed.length && !s.estimated ? 1 : 0;
+    }
+
     const cmdCtx = { env, config, db, log, out: (s: string) => console.log(s) };
     if (cmd === 'contacts') return await contactsCommand(sub, values, cmdCtx);
     if (cmd === 'referrals') return await referralsCommand(sub, arg, values, cmdCtx);
@@ -361,6 +383,7 @@ async function main(argv: string[]): Promise<number> {
           { header: 'REMOTE', value: (r) => r.remotePolicy ?? '' },
           { header: 'LEVEL', value: (r) => r.seniority ?? '' },
           { header: 'POSTED', value: (r) => fmtDate(r.postedAt) },
+          { header: 'DEADLINE', value: (r) => (r.inferredDeadline ? `${r.inferredDeadline}${(r.deadlineConfidence ?? 0) < 0.5 ? '?' : ''}` : '') },
           ...(values.all ? [{ header: 'CLOSED', value: (r: (typeof rows)[number]) => fmtDate(r.closedAt) }] : []),
           { header: 'ID', value: (r) => r.id.slice(0, 8) },
         ]),
@@ -404,7 +427,7 @@ async function runEmbed(db: Db, config: AppConfig, log: Log) {
 
 async function llmCheck(env: Env, config: AppConfig, db: Db, log: Log): Promise<number> {
   const llm = createLLM(env, config, db, log);
-  const tasks = ['match', 'tailor', 'outreach', 'extract'] as const;
+  const tasks = ['match', 'tailor', 'outreach', 'extract', 'research'] as const;
   console.log(
     table(
       tasks.map((t) => ({ t, ...llm.route(t) })),

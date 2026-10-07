@@ -13,6 +13,7 @@ import {
   vector,
   uniqueIndex,
   pgEnum,
+  date,
 } from 'drizzle-orm/pg-core';
 
 // Phase 0/1: companies, company_sources, raw_postings, jobs, plugin_runs, events.
@@ -119,6 +120,15 @@ export const jobs = pgTable(
     firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
     closedAt: timestamp('closed_at', { withTimezone: true }),
+    /** Why the job closed: gone (left every board) | deadline (inferred deadline passed) | manual. */
+    closedReason: text('closed_reason'),
+    // Phase 10: deadline inference (LLM + web search).
+    inferredDeadline: date('inferred_deadline'),
+    deadlineConfidence: real('deadline_confidence'),
+    deadlineRationale: text('deadline_rationale'),
+    /** URLs the estimate cites. */
+    deadlineSources: jsonb('deadline_sources'),
+    deadlineInferredAt: timestamp('deadline_inferred_at', { withTimezone: true }),
   },
   (t) => ({
     fingerprintUniq: uniqueIndex('jobs_fingerprint_uniq').on(t.fingerprint),
