@@ -83,6 +83,15 @@
     },
     {
       "path": "./plugins/enricher-deadline"
+    },
+    {
+      "path": "./plugins/actor-apply-greenhouse"
+    },
+    {
+      "path": "./plugins/actor-apply-lever"
+    },
+    {
+      "path": "./plugins/actor-apply-ashby"
     }
   ]
 }

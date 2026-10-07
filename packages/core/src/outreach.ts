@@ -5,6 +5,8 @@ import {
   emailDraftSchema,
   linkedinNoteDraftPatchSchema,
   linkedinNoteDraftSchema,
+  applicationDraftPatchSchema,
+  applicationDraftSchema,
   type ApprovedDraft,
   type EmailAttachment,
   type EmailDraft,
@@ -199,9 +201,11 @@ async function prepare(deps: OutreachDeps, pluginId: string, input: OutreachActi
   return emailDraftSchema.parse(await prepareDraft(deps, pluginId, input));
 }
 
-/** Validate a stored draft against its actor's schema (email or LinkedIn note). */
+/** Validate a stored draft against its actor's schema (email, LinkedIn note, or application). */
 export function parseDraftFor(pluginId: string, draft: unknown): Record<string, unknown> {
-  return pluginId === OUTREACH_ACTOR ? emailDraftSchema.parse(draft) : linkedinNoteDraftSchema.parse(draft);
+  if (pluginId === OUTREACH_ACTOR) return emailDraftSchema.parse(draft);
+  if (pluginId.startsWith('actor-apply-')) return applicationDraftSchema.parse(draft);
+  return linkedinNoteDraftSchema.parse(draft);
 }
 
 /** Run an outreach-style actor's prepare() (no side effects) and validate the draft. */
@@ -218,11 +222,26 @@ export async function editDraft(db: DB, id: string, patch: unknown): Promise<Rev
   if (!item) throw new OutreachError(`review item ${id} not found`, 'not_found');
   if (item.status !== 'pending') throw new OutreachError(`only pending items can be edited (this one is ${item.status})`, 'invalid_state');
   if (item.kind === 'attention') throw new OutreachError('attention items have nothing to edit', 'invalid_state');
-  const p = item.pluginId === OUTREACH_ACTOR ? emailDraftPatchSchema.parse(patch) : linkedinNoteDraftPatchSchema.parse(patch);
-  const merged = parseDraftFor(item.pluginId, { ...(item.draft as object), ...p });
+  let merged: Record<string, unknown>;
+  let fieldsChanged: string[];
+  if (item.kind === 'application') {
+    // Answer or change form questions; required-but-blank questions are recomputed.
+    const p = applicationDraftPatchSchema.parse(patch);
+    const d = applicationDraftSchema.parse(item.draft);
+    const byKey = new Map(p.fields.map((f) => [f.key, f.value]));
+    const unknown = [...byKey.keys()].filter((k) => !d.fields.some((f) => f.key === k));
+    if (unknown.length) throw new OutreachError(`unknown form field(s): ${unknown.join(', ')}`, 'invalid_state');
+    const fields = d.fields.map((f) => (byKey.has(f.key) ? { ...f, value: byKey.get(f.key) ?? null, source: byKey.get(f.key) ? ('human' as const) : null } : f));
+    merged = applicationDraftSchema.parse({ ...d, fields, missingRequired: fields.filter((f) => f.required && !f.value).map((f) => f.label) });
+    fieldsChanged = [...byKey.keys()];
+  } else {
+    const p = item.pluginId === OUTREACH_ACTOR ? emailDraftPatchSchema.parse(patch) : linkedinNoteDraftPatchSchema.parse(patch);
+    merged = parseDraftFor(item.pluginId, { ...(item.draft as object), ...p });
+    fieldsChanged = Object.keys(p);
+  }
   const updated = await updatePendingDraft(db, id, merged);
   if (!updated) throw new OutreachError('item changed state while editing', 'invalid_state');
-  await appendEvent(db, { kind: 'review.edited', subjectType: 'review_item', subjectId: id, payload: { fields: Object.keys(p) } });
+  await appendEvent(db, { kind: 'review.edited', subjectType: 'review_item', subjectId: id, payload: { fields: fieldsChanged } });
   return updated;
 }
 
@@ -265,7 +284,10 @@ export async function approveReviewItem(
     await appendEvent(db, { kind: 'review.approved', subjectType: 'review_item', subjectId: id, payload: { kind: 'attention' } });
     return ok;
   }
-  parseDraftFor(item.pluginId, item.draft);
+  const parsedDraft = parseDraftFor(item.pluginId, item.draft);
+  if (item.kind === 'application' && (parsedDraft.missingRequired as string[]).length) {
+    throw new OutreachError(`answer the required questions first: ${(parsedDraft.missingRequired as string[]).join(', ')}`, 'invalid_state');
+  }
   if (item.contactId) {
     const c = await getContact(db, item.contactId);
     if (!c || c.status !== 'active') throw new OutreachError(`contact is ${c?.status ?? 'missing'}`, 'contact_inactive');

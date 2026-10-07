@@ -12,6 +12,9 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@jobforge/actor-apply-ashby": "workspace:*",
+    "@jobforge/actor-apply-greenhouse": "workspace:*",
+    "@jobforge/actor-apply-lever": "workspace:*",
     "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/actor-linkedin-referral": "workspace:*",
     "@jobforge/core": "workspace:*",

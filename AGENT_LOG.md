@@ -263,3 +263,41 @@ section. Each phase also gets a `CHANGELOG.md` entry.
 - Cache estimates per (company, role family, batch): ten Walmart intern postings
   share one deadline pattern; one search could serve all of them.
 
+## Phase 11 — ATS auto-apply
+
+### Decisions
+- **Questions are read without side effects in `prepare()`** (Greenhouse job API with
+  `?questions=true`, Lever's apply page, Ashby's public GraphQL form query), so the
+  reviewer sees every question and the exact answer that will be typed.
+- **No LLM in the form filler.** Answers come only from the new `application` section of
+  `preferences.yaml`; anything else ("Why do you want to work here?", expected CTC)
+  stays blank and blocks approval until the human answers it in the review card. This
+  is the strictest reading of "never auto-invented".
+- **EEO:** null = leave blank (they're optional on all three ATSs); `decline` picks the
+  form's own decline option; any other value must match an existing option.
+- **Added an optional `preview()` to the actor contract** — the plan's "dry-run fills +
+  screenshots, user reviews the screenshot before approval" needed a side-effect-free
+  way to fill a form before anything is approved.
+- **Greenhouse uses the classic embed form** (`boards.greenhouse.io/embed/job_app`)
+  because its fields have stable ids and native selects; the newer hosted forms use
+  React comboboxes that `selectOption` can't drive.
+- **Idempotency key `apply:{job}:{profile_version}`** exactly as planned. A second
+  approved item for the same job+profile replays the stored result. A previously
+  *failed* key is handed to the new item rather than blocking forever.
+- **Captchas are never solved**: the item fails with "needs a manual application".
+- `application` is **excluded from the profile version hash**, otherwise filling it in
+  would invalidate every match result and cost a full re-match.
+
+### Issues noticed
+- The profile snapshot (`profile_snapshots.preferences`) now stores applicant details
+  incl. optional EEO answers in the local DB. That's the same trust boundary as the
+  YAML file, but worth knowing.
+- Lever and Ashby both commonly put an hCaptcha/reCAPTCHA on submit; expect a share of
+  applications to end as "needs a manual application".
+
+### Ideas
+- Let the LLM *suggest* answers for free-text questions (clearly marked "suggested",
+  still requiring a human edit before approval).
+- Store ATS question → answer pairs the human typed, and offer them as `answers` entries
+  next time a similar label shows up.
+

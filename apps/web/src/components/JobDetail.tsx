@@ -5,6 +5,7 @@ import { OutreachPanel } from '@/components/OutreachPanel';
 import { ResumePanel } from '@/components/ResumePanel';
 import { ReferralPanel } from '@/components/ReferralPanel';
 import { DeadlineCard } from '@/components/DeadlineCard';
+import { ApplyPanel } from '@/components/ApplyPanel';
 import { ScoreBadge } from '@/components/ScoreBadge';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants, Button } from '@/components/ui/button';
@@ -109,6 +110,8 @@ export function JobDetail({ id, onClose, onOpenReview }: { id: string; onClose: 
       <DeadlineCard job={job} />
 
       <ResumePanel jobId={job.id} />
+
+      <ApplyPanel jobId={job.id} onOpenReview={onOpenReview} />
 
       <ReferralPanel jobId={job.id} onOpenReview={onOpenReview} />
 

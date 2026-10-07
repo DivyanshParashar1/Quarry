@@ -13,12 +13,13 @@ import {
   type DB,
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
-import { OutreachError, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+import { OutreachError, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
 import { registerProfileRoutes } from './routes-profile.js';
 import { registerResumeRoutes } from './routes-resume.js';
 import { registerDiscoveryRoutes } from './routes-discovery.js';
 import { registerReferralRoutes } from './routes-referrals.js';
+import { registerApplyRoutes } from './routes-apply.js';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -71,6 +72,9 @@ export interface ApiOptions {
   linkedinDeps?: () => Promise<LinkedInDeps>;
   linkedinEnabled?: boolean;
   deadlineDeps?: () => Promise<DeadlineDeps>;
+  applyDeps?: () => Promise<ApplyDeps>;
+  /** Where browser screenshots live (served read-only). */
+  screenshotRoot?: string;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -215,6 +219,12 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.outreachDeps ? { outreachDeps: opts.outreachDeps } : {}),
     ...(opts.linkedinDeps ? { linkedinDeps: opts.linkedinDeps } : {}),
     linkedinEnabled: !!opts.linkedinEnabled,
+  });
+
+  registerApplyRoutes(app, {
+    db,
+    ...(opts.applyDeps ? { applyDeps: opts.applyDeps } : {}),
+    screenshotRoot: opts.screenshotRoot ?? 'data/screenshots',
   });
 
   registerDiscoveryRoutes(app, {

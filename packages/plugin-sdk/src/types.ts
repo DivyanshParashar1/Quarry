@@ -179,6 +179,11 @@ export interface ActorPlugin<C = unknown, I = ActionInput, D = ActionDraft, R = 
   prepare(ctx: PluginContext<C>, input: I): Promise<D>;
   /** Only ever called by the core, with a draft built from an approved review item. */
   execute(ctx: PluginContext<C>, draft: ApprovedDraft<D>, idempotencyKey: string): Promise<R>;
+  /**
+   * Optional dry preview of a draft (e.g. fill a form and screenshot it without
+   * submitting). Must not cause an external side effect. Returns screenshot paths.
+   */
+  preview?(ctx: PluginContext<C>, draft: D): Promise<string[]>;
 }
 export interface TrackerPlugin<C = unknown> extends BasePlugin {
   poll(ctx: PluginContext<C>, since: Date): AsyncIterable<TrackEvent>;

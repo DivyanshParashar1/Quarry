@@ -448,3 +448,8 @@ export async function countEvents(db: DB, kind: string, subjectId: string): Prom
     .where(and(eq(events.kind, kind), eq(events.subjectId, subjectId)));
   return r!.n;
 }
+
+/** Hand an idempotency key's (failed) action over to a new review item. */
+export async function reassignAction(db: DB, actionId: string, reviewItemId: string): Promise<void> {
+  await db.update(actions).set({ reviewItemId }).where(eq(actions.id, actionId));
+}

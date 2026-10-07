@@ -1,10 +1,10 @@
 // API + worker host: serves the dashboard API (and the built web app) and runs
 // the pg-boss stage workers.
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, launchBrowser, runApplyTick, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -96,6 +96,24 @@ export async function bootstrap() {
     });
   }
 
+  // Phase 11: a plain browser (not the LinkedIn session) for application forms.
+  let applyBrowser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
+  const applyDeps = async () => ({
+    ...(await outreachDeps()),
+    openBrowser: async () => (applyBrowser ??= await launchBrowser({ headless: env.BROWSER_HEADLESS })),
+  });
+  if (env.MODE === 'live') {
+    if (!(await boss.getQueue('apply.send').catch(() => null))) await boss.createQueue('apply.send', { retryLimit: 0, expireInSeconds: 20 * 60 });
+    await boss.schedule('apply.send', '*/5 * * * *');
+    await boss.work('apply.send', { localConcurrency: 1, batchSize: 1 }, async () => {
+      const r = await runApplyTick(await applyDeps());
+      if (r.outcomes.length) log.info({ apply: r }, 'apply loop ran');
+      return r;
+    });
+  } else {
+    await boss.unschedule('apply.send').catch(() => {});
+  }
+
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
@@ -108,6 +126,8 @@ export async function bootstrap() {
     autopilotDeps,
     llm: llmLazy,
     deadlineDeps,
+    applyDeps,
+    screenshotRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'screenshots'),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     config,
     pages: () => createPageFetcher({ limiter }),
@@ -133,6 +153,7 @@ export async function bootstrap() {
     log.info({ signal }, 'shutting down');
     await api.close();
     await linkedinBrowser.close();
+    await applyBrowser?.close?.();
     await boss.stop({ graceful: true, timeout: 30_000 });
     await close();
     process.exit(0);

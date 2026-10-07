@@ -45,6 +45,49 @@ export const SENIORITY_LEVELS = [
 export type SeniorityLevel = (typeof SENIORITY_LEVELS)[number];
 
 const list = <T extends z.ZodTypeAny>(t: T) => z.array(t).nullable().default([]).transform((x) => x ?? []);
+const opt = z.string().trim().min(1).nullable().default(null);
+
+/**
+ * Applicant details for ATS forms (Phase 11). Every value is the user's own;
+ * the apply actors only copy them into matching fields. Demographic (EEO)
+ * answers are optional; null means "leave it for me", "decline" picks the
+ * form's decline-to-answer option.
+ */
+export const applicationSchema = z
+  .object({
+    first_name: opt,
+    last_name: opt,
+    email: z.string().email().nullable().default(null),
+    phone: opt,
+    /** City / location line, e.g. "Bengaluru, India". */
+    location: opt,
+    linkedin_url: z.string().url().nullable().default(null),
+    github_url: z.string().url().nullable().default(null),
+    website_url: z.string().url().nullable().default(null),
+    current_company: opt,
+    current_title: opt,
+    university: opt,
+    degree: opt,
+    /** Work authorization answers by country, e.g. { India: yes, US: no }. */
+    work_authorization: z.record(z.string(), z.enum(['yes', 'no'])).nullable().default({}).transform((x) => x ?? {}),
+    requires_sponsorship: z.boolean().nullable().default(null),
+    notice_period_days: z.number().int().min(0).nullable().default(null),
+    /** Answers to recurring custom questions: the first entry whose `match` (case-insensitive substring) appears in the label wins. */
+    answers: list(z.object({ match: z.string().min(2), answer: z.string().min(1) })),
+    eeo: z
+      .object({
+        gender: opt,
+        race: opt,
+        hispanic_latino: opt,
+        veteran_status: opt,
+        disability_status: opt,
+        pronouns: opt,
+      })
+      .nullable()
+      .default({})
+      .transform((e) => e ?? { gender: null, race: null, hispanic_latino: null, veteran_status: null, disability_status: null, pronouns: null }),
+  })
+  .strict();
 
 export const preferencesSchema = z
   .object({
@@ -80,9 +123,12 @@ export const preferencesSchema = z
       .transform((e) => e ?? { companies: [], title_keywords: [], description_keywords: [] }),
     /** Anything else the matcher should weigh, in plain words. */
     notes: z.string().nullable().default(null),
+    /** Phase 11: what application forms are filled with. Never auto-invented; blanks stay blank. */
+    application: applicationSchema.nullable().default(null),
   })
   .strict();
 export type Preferences = z.infer<typeof preferencesSchema>;
+export type ApplicationProfile = z.infer<typeof applicationSchema>;
 
 /** The profile as stages see it: the active snapshot plus its facts. */
 export interface Profile {
@@ -96,7 +142,9 @@ export interface Profile {
 
 /** Content hash over facts + preferences; identical inputs give the same version. */
 export function profileVersion(facts: ProfileFact[], preferences: Preferences): string {
-  const canonical = JSON.stringify({ facts: [...facts].sort((a, b) => a.id.localeCompare(b.id)), preferences }, sortKeys);
+  // Applicant details don't affect matching; leave them out so editing them doesn't force a re-match.
+  const { application: _a, ...matching } = preferences;
+  const canonical = JSON.stringify({ facts: [...facts].sort((a, b) => a.id.localeCompare(b.id)), preferences: matching }, sortKeys);
   return createHash('sha256').update(canonical).digest('hex').slice(0, 16);
 }
 

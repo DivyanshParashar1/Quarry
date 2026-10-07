@@ -47,6 +47,15 @@ importers:
 
   apps/cli:
     dependencies:
+      '@jobforge/actor-apply-ashby':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-ashby
+      '@jobforge/actor-apply-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-greenhouse
+      '@jobforge/actor-apply-lever':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-lever
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
@@ -157,6 +166,15 @@ importers:
       '@fastify/static':
         specifier: ^10.1.5
         version: 10.1.5
+      '@jobforge/actor-apply-ashby':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-ashby
+      '@jobforge/actor-apply-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-greenhouse
+      '@jobforge/actor-apply-lever':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-lever
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
@@ -325,6 +343,9 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@jobforge/actor-apply-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-greenhouse
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
@@ -440,6 +461,54 @@ importers:
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-apply-ashby:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-apply-greenhouse:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-apply-lever:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76

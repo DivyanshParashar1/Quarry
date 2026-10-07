@@ -10,6 +10,7 @@ export * from './ats-tokens.js';
 export * from './markup.js';
 export * from './browser.js';
 export * from './linkedin.js';
+export * from './apply.js';
 
 import type { ActorPlugin, EnricherPlugin, MatcherPlugin, SourcePlugin, TailorPlugin, TrackerPlugin } from './types.js';
 

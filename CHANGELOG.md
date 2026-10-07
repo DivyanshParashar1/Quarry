@@ -297,3 +297,24 @@ Known gaps: the "one real connection request" and "accepted connection flips the
 Dependencies: none.
 
 Known gaps: the "20 real GCC postings with cited deadlines" acceptance needs real LLM calls with search (costs money; not run here).
+
+## [Phase 11] — ATS auto-apply via Playwright (Greenhouse → Lever → Ashby)
+
+- `profile/preferences.yaml` gains an **`application`** section (name, email, phone, location, LinkedIn/GitHub/website, current company/title, university, degree, per-country `work_authorization`, `requires_sponsorship`, `notice_period_days`, recurring `answers` by label substring, optional `eeo` answers where `decline` picks the form's decline option). It is excluded from the profile-version hash, so editing it doesn't force a re-match.
+- `packages/plugin-sdk/apply.ts` — `ApplyInput`, `FormQuestion`, `applicationDraftSchema` (fields with value + source, `missingRequired`, preview screenshots, `profileVersion`), `ApplicationResult`; **`mapAnswers`** is deterministic and never invents (free-text "why us?" questions stay blank for the human; select answers must match an existing option); `fillForm` and `runApplyFlow` (fill → full-page screenshot → only when live: submit → wait for confirmation → screenshot; a captcha throws `SessionBlockedError`). `ActorPlugin.preview?()` (no side effects) added to the contract.
+- `plugins/actor-apply-greenhouse` — questions from the public job API (`?questions=true`, incl. location and EEOC compliance questions), the classic embedded form (`boards.greenhouse.io/embed/job_app`) with id-addressed fields, `#submit_app`, confirmation detection.
+- `plugins/actor-apply-lever` — questions parsed from the hosted apply page (`li.application-question`, ✱ required, `cards[...]` radios, `eeo[...]` selects), `#btn-submit`.
+- `plugins/actor-apply-ashby` — form definition via the public non-user GraphQL `ApiJobPosting` query (sections/fieldEntries, Boolean/ValueSelect as radios, EEO section), attribute selectors (UUID paths can start with a digit).
+- All three: dry run fills and screenshots but **never clicks submit**; execute refuses while required answers are missing; screenshots go to `data/screenshots/apply/` (absolute repo path regardless of cwd).
+- `packages/core/apply.ts` — `draftApplication(jobId)` (resolves the Greenhouse/Lever/Ashby posting behind the canonical job, requires a rendered tailored resume and the `application` section, refuses duplicates, optional preview screenshots stored on the draft); `runApplyTick` (lease, one real submission per tick, idempotency key **`apply:{job_id}:{profile_version}`** — a retried or duplicated application replays the stored result and is marked executed without resubmitting; captcha → `failed` "needs a manual application"; other errors retry once). Editing an application draft (`{fields: [{key, value}]}`) recomputes `missingRequired`; approval is refused until it's empty. `actions.result.screenshots[]` is the audit trail; `application.submitted` events.
+- `packages/db` — `applyTargetForJob`, `reassignAction`.
+- `apps/cli` — `jf apply draft <jobId> [--no-preview]`, `jf apply send [--live] [--watch]`.
+- `apps/server` — `POST /api/jobs/:id/apply`, `GET /api/review/:id/screenshots/:n` (PNG only, confined to `data/screenshots`), `apply.send` loop every 5 minutes in `MODE=live`.
+- `apps/web` — job page **Apply** panel; review-queue **Application** card (every answer visible/editable with its source, required gaps highlighted, filled-form preview screenshots, approve disabled until complete).
+- `apps/mcp` — `draft_application(jobId)` (approval still goes through `approve` with confirmation).
+
+Deferred per plan: Workday / SuccessFactors / Taleo auto-apply (manual apply with referral + resume prep).
+
+Dependencies: none new.
+
+Known gaps: real submissions (one per ATS) need your live run; the newer React-based Greenhouse forms (job-boards.greenhouse.io) and Ashby's custom select controls may need selector work — the classic Greenhouse embed form is used for that reason.

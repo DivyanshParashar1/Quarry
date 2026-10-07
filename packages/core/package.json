@@ -33,6 +33,7 @@
     "typescript": "^5.6.3",
     "@jobforge/actor-linkedin-referral": "workspace:*",
     "@jobforge/tracker-linkedin": "workspace:*",
-    "@jobforge/enricher-deadline": "workspace:*"
+    "@jobforge/enricher-deadline": "workspace:*",
+    "@jobforge/actor-apply-greenhouse": "workspace:*"
   }
 }

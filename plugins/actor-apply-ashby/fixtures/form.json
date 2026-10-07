@@ -1,0 +1,114 @@
+{
+ "data": {
+  "jobPosting": {
+   "id": "8a1d",
+   "title": "Software Engineer",
+   "applicationForm": {
+    "sections": [
+     {
+      "title": null,
+      "fieldEntries": [
+       {
+        "field": {
+         "path": "_systemfield_name",
+         "title": "Name",
+         "type": "String"
+        },
+        "isRequired": true
+       },
+       {
+        "field": {
+         "path": "_systemfield_email",
+         "title": "Email",
+         "type": "Email"
+        },
+        "isRequired": true
+       },
+       {
+        "field": {
+         "path": "_systemfield_resume",
+         "title": "Resume",
+         "type": "File"
+        },
+        "isRequired": true
+       },
+       {
+        "field": {
+         "path": "2c4e7a1b-phone",
+         "title": "Phone number",
+         "type": "Phone"
+        },
+        "isRequired": false
+       },
+       {
+        "field": {
+         "path": "5b8f-linkedin",
+         "title": "LinkedIn Profile",
+         "type": "String"
+        },
+        "isRequired": false
+       },
+       {
+        "field": {
+         "path": "7d2a-auth",
+         "title": "Are you authorized to work in India?",
+         "type": "Boolean"
+        },
+        "isRequired": true
+       },
+       {
+        "field": {
+         "path": "9e1f-hear",
+         "title": "How did you hear about us?",
+         "type": "ValueSelect",
+         "selectableValues": [
+          {
+           "label": "Referral",
+           "value": "referral"
+          },
+          {
+           "label": "LinkedIn",
+           "value": "linkedin"
+          },
+          {
+           "label": "Company careers page",
+           "value": "company careers page"
+          }
+         ]
+        },
+        "isRequired": false
+       }
+      ]
+     },
+     {
+      "title": "Voluntary Self-Identification",
+      "fieldEntries": [
+       {
+        "field": {
+         "path": "eeo-gender",
+         "title": "Gender",
+         "type": "ValueSelect",
+         "selectableValues": [
+          {
+           "label": "Female",
+           "value": "female"
+          },
+          {
+           "label": "Male",
+           "value": "male"
+          },
+          {
+           "label": "Decline to self-identify",
+           "value": "decline to self-identify"
+          }
+         ]
+        },
+        "isRequired": false
+       }
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

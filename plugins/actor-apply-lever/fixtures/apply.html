@@ -1,0 +1,19 @@
+<html><head><title>Acme - Backend Engineer</title></head><body>
+<form id="application-form" method="POST" enctype="multipart/form-data">
+<ul>
+<li class="application-question resume"><label><div class="application-label">Resume/CV<span class="required">✱</span></div><div class="application-field"><input type="file" name="resume" id="resume-upload-input"></div></label></li>
+<li class="application-question"><label><div class="application-label">Full name<span class="required">✱</span></div><div class="application-field"><input type="text" name="name" required></div></label></li>
+<li class="application-question"><label><div class="application-label">Email<span class="required">✱</span></div><div class="application-field"><input type="email" name="email" required></div></label></li>
+<li class="application-question"><label><div class="application-label">Phone</div><div class="application-field"><input type="text" name="phone"></div></label></li>
+<li class="application-question"><label><div class="application-label">Current company</div><div class="application-field"><input type="text" name="org"></div></label></li>
+<li class="application-question"><label><div class="application-label">LinkedIn URL</div><div class="application-field"><input type="text" name="urls[LinkedIn]"></div></label></li>
+<li class="application-question"><label><div class="application-label">GitHub URL</div><div class="application-field"><input type="text" name="urls[GitHub]"></div></label></li>
+<li class="application-question custom-question"><div class="application-label"><div class="text">Are you authorized to work in India?<span class="required">✱</span></div></div><div class="application-field"><ul data-qa="multiple-choice">
+  <li><label><input type="radio" name="cards[9f1c][field0]" value="Yes"><span>Yes</span></label></li>
+  <li><label><input type="radio" name="cards[9f1c][field0]" value="No"><span>No</span></label></li></ul></div></li>
+<li class="application-question custom-question"><div class="application-label"><div class="text">What is your expected CTC?<span class="required">✱</span></div></div><div class="application-field"><input type="text" name="cards[9f1c][field1]"></div></li>
+<li class="application-question"><label><div class="application-label">Additional information</div><div class="application-field"><textarea name="comments"></textarea></div></label></li>
+<li class="application-question"><label><div class="application-label">Gender</div><div class="application-field"><select name="eeo[gender]"><option value="">Select ...</option><option value="Female">Female</option><option value="Male">Male</option><option value="Decline to self-identify">Decline to self-identify</option></select></div></label></li>
+</ul>
+<button id="btn-submit" type="submit" data-qa="btn-submit">Submit application</button>
+</form></body></html>

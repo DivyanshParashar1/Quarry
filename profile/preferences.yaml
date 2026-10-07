@@ -36,3 +36,33 @@ exclusions:
 
 # Anything else the matcher should weigh, in plain words.
 notes: null
+
+# Phase 11: what ATS application forms are filled with (Greenhouse / Lever / Ashby).
+# Nothing here is ever invented: a form question with no matching value is left
+# for you in the review queue. Editing this section does not trigger a re-match.
+application: null
+# application:
+#   first_name: Asha
+#   last_name: Rao
+#   email: asha@example.com
+#   phone: "+91 98xxxxxxx"
+#   location: Bengaluru, India
+#   linkedin_url: https://www.linkedin.com/in/asha/
+#   github_url: https://github.com/asha
+#   website_url: null
+#   current_company: null
+#   current_title: null
+#   university: Rajiv Gandhi Institute of Petroleum Technology
+#   degree: B.Tech, Computer Science
+#   work_authorization: { India: yes, US: no }
+#   requires_sponsorship: null      # true / false; null = ask me
+#   notice_period_days: null
+#   answers:                        # recurring custom questions (substring match on the label)
+#     - { match: "hear about", answer: "Company careers page" }
+#   eeo:                            # optional; null = leave for me, "decline" = pick the decline option
+#     gender: null
+#     race: null
+#     hispanic_latino: null
+#     veteran_status: null
+#     disability_status: null
+#     pronouns: null

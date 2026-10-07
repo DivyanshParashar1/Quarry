@@ -222,6 +222,18 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
   );
 
   server.registerTool(
+    'draft_application',
+    {
+      title: 'Draft a job application',
+      description:
+        'Prepare an application for a Greenhouse/Lever/Ashby job: maps the form from the profile and the tailored resume, screenshots the filled form (never submits). The user approves it in the review queue; unanswered required questions must be filled there first.',
+      inputSchema: { jobId: z.string().uuid() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    },
+    ({ jobId }) => run(() => api.send('POST', `/api/jobs/${jobId}/apply`, {})),
+  );
+
+  server.registerTool(
     'discover_ats',
     {
       title: 'Discover ATS',

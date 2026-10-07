@@ -48,7 +48,7 @@ import { createRegistry } from './plugins.js';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
-import { linkedinCommand, referralsCommand } from './referral-cmds.js';
+import { applyCommand, linkedinCommand, referralsCommand } from './referral-cmds.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -112,6 +112,13 @@ Outreach (nothing is sent without an approved review item; dry run unless --live
   jf outreach followups           Draft due follow-ups for review.
   jf outreach track               Check Gmail for replies and bounces.
   jf outreach threads
+
+Applications (Phase 11; Greenhouse, Lever, Ashby — others stay manual):
+  jf apply draft <jobId> [--no-preview]
+      Map the form's questions from preferences.yaml \`application\` + the tailored
+      resume; opens the form once to screenshot it filled (never submits).
+  jf apply send [--live] [--watch]
+      Submit approved applications (dry run fills + screenshots only).
 
 Referrals (Phase 8; no global send cap — a person is asked at most once per cooldown, a job at most N times):
   jf referrals fanout <jobId> [--count <n>] [--live]
@@ -181,6 +188,7 @@ async function main(argv: string[]): Promise<number> {
       'no-probe': { type: 'boolean' },
       'no-alerts': { type: 'boolean' },
       count: { type: 'string' },
+      'no-preview': { type: 'boolean' },
       since: { type: 'string' },
       dump: { type: 'string' },
       verbose: { type: 'boolean', short: 'v' },
@@ -349,6 +357,7 @@ async function main(argv: string[]): Promise<number> {
     const cmdCtx = { env, config, db, log, out: (s: string) => console.log(s) };
     if (cmd === 'contacts') return await contactsCommand(sub, values, cmdCtx);
     if (cmd === 'referrals') return await referralsCommand(sub, arg, values, cmdCtx);
+    if (cmd === 'apply') return await applyCommand(sub, arg, values, cmdCtx);
     if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx);
     if (cmd === 'review') return await reviewCommand(sub, arg, values, cmdCtx);
     if (cmd === 'outreach') return await outreachCommand(sub, values, cmdCtx);

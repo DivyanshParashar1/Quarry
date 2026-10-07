@@ -3,7 +3,9 @@ import { findUp } from '@jobforge/shared';
 import { findCompanyByName, getBatchForJob, resolveIdPrefix } from '@jobforge/db';
 import {
   approveBatch,
+  draftApplication,
   fanOutReferrals,
+  runApplyTick,
   importLinkedInEmployees,
   launchBrowser,
   linkedinBrowserFactory,
@@ -209,4 +211,40 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
     }
   }
   throw new CmdError('usage: jf linkedin login|status|resume|employees|send|track');
+}
+
+export async function applyCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues & { 'no-preview'?: boolean | undefined }, c: CmdCtx): Promise<number> {
+  const live = !!v.live || c.env.MODE === 'live';
+  const holder: { browser: Awaited<ReturnType<typeof launchBrowser>> | null } = { browser: null };
+  const base = await outreachDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live });
+  const deps = {
+    ...base,
+    openBrowser: async () => (holder.browser ??= await launchBrowser({ headless: c.env.BROWSER_HEADLESS })),
+  };
+  try {
+    if (sub === 'draft') {
+      if (!arg) throw new CmdError('usage: jf apply draft <jobId> [--no-preview]');
+      const item = await draftApplication(deps, await resolveIdPrefix(c.db, 'jobs', arg), { preview: !v['no-preview'] });
+      const d = item.draft as { fields: { label: string; value: string | null; required: boolean }[]; missingRequired: string[]; previewScreenshots: string[] };
+      c.out(`application ${item.id.slice(0, 8)} drafted (${item.pluginId}) · ${d.fields.filter((f) => f.value).length}/${d.fields.length} answered`);
+      for (const m of d.missingRequired) c.out(`  ! required, unanswered: ${m}`);
+      for (const s of d.previewScreenshots) c.out(`  preview: ${s}`);
+      if (d.missingRequired.length) c.out('Answer them in the dashboard review queue before approving.');
+      return 0;
+    }
+    if (sub === 'send') {
+      for (;;) {
+        const r = await runApplyTick(deps);
+        if (r.skipped) c.out(`skipped: ${r.skipped}`);
+        for (const o of r.outcomes) {
+          c.out(`${r.mode === 'dry_run' ? 'DRY RUN filled' : o.ok ? 'SUBMITTED' : 'FAILED'} ${o.reviewItemId.slice(0, 8)}${o.error ? ` · ${o.error}` : ''}${o.screenshots?.length ? ` · ${o.screenshots.join(', ')}` : ''}`);
+        }
+        if (!r.outcomes.length) c.out('no approved applications');
+        if (!v.watch || r.mode === 'dry_run' || !r.outcomes.length) return 0;
+      }
+    }
+    throw new CmdError('usage: jf apply draft <jobId> | send [--live] [--watch]');
+  } finally {
+    await holder.browser?.close?.();
+  }
 }

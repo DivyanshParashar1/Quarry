@@ -239,3 +239,34 @@ export async function linkedinThreads(db: DB): Promise<LinkedInThreadRow[]> {
     .innerJoin(contacts, eq(contacts.id, outreachThreads.contactId))
     .where(eq(outreachThreads.channel, 'linkedin'));
 }
+
+// ---------------------------------------------------------------------------
+// Phase 11: apply targets
+// ---------------------------------------------------------------------------
+
+const APPLY_SOURCES: Record<string, 'greenhouse' | 'lever' | 'ashby'> = {
+  'source-greenhouse': 'greenhouse',
+  'source-lever': 'lever',
+  'source-ashby': 'ashby',
+};
+
+export interface ApplyTarget {
+  ats: 'greenhouse' | 'lever' | 'ashby';
+  boardToken: string;
+  postingId: string;
+  url: string | null;
+}
+
+/** The first Greenhouse/Lever/Ashby posting behind a canonical job (Workday/SF/Taleo apply stays manual). */
+export async function applyTargetForJob(db: DB, jobId: string): Promise<ApplyTarget | null> {
+  const rows = await db.execute<{ source_plugin: string; external_id: string; url: string | null; board_token: string | null }>(sql`
+    select r.source_plugin, r.external_id, r.url, s.board_token
+    from raw_postings r left join company_sources s on s.id = r.company_source_id
+    where r.canonical_job_id = ${jobId} and r.source_plugin in ('source-greenhouse', 'source-lever', 'source-ashby')
+    order by r.last_seen_at desc`);
+  for (const r of rows) {
+    const ats = APPLY_SOURCES[r.source_plugin];
+    if (ats && r.board_token) return { ats, boardToken: r.board_token, postingId: r.external_id, url: r.url };
+  }
+  return null;
+}

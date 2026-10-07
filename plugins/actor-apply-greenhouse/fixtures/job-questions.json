@@ -1,0 +1,208 @@
+{
+ "id": 4012345,
+ "title": "Software Engineer, New Grad",
+ "absolute_url": "https://boards.greenhouse.io/acme/jobs/4012345",
+ "questions": [
+  {
+   "required": true,
+   "label": "First Name",
+   "fields": [
+    {
+     "name": "first_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "Last Name",
+   "fields": [
+    {
+     "name": "last_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "Email",
+   "fields": [
+    {
+     "name": "email",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": false,
+   "label": "Phone",
+   "fields": [
+    {
+     "name": "phone",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "Resume/CV",
+   "fields": [
+    {
+     "name": "resume",
+     "type": "input_file",
+     "values": []
+    },
+    {
+     "name": "resume_text",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": false,
+   "label": "Cover Letter",
+   "fields": [
+    {
+     "name": "cover_letter",
+     "type": "input_file",
+     "values": []
+    },
+    {
+     "name": "cover_letter_text",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": false,
+   "label": "LinkedIn Profile",
+   "fields": [
+    {
+     "name": "question_11111",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "Are you legally authorized to work in India?",
+   "fields": [
+    {
+     "name": "question_22222",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "Will you now or in the future require visa sponsorship?",
+   "fields": [
+    {
+     "name": "question_33333",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": 1
+      },
+      {
+       "label": "No",
+       "value": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "How did you hear about this job?",
+   "fields": [
+    {
+     "name": "question_44444",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "required": true,
+   "label": "Why do you want to work at Acme?",
+   "fields": [
+    {
+     "name": "question_55555",
+     "type": "textarea",
+     "values": []
+    }
+   ]
+  }
+ ],
+ "location_questions": [],
+ "compliance": [
+  {
+   "type": "eeoc",
+   "questions": [
+    {
+     "required": false,
+     "label": "Gender",
+     "fields": [
+      {
+       "name": "gender",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Male",
+         "value": 1
+        },
+        {
+         "label": "Female",
+         "value": 2
+        },
+        {
+         "label": "Decline To Self Identify",
+         "value": 3
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "required": false,
+     "label": "Veteran Status",
+     "fields": [
+      {
+       "name": "veteran_status",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I am not a protected veteran",
+         "value": 1
+        },
+        {
+         "label": "I don't wish to answer",
+         "value": 3
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
