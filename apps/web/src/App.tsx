@@ -4,6 +4,7 @@ import { FilterBar } from '@/components/FilterBar';
 import { JobDetail } from '@/components/JobDetail';
 import { JobList } from '@/components/JobList';
 import { ProfilePage } from '@/components/ProfilePage';
+import { ResumeEditor } from '@/components/ResumeEditor';
 import { ReviewQueue } from '@/components/ReviewQueue';
 import { StatsBar } from '@/components/StatsBar';
 import { getJson, type JobsPage, type Pipeline, type Stats } from '@/lib/api';
@@ -21,12 +22,13 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-type Tab = 'jobs' | 'review' | 'profile';
+type Tab = 'jobs' | 'review' | 'profile' | 'resume';
 
 export function App() {
   const [tab, setTab] = useState<Tab>(() => {
     if (window.location.pathname === '/review') return 'review';
     if (window.location.pathname === '/profile') return 'profile';
+    if (window.location.pathname === '/resume') return 'resume';
     return 'jobs';
   });
   const pipeline = useQuery({
@@ -42,7 +44,14 @@ export function App() {
   const debounced = useDebounced(filters, 250);
 
   useEffect(() => {
-    const path = tab === 'review' ? '/review' : tab === 'profile' ? '/profile' : `/${filtersToSearch(filters, selected)}`;
+    const path =
+      tab === 'review'
+        ? '/review'
+        : tab === 'profile'
+          ? '/profile'
+          : tab === 'resume'
+            ? '/resume'
+            : `/${filtersToSearch(filters, selected)}`;
     window.history.replaceState(null, '', path);
   }, [filters, selected, tab]);
 
@@ -71,7 +80,7 @@ export function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-base font-semibold tracking-tight">JobForge</h1>
           <nav className="flex gap-1 text-sm">
-            {(['jobs', 'review', 'profile'] as const).map((t) => (
+            {(['jobs', 'review', 'profile', 'resume'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -95,7 +104,11 @@ export function App() {
         </div>
         <StatsBar stats={stats.data} />
       </header>
-      {tab === 'profile' ? (
+      {tab === 'resume' ? (
+        <main className="min-h-0 flex-1 overflow-y-auto">
+          <ResumeEditor />
+        </main>
+      ) : tab === 'profile' ? (
         <main className="min-h-0 flex-1 overflow-y-auto">
           <ProfilePage />
         </main>

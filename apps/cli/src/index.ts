@@ -443,24 +443,16 @@ async function tailorCommand(jobArg: string, env: Env, config: AppConfig, db: Db
     process.stdout.write(`using ${check.version}\n`);
   }
   const llm = createLLM(env, config, db, log);
-  const route = llm.route('tailor');
-  console.log(`tailoring with ${route.provider.name}/${route.model} …`);
+  console.log(`tailoring job ${jobId.slice(0, 8)} (block-based assembler) …`);
   const r = await runTailor(
-    { db, registry: createRegistry(config), log, llm, limiter: new DomainRateLimiter(), dryRun: env.MODE !== 'live', contact: config.resume },
+    { db, registry: createRegistry(config), log, llm, limiter: new DomainRateLimiter(), dryRun: env.MODE !== 'live' },
     { jobId },
   );
-  const kept = Array.isArray(r.variant.bullets) ? r.variant.bullets.length : 0;
-  const dropped = r.dropped.length;
+  const blocks = r.selection.included_block_ids.length;
+  const rewrites = r.selection.bullet_rewrites.length;
   console.log(
-    `variant ${r.variant.id.slice(0, 8)} · ${r.variant.status} · ${kept} bullets kept, ${dropped} dropped by validator`,
+    `variant ${r.variant.id.slice(0, 8)} · ${r.variant.status} · ${blocks} blocks · ${rewrites} bullet rewrites`,
   );
-  if (dropped) {
-    console.log('\nDropped bullets:');
-    for (const d of r.dropped) {
-      console.log(`  [${d.factId}] ${d.text}`);
-      for (const i of d.issues) console.log(`    - ${i.kind}: ${i.detail}`);
-    }
-  }
   if (r.variant.status === 'rendered' && r.variant.pdfPath) {
     console.log(`\nPDF: ${r.variant.pdfPath} (${r.variant.pdfBytes} bytes)`);
   } else if (r.variant.error) {

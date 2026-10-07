@@ -65,6 +65,5 @@ export function tailorDeps(
     limiter: new DomainRateLimiter(),
     dryRun: !(o.live || o.env.MODE === 'live'),
     llm: createLLM(o.env, o.config, o.db, o.log),
-    contact: o.config.resume,
   };
 }

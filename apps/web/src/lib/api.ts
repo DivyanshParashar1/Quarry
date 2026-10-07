@@ -207,25 +207,88 @@ export interface FactDraft {
   tags: string[];
 }
 
+// Resume variants moved to a block-based model: the tailor plugin assembles
+// LaTeX fragments from profile/resume/blocks/ and only an LLM-authored rewrite
+// changes individual bullet text. The server still returns the pre-migration
+// row shape (fact_ids/bullets/header columns reused as metadata carriers)
+// until the Phase 2 DB migration lands.
+// Resume block editor (GET/POST/PUT/DELETE /api/resume/*).
+
+export interface ResumeBullet {
+  id: string;
+  tags?: string[];
+}
+
+export interface ResumeBlock {
+  id: string;
+  file: string;
+  section: string;
+  title?: string;
+  always_include?: boolean;
+  tags?: string[];
+  tech_stack_line?: string;
+  bullets?: ResumeBullet[];
+}
+
+export interface ResumeSectionWrapper {
+  header: string;
+  inner_start: string;
+  inner_end: string;
+  separator: string;
+}
+
+export interface ResumeManifest {
+  sections_order: string[];
+  sections: Record<string, ResumeSectionWrapper>;
+  header_block: string;
+  blocks: ResumeBlock[];
+  budget: {
+    experience_blocks?: { min: number; max: number };
+    project_blocks?: { min: number; max: number };
+    total_bullets_hint?: number;
+  };
+}
+
+export interface ResumeData {
+  manifest: ResumeManifest;
+  fragments: Record<string, string>;
+  preamble: string;
+}
+
 export type ResumeStatus = 'rendered' | 'validation_failed' | 'render_failed';
 
-export interface ValidationIssue {
-  kind: 'unknown_fact_id' | 'invented_number' | 'invented_term' | 'too_long' | 'empty';
+export interface GuardrailIssue {
+  kind: 'invented_number' | 'invented_term' | 'too_long' | 'empty' | 'unknown_bullet_id' | 'unknown_block_id';
   detail: string;
 }
 
-export interface FactValidation {
-  factId: string;
-  text: string;
-  section: string;
+export interface RewriteValidation {
+  bullet_id: string;
+  original: string;
+  rewritten: string;
   status: 'ok' | 'warning' | 'error';
-  issues: ValidationIssue[];
+  issues: GuardrailIssue[];
+  reverted: boolean;
 }
 
-export interface TailoredBullet {
-  factId: string;
-  text: string;
-  section: string;
+export interface BulletRewrite {
+  bullet_id: string;
+  original: string;
+  rewritten: string;
+  reason: string;
+}
+
+export interface ResumeVariantMeta {
+  selectedBlockIds: string[];
+  texPath: string;
+  pages: number | null;
+}
+
+export interface ResumeVariantRewrites {
+  rewrites: BulletRewrite[];
+  techStackRewrites: { block_id: string; original: string; rewritten: string }[];
+  skillsReorder: { group: string; ordered: string[] }[];
+  rationale: string;
 }
 
 export interface ResumeVariant {
@@ -234,10 +297,13 @@ export interface ResumeVariant {
   profileVersion: string;
   pluginId: string;
   templateId: string;
+  /** Retired column; always empty under the block-based tailor. */
   factIds: string[];
-  bullets: TailoredBullet[];
-  header: { summary: string; skills: string[] };
-  validationReport: FactValidation[];
+  /** Reused `bullets` jsonb column — now carries block/path/page metadata. */
+  bullets: ResumeVariantMeta;
+  /** Reused `header` jsonb column — now carries the selection's rewrites. */
+  header: ResumeVariantRewrites;
+  validationReport: RewriteValidation[];
   status: ResumeStatus;
   pdfPath: string | null;
   pdfBytes: number | null;

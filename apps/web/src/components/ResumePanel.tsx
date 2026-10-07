@@ -50,11 +50,11 @@ export function ResumePanel({ jobId }: { jobId: string }) {
           {variants.length ? 'Retailor' : 'Tailor for this job'}
         </Button>
       </div>
-      {tailor.isPending && <p className="text-sm text-muted-foreground">Tailoring (LLM call, then Typst render)…</p>}
+      {tailor.isPending && <p className="text-sm text-muted-foreground">Assembling blocks and compiling with latexmk…</p>}
       {tailor.error && <p className="text-sm text-red-600">{(tailor.error as Error).message}</p>}
       {!latest && !tailor.isPending && (
         <p className="text-sm text-muted-foreground">
-          No tailored resume yet. The tailor selects facts from your profile and renders a one-page PDF; every bullet is checked against its source fact.
+          No tailored resume yet. The tailor picks which blocks from profile/resume/ to include and renders a one-page PDF; any bullet rewrites are checked against the original.
         </p>
       )}
       {latest && <VariantCard variant={latest} />}
@@ -86,23 +86,21 @@ export function ResumePanel({ jobId }: { jobId: string }) {
 }
 
 function VariantCard({ variant: v }: { variant: ResumeVariant }) {
-  const kept = v.bullets.length;
-  const dropped = v.validationReport.filter((r) => r.status === 'error').length;
+  const blocks = v.bullets.selectedBlockIds ?? [];
+  const rewrites = v.header.rewrites ?? [];
+  const reverted = v.validationReport.filter((r) => r.reverted).length;
   const warnings = v.validationReport.filter((r) => r.status === 'warning').length;
-  const bySection = new Map<string, typeof v.bullets>();
-  for (const b of v.bullets) {
-    if (!bySection.has(b.section)) bySection.set(b.section, []);
-    bySection.get(b.section)!.push(b);
-  }
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <Badge className={STATUS_STYLE[v.status]}>{v.status.replace('_', ' ')}</Badge>
         <span className="text-muted-foreground">
-          {kept} bullet{kept === 1 ? '' : 's'} kept
-          {dropped > 0 && ` · ${dropped} dropped`}
+          {blocks.length} block{blocks.length === 1 ? '' : 's'}
+          {rewrites.length > 0 && ` · ${rewrites.length} rewrite${rewrites.length === 1 ? '' : 's'}`}
+          {reverted > 0 && ` · ${reverted} reverted`}
           {warnings > 0 && ` · ${warnings} warning${warnings === 1 ? '' : 's'}`}
+          {v.bullets.pages != null && ` · ${v.bullets.pages}pp`}
         </span>
         {v.provider && (
           <span className="text-muted-foreground">
@@ -131,42 +129,47 @@ function VariantCard({ variant: v }: { variant: ResumeVariant }) {
           className="h-96 w-full rounded-md border border-border bg-white"
         />
       )}
-      {v.header.summary && (
-        <p className="text-sm italic text-muted-foreground">{v.header.summary}</p>
+      {v.header.rationale && (
+        <p className="text-sm italic text-muted-foreground">{v.header.rationale}</p>
       )}
-      {v.header.skills.length > 0 && (
+      {blocks.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {v.header.skills.map((s) => (
-            <Badge key={s} variant="outline">
-              {s}
+          {blocks.map((id) => (
+            <Badge key={id} variant="outline">
+              {id}
             </Badge>
           ))}
         </div>
       )}
-      {[...bySection.entries()].map(([section, bullets]) => (
-        <div key={section}>
-          <h4 className="text-xs font-semibold uppercase text-muted-foreground">{section}</h4>
-          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-            {bullets.map((b, i) => (
-              <li key={`${b.factId}-${i}`}>
-                {b.text}{' '}
-                <code className="text-xs text-muted-foreground">[{b.factId}]</code>
+      {rewrites.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            Bullet rewrites ({rewrites.length})
+          </summary>
+          <ul className="mt-2 flex flex-col gap-2 text-xs">
+            {rewrites.map((r) => (
+              <li key={r.bullet_id} className="rounded-md border border-border p-2">
+                <div className="text-muted-foreground">[{r.bullet_id}] {r.reason}</div>
+                <div className="mt-1 text-xs line-through opacity-70">{r.original}</div>
+                <div className="text-xs">{r.rewritten}</div>
               </li>
             ))}
           </ul>
-        </div>
-      ))}
+        </details>
+      )}
       {v.validationReport.length > 0 && (
         <details>
           <summary className="cursor-pointer text-xs text-muted-foreground">
-            Validation report ({v.validationReport.length} bullet{v.validationReport.length === 1 ? '' : 's'})
+            Guardrail report ({v.validationReport.length} rewrite{v.validationReport.length === 1 ? '' : 's'})
           </summary>
           <ul className="mt-2 flex flex-col gap-2 text-xs">
             {v.validationReport.map((r, i) => (
-              <li key={`${r.factId}-${i}`} className={ISSUE_STYLE[r.status]}>
+              <li key={`${r.bullet_id}-${i}`} className={ISSUE_STYLE[r.status]}>
                 <div>
-                  <span className="font-semibold uppercase">{r.status}</span> · [{r.factId}] {r.text}
+                  <span className="font-semibold uppercase">{r.status}</span>
+                  {r.reverted && ' · reverted'} · [{r.bullet_id}]
                 </div>
+                <div className="opacity-70">{r.rewritten}</div>
                 {r.issues.length > 0 && (
                   <ul className="list-disc pl-5">
                     {r.issues.map((is, j) => (
