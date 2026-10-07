@@ -548,7 +548,7 @@ async function discoverAtsCommand(
         { probe, minConfidence: config.discovery.minConfidence },
       );
       rows.push({ name: c.name, domain: r.domain ?? '', best: r.best, saved: r.saved?.sourcesCreated ?? 0 });
-      process.stderr.isTTY && process.stderr.write(`\rchecked ${rows.length}/${due.length}`);
+      if (process.stderr.isTTY) process.stderr.write(`\rchecked ${rows.length}/${due.length}`);
     }
     if (process.stderr.isTTY) process.stderr.write('\n');
     console.log(

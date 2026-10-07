@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { sql, saveDiscoveredCompany, upsertCompany, findCompanyByDomain, listCompaniesForAtsCheck } from '@jobforge/db';
 import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
 import type { LLMClient, LLMRequest } from '@jobforge/shared';
