@@ -1,47 +1,142 @@
 import { z } from 'zod';
 
-// Grounded tailoring (PLAN.md §7): every output bullet carries the fact id it
-// came from, and the core's validator checks the bullet introduces no numbers,
-// technologies, or named claims that aren't in the source fact.
+// Block-based tailoring (CLAUDE.md pivot):
+//   - The profile exposes a library of LaTeX fragments ("blocks") under
+//     profile/resume/blocks/, described by profile/resume/manifest.yaml.
+//   - The tailor plugin picks which block ids to include for a given job and,
+//     at most, rewrites individual bullets / tech-stack lines to match the JD.
+//   - The plugin never writes LaTeX structure. The guardrail only checks that
+//     rewrites don't invent numbers or named entities vs the ORIGINAL bullet.
 
-export const validationStatusSchema = z.enum(['ok', 'warning', 'error']);
-export type ValidationStatus = z.infer<typeof validationStatusSchema>;
+// ---------------------------------------------------------------------------
+// Manifest schema — mirrors profile/resume/manifest.yaml
+// ---------------------------------------------------------------------------
 
-export const validationIssueSchema = z.object({
-  kind: z.enum(['unknown_fact_id', 'invented_number', 'invented_term', 'too_long', 'empty']),
+export const sectionWrapperSchema = z.object({
+  header: z.string(),
+  inner_start: z.string().default(''),
+  inner_end: z.string().default(''),
+  separator: z.string().default(''),
+});
+export type SectionWrapper = z.infer<typeof sectionWrapperSchema>;
+
+export const bulletMetaSchema = z.object({
+  id: z.string().min(1),
+  tags: z.array(z.string()).default([]),
+});
+export type BulletMeta = z.infer<typeof bulletMetaSchema>;
+
+export const blockMetaSchema = z.object({
+  id: z.string().min(1),
+  file: z.string().min(1),
+  section: z.string().min(1),
+  title: z.string().optional(),
+  always_include: z.boolean().default(false),
+  tags: z.array(z.string()).default([]),
+  tech_stack_line: z.string().optional(),
+  bullets: z.array(bulletMetaSchema).default([]),
+});
+export type BlockMeta = z.infer<typeof blockMetaSchema>;
+
+export const budgetSchema = z
+  .object({
+    experience_blocks: z.object({ min: z.number().int().min(0), max: z.number().int().min(1) }).optional(),
+    project_blocks: z.object({ min: z.number().int().min(0), max: z.number().int().min(1) }).optional(),
+    total_bullets_hint: z.number().int().positive().optional(),
+  })
+  .default({});
+export type Budget = z.infer<typeof budgetSchema>;
+
+export const resumeManifestSchema = z.object({
+  sections_order: z.array(z.string()).min(1),
+  sections: z.record(z.string(), sectionWrapperSchema),
+  header_block: z.string().min(1),
+  blocks: z.array(blockMetaSchema).min(1),
+  budget: budgetSchema,
+});
+export type ResumeManifest = z.infer<typeof resumeManifestSchema>;
+
+// ---------------------------------------------------------------------------
+// Selection + rewrites — what the LLM (or a deterministic selector) produces
+// ---------------------------------------------------------------------------
+
+export const bulletRewriteSchema = z.object({
+  bullet_id: z.string().min(1),
+  original: z.string().min(1),
+  rewritten: z.string().min(1),
+  reason: z.string().default(''),
+});
+export type BulletRewrite = z.infer<typeof bulletRewriteSchema>;
+
+export const techStackRewriteSchema = z.object({
+  block_id: z.string().min(1),
+  original: z.string().min(1),
+  rewritten: z.string().min(1),
+});
+export type TechStackRewrite = z.infer<typeof techStackRewriteSchema>;
+
+export const skillsReorderSchema = z.object({
+  /** Group label, e.g. "Languages" or "Frameworks & Libraries". */
+  group: z.string().min(1),
+  ordered: z.array(z.string().min(1)).min(1),
+});
+export type SkillsReorder = z.infer<typeof skillsReorderSchema>;
+
+export const tailorSelectionSchema = z.object({
+  /** Ordered by priority; the shrink loop drops from the tail if the PDF overflows. */
+  included_block_ids: z.array(z.string().min(1)).min(1),
+  bullet_rewrites: z.array(bulletRewriteSchema).default([]),
+  tech_stack_rewrites: z.array(techStackRewriteSchema).default([]),
+  skills_reorder: z.array(skillsReorderSchema).default([]),
+  rationale: z.string().default(''),
+  confidence: z.number().min(0).max(1).default(0.5),
+});
+export type TailorSelection = z.infer<typeof tailorSelectionSchema>;
+
+// ---------------------------------------------------------------------------
+// Guardrail report — flags rewrites that invented content vs the original
+// ---------------------------------------------------------------------------
+
+export const guardrailStatusSchema = z.enum(['ok', 'warning', 'error']);
+export type GuardrailStatus = z.infer<typeof guardrailStatusSchema>;
+
+export const guardrailIssueSchema = z.object({
+  kind: z.enum(['invented_number', 'invented_term', 'too_long', 'empty', 'unknown_bullet_id', 'unknown_block_id']),
   detail: z.string(),
 });
-export type ValidationIssue = z.infer<typeof validationIssueSchema>;
+export type GuardrailIssue = z.infer<typeof guardrailIssueSchema>;
 
-export const factValidationSchema = z.object({
-  factId: z.string(),
-  text: z.string(),
-  section: z.string(),
-  status: validationStatusSchema,
-  issues: z.array(validationIssueSchema),
+export const rewriteValidationSchema = z.object({
+  bullet_id: z.string(),
+  original: z.string(),
+  rewritten: z.string(),
+  status: guardrailStatusSchema,
+  issues: z.array(guardrailIssueSchema),
+  /** True when the rewrite was discarded and the original kept. */
+  reverted: z.boolean().default(false),
 });
-export type FactValidation = z.infer<typeof factValidationSchema>;
+export type RewriteValidation = z.infer<typeof rewriteValidationSchema>;
 
-export const bulletSchema = z.object({
-  /** Must match an id in profile.facts. */
-  factId: z.string().min(1),
-  /** Rephrased bullet, at most ~200 chars; must only reference content from the source fact. */
-  text: z.string().trim().min(3).max(400),
-  /** Which resume section the bullet belongs under (e.g. "Experience", "Projects"). */
-  section: z.string().trim().min(1).max(60),
-});
-export type TailoredBullet = z.infer<typeof bulletSchema>;
+// ---------------------------------------------------------------------------
+// Final tailor output. The plugin assembles + compiles; the runner persists.
+// ---------------------------------------------------------------------------
 
-export const headerSchema = z.object({
-  /** 1-2 sentence summary / headline tailored to the job. Must not invent experience. */
-  summary: z.string().trim().max(400),
-  /** Headline skills ordered by relevance. Only skills present in the profile facts/preferences. */
-  skills: z.array(z.string().trim().min(1).max(40)).max(20),
-});
-export type TailoredHeader = z.infer<typeof headerSchema>;
+export const tailorStatusSchema = z.enum(['rendered', 'render_failed', 'selection_failed']);
+export type TailorStatus = z.infer<typeof tailorStatusSchema>;
 
-export const tailoredResumeSchema = z.object({
-  header: headerSchema,
-  bullets: z.array(bulletSchema).min(1).max(20),
-});
-export type TailoredResume = z.infer<typeof tailoredResumeSchema>;
+export interface TailoredResume {
+  /** The exact .tex sent to latexmk; archived alongside the PDF. */
+  tex: string;
+  /** PDF bytes when latexmk succeeded, null otherwise. */
+  pdf: Uint8Array | null;
+  /** Number of pages in the compiled PDF (null when compile failed). */
+  pages: number | null;
+  selection: TailorSelection;
+  /** Per-rewrite guardrail results, including reverts. */
+  report: RewriteValidation[];
+  status: TailorStatus;
+  error: string | null;
+  confidence: number;
+  provider: string;
+  model: string;
+}
