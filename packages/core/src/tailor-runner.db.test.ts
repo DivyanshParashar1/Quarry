@@ -2,25 +2,30 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { z } from 'zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { preferencesSchema } from '@jobforge/plugin-sdk';
+import {
+  defineTailorPlugin,
+  preferencesSchema,
+  type Job,
+  type PluginContext,
+  type Profile,
+  type TailoredResume,
+} from '@jobforge/plugin-sdk';
 import {
   getResumeVariant,
   latestRenderedResumeForJob,
   listResumeVariantsForJob,
-  recordLlmCall,
   recordPosting,
   upsertCompany,
   type DB,
 } from '@jobforge/db';
 import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import tailorResume from '@jobforge/tailor-resume-latex';
 import { normalizePosting } from './normalize.js';
 import { loadProfileData } from './profile-loader.js';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
-import { checkLatex, runTailor, type TailorRunDeps } from './tailor-runner.js';
+import { runTailor, type TailorRunDeps } from './tailor-runner.js';
 import { silentLogger } from './test-utils.js';
 
 const adminUrl = testDbAdminUrl();
@@ -46,30 +51,48 @@ async function addJob(db: DB, companyId: string, company: string, id: string, ti
   );
 }
 
-const GOOD_RESPONSE = {
-  header: {
-    summary: 'Backend engineer with Go and Postgres experience building payments systems.',
-    skills: ['Go', 'Postgres'],
+/**
+ * A stub tailor plugin that returns a fixed `TailoredResume`. The runner's job
+ * is to persist that result; the plugin's actual LaTeX assembly + compile is
+ * covered by the plugin's own tests.
+ */
+function stubTailorPlugin(result: TailoredResume) {
+  return defineTailorPlugin<{}>({
+    manifest: {
+      id: 'tailor-resume-latex',
+      version: '0.0.0-test',
+      stage: 'tailor',
+      description: 'stub',
+      configSchema: z.object({}).default({}),
+      permissions: { domains: [], llm: false },
+      sideEffects: 'none',
+    },
+    async tailor(_ctx: PluginContext<{}>, _job: Job, _profile: Profile) {
+      return result;
+    },
+  });
+}
+
+const PDF_BYTES = new TextEncoder().encode('%PDF-1.4\n%fake\n');
+
+const RESULT: TailoredResume = {
+  tex: '% assembled resume\n\\documentclass{article}\\begin{document}hi\\end{document}\n',
+  pdf: PDF_BYTES,
+  pages: 1,
+  selection: {
+    included_block_ids: ['header', 'exp.screenify', 'proj.flashseat'],
+    bullet_rewrites: [],
+    tech_stack_rewrites: [],
+    skills_reorder: [],
+    rationale: 'deterministic',
+    confidence: 1,
   },
-  bullets: [
-    {
-      factId: 'exp-acme',
-      text: 'Built the Go payments ledger on Postgres handling 2M transactions/day.',
-      section: 'Experience',
-    },
-    {
-      factId: 'skill-go',
-      text: 'Go experience across production services.',
-      section: 'Skills',
-    },
-    // Invented tech + number: must be dropped by the validator.
-    {
-      factId: 'exp-acme',
-      text: 'Rewrote the service in Rust and cut latency 95%.',
-      section: 'Experience',
-    },
-  ],
-  confidence: 0.9,
+  report: [],
+  status: 'rendered',
+  error: null,
+  confidence: 1,
+  provider: 'deterministic',
+  model: 'none',
 };
 
 describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
@@ -80,23 +103,12 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
   beforeAll(async () => {
     t = await createTestDb(adminUrl!);
     const registry = new PluginRegistry();
-    registry.register(tailorResume);
+    registry.register(stubTailorPlugin(RESULT));
     const prefs = preferencesSchema.parse({ roles: ['Backend Engineer'], stack: ['Go', 'Postgres'] });
-    const facts = [
-      {
-        id: 'exp-acme',
-        kind: 'experience' as const,
-        content: 'Backend engineer at Acme. Built the payments ledger service in Go on Postgres, handling 2M transactions/day.',
-        metrics: { transactions_per_day: 2_000_000 },
-        tags: ['go', 'postgres'],
-      },
-      { id: 'skill-go', kind: 'skill' as const, content: 'Go (3 years)', metrics: {}, tags: ['go'] },
-    ];
-    await loadProfileData(t.db, facts, prefs);
+    await loadProfileData(t.db, [], prefs);
     const { id: companyId } = await upsertCompany(t.db, { name: 'Acme' });
     const r = await addJob(t.db, companyId, 'Acme', 'a', 'Senior Backend Engineer', 'Go, Postgres, payments');
     jobId = r.jobId;
-    const provider = createFakeProvider(() => GOOD_RESPONSE);
     const resumeDir = await mkdtemp(join(tmpdir(), 'jf-resumes-'));
     deps = {
       db: t.db,
@@ -105,48 +117,39 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
       limiter: new DomainRateLimiter(),
       dryRun: true,
       resumeDir,
-      llm: createLLMClient({
-        providers: { 'claude-code': provider },
-        defaultProvider: 'claude-code',
-        onCall: (rec) => recordLlmCall(t.db, rec),
-      }),
-      contact: { name: 'Asha K.', headline: 'Backend Engineer', contact: 'asha@example.com' },
     };
   });
   afterAll(async () => t?.drop());
 
-  it('drops invented bullets and persists the variant with the validation report', async () => {
+  it('persists the plugin output as a rendered resume_variant', async () => {
     const r = await runTailor(deps, { jobId });
     expect(r.variant.jobId).toBe(jobId);
-    expect(r.variant.factIds).toEqual(['exp-acme', 'skill-go']);
-    expect(r.dropped).toHaveLength(1);
-    expect(r.dropped[0]!.text).toMatch(/Rust/);
+    expect(r.variant.status).toBe('rendered');
+    expect(r.variant.pdfPath).toBeTruthy();
+    expect(existsSync(r.variant.pdfPath!)).toBe(true);
+    const pdf = await readFile(r.variant.pdfPath!);
+    expect(pdf.subarray(0, 4).toString()).toBe('%PDF');
+
+    const header = r.variant.header as { rewrites: unknown[] };
+    expect(header.rewrites).toEqual([]);
+    const meta = r.variant.bullets as { selectedBlockIds: string[]; pages: number | null };
+    expect(meta.selectedBlockIds).toEqual(['header', 'exp.screenify', 'proj.flashseat']);
+    expect(meta.pages).toBe(1);
 
     const roundTrip = await getResumeVariant(t.db, r.variant.id);
-    expect(roundTrip).toBeTruthy();
-    expect(roundTrip!.pluginId).toBe('tailor-resume-latex');
-    expect(roundTrip!.confidence).toBeGreaterThan(0);
-    const bullets = roundTrip!.bullets as { factId: string; text: string; section: string }[];
-    expect(bullets.map((b) => b.factId)).toEqual(['exp-acme', 'skill-go']);
+    expect(roundTrip?.pluginId).toBe('tailor-resume-latex');
+    const latest = await latestRenderedResumeForJob(t.db, jobId);
+    expect(latest?.id).toBe(r.variant.id);
   });
 
-  it('either renders a PDF or records render_failed with a reason', async () => {
-    const r = await runTailor(deps, { jobId });
+  it('records render_failed when the plugin returns no PDF', async () => {
+    const failRegistry = new PluginRegistry();
+    failRegistry.register(stubTailorPlugin({ ...RESULT, pdf: null, pages: null, status: 'render_failed', error: 'no latexmk' }));
+    const r = await runTailor({ ...deps, registry: failRegistry }, { jobId });
+    expect(r.variant.status).toBe('render_failed');
+    expect(r.variant.pdfPath).toBeNull();
+    expect(r.variant.error).toMatch(/latexmk/);
     const list = await listResumeVariantsForJob(t.db, jobId);
-    expect(list.length).toBeGreaterThan(0);
-    const latex = await checkLatex();
-    if (latex.ok) {
-      expect(r.variant.status).toBe('rendered');
-      expect(r.variant.pdfPath).toBeTruthy();
-      expect(existsSync(r.variant.pdfPath!)).toBe(true);
-      const head = await readFile(r.variant.pdfPath!);
-      expect(head.subarray(0, 4).toString()).toBe('%PDF');
-      const latest = await latestRenderedResumeForJob(t.db, jobId);
-      expect(latest?.id).toBe(r.variant.id);
-    } else {
-      expect(r.variant.status).toBe('render_failed');
-      expect(r.variant.pdfPath).toBeNull();
-      expect(r.variant.error).toMatch(/latex/i);
-    }
+    expect(list.length).toBeGreaterThan(1);
   });
 });
