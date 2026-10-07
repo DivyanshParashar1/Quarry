@@ -6,6 +6,7 @@ import { createLogger, findUp, loadAppConfig, loadEnv, type AppConfig, type Env 
 import {
   countJobs,
   createDb,
+  listCompaniesForAtsCheck,
   getActiveProfile,
   listRankedJobs,
   listSourceTargets,
@@ -16,7 +17,14 @@ import {
 } from '@jobforge/db';
 import {
   checkLatex,
+  COMPANY_LISTS,
+  createPageFetcher,
+  discoverAndSave,
+  discoverAts,
   DomainRateLimiter,
+  normalizeDomain,
+  runDiscoverCompanies,
+  type DiscoverAtsResult,
   embedPending,
   enqueueSourceFetches,
   loadProfile,
@@ -47,6 +55,13 @@ Usage:
   jf companies list
   jf fetch [--plugin <id>] [--company <name>] [--concurrency <n>] [--verbose]
       Fetch every active board (or a subset) through the job queue.
+  jf discover_ats <domain|company name> [--name <company>] [--save] [--no-probe]
+      Detect a company's ATS from its careers pages (robots.txt respected), falling
+      back to ATS API probes by name. --save writes the company + detected boards.
+  jf discover_ats --missing [--limit <n>]
+      Run detection for companies that have no board yet (e.g. seeded with a domain only).
+  jf discover_companies --list <yc|gcc-journal|wellfound|internshala|hirect> [--max-new <n>] [--dry-run] [--concurrency <n>]
+      Crawl a public company list, detect each new company's ATS, save company + boards.
   jf jobs list [--company <name>] [--q <title text>] [--limit <n>] [--all]
       Sorted by match score once \`jf match\` has run. --all includes closed jobs.
   jf profile load [--dir <profile dir>]
@@ -128,6 +143,12 @@ async function main(argv: string[]): Promise<number> {
       live: { type: 'boolean' },
       watch: { type: 'boolean' },
       force: { type: 'boolean' },
+      list: { type: 'string' },
+      'max-new': { type: 'string' },
+      'dry-run': { type: 'boolean' },
+      save: { type: 'boolean' },
+      missing: { type: 'boolean' },
+      'no-probe': { type: 'boolean' },
       verbose: { type: 'boolean', short: 'v' },
       help: { type: 'boolean', short: 'h' },
     },
@@ -174,6 +195,14 @@ async function main(argv: string[]): Promise<number> {
         ]),
       );
       return 0;
+    }
+
+    if (cmd === 'discover_ats' || (cmd === 'discover' && sub === 'ats')) {
+      const target = cmd === 'discover' ? arg : sub;
+      return await discoverAtsCommand(target, values, db, log, config);
+    }
+    if (cmd === 'discover_companies' || (cmd === 'discover' && sub === 'companies')) {
+      return await discoverCompaniesCommand(values, env, config, db, log);
     }
 
     if (cmd === 'fetch') return await fetchCommand(values, db, env.DATABASE_URL, env.MODE, log, config);
@@ -486,6 +515,133 @@ async function autopilotCommand(
     );
   }
   return summary.escalated || summary.approved ? 0 : 1;
+}
+
+function pageFetcher() {
+  return createPageFetcher({ limiter: new DomainRateLimiter() });
+}
+
+async function discoverAtsCommand(
+  target: string | undefined,
+  values: { name?: string | undefined; save?: boolean | undefined; missing?: boolean | undefined; limit?: string | undefined; 'no-probe'?: boolean | undefined },
+  db: Db,
+  log: Log,
+  config: AppConfig,
+): Promise<number> {
+  const pages = pageFetcher();
+  const probe = !values['no-probe'];
+  if (values.missing) {
+    const due = await listCompaniesForAtsCheck(db, {
+      checkedBefore: new Date(),
+      onlyWithoutSources: true,
+      limit: values.limit ? Number(values.limit) : 50,
+    });
+    if (!due.length) {
+      console.log('Every company already has a board (or was checked just now).');
+      return 0;
+    }
+    const rows = [];
+    for (const c of due) {
+      const r = await discoverAndSave(
+        { db, pages, log },
+        { name: c.name, domain: c.domain ?? undefined, discoveredVia: 'discover_ats' },
+        { probe, minConfidence: config.discovery.minConfidence },
+      );
+      rows.push({ name: c.name, domain: r.domain ?? '', best: r.best, saved: r.saved?.sourcesCreated ?? 0 });
+      process.stderr.isTTY && process.stderr.write(`\rchecked ${rows.length}/${due.length}`);
+    }
+    if (process.stderr.isTTY) process.stderr.write('\n');
+    console.log(
+      table(rows, [
+        { header: 'COMPANY', value: (r) => r.name, max: 28 },
+        { header: 'DOMAIN', value: (r) => r.domain, max: 28 },
+        { header: 'ATS', value: (r) => r.best?.atsType ?? '-' },
+        { header: 'BOARD', value: (r) => r.best?.boardToken ?? '', max: 40 },
+        { header: 'CONF', value: (r) => (r.best ? r.best.confidence.toFixed(2) : '') },
+        { header: 'NEW BOARDS', value: (r) => String(r.saved) },
+      ]),
+    );
+    console.log(`\n${rows.filter((r) => r.best).length}/${rows.length} detected`);
+    return 0;
+  }
+  if (!target) throw new UsageError('missing <domain|company name> (or --missing)');
+  const looksLikeDomain = normalizeDomain(target) !== null && target.includes('.');
+  const input = looksLikeDomain ? { domain: target, name: values.name } : { name: values.name ?? target };
+  if (values.save) {
+    const name = values.name ?? (looksLikeDomain ? undefined : target);
+    if (!name) throw new UsageError('--save with a domain needs --name <company>');
+    const r = await discoverAndSave({ db, pages, log }, { ...input, name, discoveredVia: 'discover_ats' }, { probe, minConfidence: config.discovery.minConfidence });
+    printDetections(r);
+    if (r.saved) {
+      console.log(
+        `\nsaved: company ${r.saved.companyCreated ? 'created' : `matched by ${r.saved.matchedBy}`} · ${r.saved.sourcesCreated} new board(s)`,
+      );
+    }
+    return r.best ? 0 : 1;
+  }
+  const r = await discoverAts({ pages, log }, input, { probe });
+  printDetections(r);
+  return r.best ? 0 : 1;
+}
+
+function printDetections(r: DiscoverAtsResult): void {
+  if (!r.detections.length) console.log('No ATS detected.');
+  else
+    console.log(
+      table(r.detections, [
+        { header: 'ATS', value: (d) => d.atsType },
+        { header: 'BOARD', value: (d) => d.boardToken, max: 45 },
+        { header: 'CONF', value: (d) => d.confidence.toFixed(2) },
+        { header: 'EVIDENCE', value: (d) => d.evidence, max: 70 },
+      ]),
+    );
+  if (r.robotsBlocked.length) console.log(`\nrobots.txt blocked: ${r.robotsBlocked.join(', ')}`);
+  if (r.errors.length) console.log(`errors: ${r.errors.slice(0, 5).join('; ')}`);
+}
+
+async function discoverCompaniesCommand(
+  values: { list?: string | undefined; 'max-new'?: string | undefined; 'dry-run'?: boolean | undefined; concurrency?: string | undefined },
+  env: Env,
+  config: AppConfig,
+  db: Db,
+  log: Log,
+): Promise<number> {
+  if (!values.list) throw new UsageError(`--list is required (${Object.keys(COMPANY_LISTS).join(', ')})`);
+  const source = COMPANY_LISTS[values.list];
+  if (!source) throw new UsageError(`unknown list ${values.list} (${Object.keys(COMPANY_LISTS).join(', ')})`);
+  const settings: AppConfig['discovery']['lists'][string] = config.discovery.lists[values.list] ?? { enabled: true };
+  if (settings.enabled === false) {
+    console.log(`list ${values.list} is disabled in config.yaml`);
+    return 0;
+  }
+  const s = await runDiscoverCompanies(
+    { db, pages: pageFetcher(), log, ...(source.needsLlm ? { llm: createLLM(env, config, db, log) } : {}) },
+    {
+      list: values.list,
+      settings: { urls: settings.urls, regions: settings.regions },
+      maxNew: values['max-new'] ? Number(values['max-new']) : (settings.maxNew ?? 100),
+      minConfidence: config.discovery.minConfidence,
+      dryRun: !!values['dry-run'],
+      ...(values.concurrency ? { concurrency: Number(values.concurrency) } : {}),
+    },
+  );
+  if (s.companies.length) {
+    console.log(
+      table(s.companies, [
+        { header: 'COMPANY', value: (r) => r.name, max: 30 },
+        { header: 'DOMAIN', value: (r) => r.domain ?? '', max: 28 },
+        { header: 'ATS', value: (r) => r.best?.atsType ?? '-' },
+        { header: 'BOARD', value: (r) => r.best?.boardToken ?? '', max: 40 },
+        { header: 'NOTE', value: (r) => r.error ?? (r.created ? 'new' : ''), max: 40 },
+      ]),
+    );
+  }
+  console.log(
+    `\n${values['dry-run'] ? '[dry run] ' : ''}list ${s.list}: ${s.candidates} candidates · ${s.unique} unique · ${s.existing} already known · ` +
+      `${s.added} added (${s.withAts} with a board, ${s.withoutAts} without) · ${s.errors.length} errors`,
+  );
+  if (s.errors.length && !s.companies.length) console.log(`errors: ${s.errors.slice(0, 5).join('; ')}`);
+  return s.errors.length && !s.added ? 1 : 0;
 }
 
 class UsageError extends Error {}

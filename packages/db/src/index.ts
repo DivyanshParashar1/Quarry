@@ -11,3 +11,4 @@ export { sql } from 'drizzle-orm';
 export * from './contacts-repo.js';
 export * from './outreach-repo.js';
 export * from './resume-repo.js';
+export * from './discovery-repo.js';

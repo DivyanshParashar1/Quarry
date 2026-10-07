@@ -91,6 +91,37 @@ export const appConfigSchema = z
       })
       .strict()
       .default({}),
+    /** Company discovery (Phase 6/13): list crawlers + discover_ats. */
+    discovery: z
+      .object({
+        /** Detections below this confidence are reported but not saved as boards. */
+        minConfidence: z.number().min(0).max(1).default(0.5),
+        /** Per-list settings, keyed by list id (yc, gcc-journal, wellfound, internshala, hirect). */
+        lists: z
+          .record(
+            z.string(),
+            z
+              .object({
+                enabled: z.boolean().default(true),
+                /** Pages to crawl (LLM-extracted lists) or the JSON feed (yc). */
+                urls: z.array(z.string().url()).optional(),
+                /** yc: keep companies whose regions include one of these. */
+                regions: z.array(z.string()).optional(),
+                /** Max new companies per run from this list. */
+                maxNew: z.number().int().positive().optional(),
+              })
+              .strict(),
+          )
+          .default({}),
+        /** Phase 13: show a dashboard banner when one day adds more than this many companies. */
+        alertThreshold: z.number().int().positive().default(40),
+        /** Phase 13: re-check each company's ATS this often. */
+        recheckDays: z.number().int().positive().default(30),
+        /** Phase 13: run the nightly discovery loop (server, MODE=live not required: it only reads public pages). */
+        nightly: z.boolean().default(false),
+      })
+      .strict()
+      .default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })
