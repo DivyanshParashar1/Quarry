@@ -1,0 +1,25 @@
+{
+  "name": "@jobforge/actor-linkedin-referral",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LinkedIn (Playwright, dedicated account, opt-in)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@jobforge/plugin-sdk": "workspace:*",
+    "@jobforge/shared": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@jobforge/llm": "workspace:*"
+  }
+}

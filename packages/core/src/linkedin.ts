@@ -128,6 +128,8 @@ export interface LinkedInDeps extends Omit<ContextDeps, 'signal' | 'log'> {
   enabled: boolean;
   /** Launches lazily; never called when disabled or paused. */
   openBrowser: () => Promise<RawBrowser>;
+  /** Save the refreshed session after a successful run (optional). */
+  saveSession?: () => Promise<void>;
 }
 
 export interface EmployeeImport {
@@ -225,9 +227,18 @@ export async function linkedinSessionStore(env: LinkedInEnv, repoRoot: string): 
  * A lazily-launched, shared browser on the saved LinkedIn session. Throws a
  * login SessionBlockedError when no session has been saved yet.
  */
-export function linkedinBrowserFactory(env: LinkedInEnv, repoRoot: string): { open: () => Promise<RawBrowser>; close: () => Promise<void> } {
+export function linkedinBrowserFactory(
+  env: LinkedInEnv,
+  repoRoot: string,
+): { open: () => Promise<RawBrowser>; close: () => Promise<void>; save: () => Promise<void> } {
   let browser: Promise<RawBrowser> | null = null;
   return {
+    /** Persist refreshed cookies back to the encrypted store (after a successful run). */
+    async save() {
+      const b = browser ? await browser.catch(() => null) : null;
+      if (!b?.storageState) return;
+      await (await linkedinSessionStore(env, repoRoot)).save(await b.storageState());
+    },
     open: () =>
       (browser ??= (async () => {
         const store = await linkedinSessionStore(env, repoRoot);

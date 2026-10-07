@@ -199,3 +199,36 @@ section. Each phase also gets a `CHANGELOG.md` entry.
 - Show "asked N days ago for <job>" on contacts in the Outreach panel so the cooldown is
   visible before the fan-out skips someone.
 
+## Phase 9 — LinkedIn actor + tracker
+
+### Decisions
+- **An accepted connection counts as a reply.** The plan says acceptance "flips the
+  related referral_ask to replied and feeds Phase 12", so the thread is marked
+  `replied` on accept, which triggers the batch-replied logic.
+- **No follow-ups on LinkedIn threads** — you can't message someone until they accept,
+  and re-sending requests is what gets accounts restricted.
+- **Never twice:** before clicking Connect the actor checks for *Pending* / *1st degree*
+  on the profile, so a retry after a crash (or a request sent by hand) is a no-op.
+  The `actions` idempotency key (`li:<itemId>`) covers the rest.
+- **A block leaves the item approved** (not failed) with a `paused:` note, so after the
+  human resolves the attention item the same ask goes out without re-approval.
+- **Typing via `pressSequentially`** (Playwright's per-key typing) with 40–140 ms delays.
+- **Tracker matching** is by canonical profile URL for accepts and by contact name for
+  inbox replies (LinkedIn's inbox list doesn't carry profile URLs). Name collisions
+  are possible but only affect which thread gets marked replied.
+- Made the browser capability **optional when building a context**: `prepare()` must
+  not need a browser (no side effects), so the plugin only fails if it actually tries
+  to browse without one.
+
+### Issues noticed
+- Found and fixed while testing: LinkedIn uses curly apostrophes (“You’ve reached the
+  weekly invitation limit”), which the block-detection regexes initially missed.
+- The real LinkedIn rate limits slept 15 s per navigation inside a test; the test now
+  uses the virtual clock. Worth remembering for any new browser-plugin test.
+
+### Ideas
+- Store the LinkedIn messaging thread URL on the outreach thread when a reply arrives,
+  so the dashboard can link straight to the conversation.
+- After an accept, offer to draft a short LinkedIn message (≤ 1000 chars) with the
+  resume link — a natural "follow-up" that only exists once connected.
+

@@ -214,3 +214,28 @@ export async function setContactHints(
 export async function setCompanyLinkedin(db: DB, companyId: string, l: { linkedinId: string | null; linkedinSlug: string | null }): Promise<void> {
   await db.update(companies).set({ ...l, updatedAt: new Date() }).where(eq(companies.id, companyId));
 }
+
+export interface LinkedInThreadRow {
+  threadId: string;
+  state: string;
+  contactId: string;
+  contactName: string;
+  linkedinUrl: string | null;
+  reviewItemId: string | null;
+}
+
+/** LinkedIn-channel threads (for matching tracker events by profile URL or name). */
+export async function linkedinThreads(db: DB): Promise<LinkedInThreadRow[]> {
+  return db
+    .select({
+      threadId: outreachThreads.id,
+      state: outreachThreads.state,
+      contactId: contacts.id,
+      contactName: contacts.name,
+      linkedinUrl: contacts.linkedinUrl,
+      reviewItemId: outreachThreads.reviewItemId,
+    })
+    .from(outreachThreads)
+    .innerJoin(contacts, eq(contacts.id, outreachThreads.contactId))
+    .where(eq(outreachThreads.channel, 'linkedin'));
+}

@@ -20,9 +20,9 @@ import {
   type ReviewItemRow,
 } from '@jobforge/db';
 import { loadCompanyRef } from './contacts-runner.js';
+import { LINKEDIN_ACTOR } from './linkedin-send.js';
 import { approveReviewItem, OutreachError, prepareDraft, resolveResumeAttachment, loadJobForOutreach, type OutreachDeps } from './outreach.js';
 
-export const LINKEDIN_ACTOR = 'actor-linkedin-referral';
 const DAY = 86_400_000;
 
 // ---------------------------------------------------------------------------

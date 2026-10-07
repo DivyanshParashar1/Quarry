@@ -10,8 +10,10 @@ import {
   linkedinHealth,
   linkedinPaused,
   linkedinSessionStore,
+  pollLinkedInTracker,
   referralPanel,
   resumeLinkedIn,
+  runLinkedInSendTick,
   type LinkedInDeps,
 } from '@jobforge/core';
 import { DomainRateLimiter } from '@jobforge/core';
@@ -21,6 +23,7 @@ import { outreachDeps } from './runtime.js';
 import { CmdError, type CmdCtx } from './outreach-cmds.js';
 
 export interface ReferralValues {
+  watch?: boolean | undefined;
   count?: string | undefined;
   live?: boolean | undefined;
   company?: string | undefined;
@@ -44,6 +47,7 @@ export function linkedinDeps(c: CmdCtx, live: boolean): LinkedInDeps & { closeBr
     linkedin: c.config.linkedin,
     enabled: c.env.LINKEDIN_ENABLED && live,
     openBrowser: factory.open,
+    saveSession: factory.save,
     closeBrowser: factory.close,
   };
 }
@@ -172,6 +176,34 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
       if (r.skipped) c.out(`skipped: ${r.skipped}`);
       else c.out(`${r.ok ? 'ok' : `FAILED: ${r.error}`} · ${r.profiles} profiles · ${r.contactsCreated} new contacts · ${r.emailsInferred} emails inferred`);
       return r.ok || r.skipped ? 0 : 1;
+    } finally {
+      await li.closeBrowser();
+    }
+  }
+  if (sub === 'send') {
+    const live = !!v.live || c.env.MODE === 'live';
+    const li = linkedinDeps(c, live);
+    try {
+      for (;;) {
+        const r = await runLinkedInSendTick({ ...li, policy: c.config.outreach });
+        for (const o of r.outcomes) c.out(`${r.mode === 'dry_run' ? 'DRY RUN would send' : o.ok ? 'SENT' : 'FAILED'} → ${o.profileUrl}${o.outcome && o.outcome !== 'sent' && o.outcome !== 'dry_run' ? ` (${o.outcome})` : ''}${o.error ? ` · ${o.error}` : ''}`);
+        for (const h of r.held) c.out(`held ${h.reviewItemId.slice(0, 8)}: ${h.reason}`);
+        if (r.skipped) c.out(`skipped: ${r.skipped}`);
+        if (r.waitingUntil) c.out(`next request not before ${r.waitingUntil.toISOString()}`);
+        if (!r.outcomes.length && !r.skipped && !r.waitingUntil && r.mode === 'live') c.out('nothing approved to send on LinkedIn');
+        if (!v.watch || r.mode === 'dry_run' || r.skipped) return 0;
+        await new Promise((res) => setTimeout(res, 30_000));
+      }
+    } finally {
+      await li.closeBrowser();
+    }
+  }
+  if (sub === 'track') {
+    const li = linkedinDeps(c, !!v.live || c.env.MODE === 'live');
+    try {
+      const r = await pollLinkedInTracker(li);
+      c.out(r.skipped ? `skipped: ${r.skipped}` : `${r.events} events · ${r.accepted} accepted · ${r.replies} replies${r.error ? ` · error: ${r.error}` : ''}`);
+      return r.error ? 1 : 0;
     } finally {
       await li.closeBrowser();
     }

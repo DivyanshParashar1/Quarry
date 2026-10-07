@@ -120,6 +120,17 @@ function approvedDraftFrom(item: ReviewItemRow): ApprovedDraft<EmailDraft> {
   return d as unknown as ApprovedDraft<EmailDraft>;
 }
 
+/**
+ * Core-only: mint an ApprovedDraft for any actor from an approved row, after
+ * validating the draft with that actor's schema. Plugins never call this.
+ */
+export function coreApprovedDraft<T>(item: ReviewItemRow, parse: (d: unknown) => T): ApprovedDraft<T> {
+  if (item.status !== 'approved') throw new OutreachError(`review item ${item.id} is ${item.status}, not approved`, 'invalid_state');
+  const d = Object.freeze({ reviewItemId: item.id, draft: Object.freeze(parse(item.draft)) });
+  minted.add(d);
+  return d as unknown as ApprovedDraft<T>;
+}
+
 export function isCoreApproved(d: unknown): boolean {
   return typeof d === 'object' && d !== null && minted.has(d);
 }

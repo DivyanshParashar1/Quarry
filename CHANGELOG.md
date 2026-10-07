@@ -259,3 +259,21 @@ Known gaps: all fixtures are synthetic; the "5 SuccessFactors + 3 Taleo tenants 
 Dependencies added: `playwright` (in `packages/core`; listed in PLAN.md §2).
 
 Known gaps: the LinkedIn markup and the alert/ATS fixtures are synthetic; autopilot's `fanOutReferrals` hook is wired in Phase 12 together with the sequencer.
+
+## [Phase 9] — LinkedIn referral actor + tracker (dedicated account)
+
+- `plugins/actor-linkedin-referral` (`sideEffects: external`, `www.linkedin.com` only, LLM + browser)
+  - `prepare()`: LLM connection note ≤ 300 characters citing exactly one resume bullet (validated; repair retry), grounded in the Phase 8 referral prompt.
+  - `execute()`: profile → pre screenshot → already *Pending* / *1st* = no-op (never twice) → human-ish mouse jitter → Connect (or More → Connect) → Add a note → type the note character by character → Send → post screenshot. Any checkpoint/captcha/login/restricted/weekly-limit page throws `SessionBlockedError`. All selectors in one `SEL` table.
+- `plugins/tracker-linkedin` (read-only): accepted connections (connections page, "Connected N ago") and inbox threads whose last message is theirs.
+- `packages/core`
+  - `runLinkedInSendTick`: dry-run previews without a browser unless `LINKEDIN_ENABLED` + live; live = one request per tick under a lease, `linkedin.dailyConnectionCap` (25), random `actionGapSeconds` (45–120 s), referral limits re-checked; a block pauses all LinkedIn loops, raises an `attention` review item, and leaves the item approved for after the resume; other errors retry up to 3 times. Sent asks open a `channel = linkedin` thread with no follow-ups and bump the batch.
+  - `pollLinkedInTracker`: matches events to LinkedIn threads by profile URL (or name); an accepted connection or reply marks the thread replied → batch `replied` → `referral.replied` (Phase 12 signal). Cursor in `app_state`.
+  - `coreApprovedDraft()` mints ApprovedDrafts for any actor (core-only); the browser capability is optional at context build (`prepare()` never browses); the LinkedIn browser factory saves refreshed cookies back to the encrypted store.
+- `apps/cli` — `jf linkedin send [--live] [--watch]`, `jf linkedin track [--live]`.
+- `apps/server` — `linkedin.send` (every minute) and `linkedin.track` (every 30 min) pg-boss loops when `LINKEDIN_ENABLED=true` and `MODE=live`.
+- `docs/linkedin.md` — account setup, login, flow, safeguards.
+
+Dependencies: none new (Playwright arrived in Phase 8).
+
+Known gaps: the "one real connection request" and "accepted connection flips the ask" acceptance runs need your dedicated account; they are exercised here with a scripted fake browser, including an injected security-check page.

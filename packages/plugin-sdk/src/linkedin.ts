@@ -21,9 +21,9 @@ const BLOCK_URL: [RegExp, string][] = [
 ];
 
 const BLOCK_TEXT: [RegExp, string][] = [
-  [/let'?s do a quick security check|security verification|verify you'?re (a )?human|captcha/i, 'captcha'],
-  [/we'?ve restricted your account|your account has been restricted|account (is )?temporarily restricted/i, 'restricted'],
-  [/you'?ve reached the weekly invitation limit|weekly limit for invitations|too many requests|unusual activity/i, 'rate_limited'],
+  [/let['’]?s do a quick security check|security verification|verify you['’]?re (a )?human|captcha/i, 'captcha'],
+  [/we['’]?ve restricted your account|your account has been restricted|account (is )?temporarily restricted/i, 'restricted'],
+  [/you['’]?ve reached the weekly invitation limit|weekly limit for invitations|too many requests|unusual activity/i, 'rate_limited'],
   [/sign in to (view|see)|join linkedin to|welcome back.*sign in/i, 'login'],
 ];
 

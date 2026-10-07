@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@jobforge/actor-gmail-outreach": "workspace:*",
+    "@jobforge/actor-linkedin-referral": "workspace:*",
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
     "@jobforge/embeddings": "workspace:*",
@@ -31,6 +32,7 @@
     "@jobforge/source-workday": "workspace:*",
     "@jobforge/tailor-resume-latex": "workspace:*",
     "@jobforge/tracker-gmail": "workspace:*",
+    "@jobforge/tracker-linkedin": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

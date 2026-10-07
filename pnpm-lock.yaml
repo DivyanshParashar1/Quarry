@@ -50,6 +50,9 @@ importers:
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
+      '@jobforge/actor-linkedin-referral':
+        specifier: workspace:*
+        version: link:../../plugins/actor-linkedin-referral
       '@jobforge/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -104,6 +107,9 @@ importers:
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
+      '@jobforge/tracker-linkedin':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-linkedin
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -151,6 +157,9 @@ importers:
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
+      '@jobforge/actor-linkedin-referral':
+        specifier: workspace:*
+        version: link:../../plugins/actor-linkedin-referral
       '@jobforge/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -202,6 +211,9 @@ importers:
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
+      '@jobforge/tracker-linkedin':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-linkedin
       fastify:
         specifier: ^5.12.5
         version: 5.12.5
@@ -310,6 +322,9 @@ importers:
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
+      '@jobforge/actor-linkedin-referral':
+        specifier: workspace:*
+        version: link:../../plugins/actor-linkedin-referral
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
@@ -325,6 +340,9 @@ importers:
       '@jobforge/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
+      '@jobforge/tracker-linkedin':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-linkedin
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
@@ -422,6 +440,25 @@ importers:
         version: 5.9.3
 
   plugins/actor-gmail-outreach:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@jobforge/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-linkedin-referral:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*
@@ -648,6 +685,22 @@ importers:
         version: 5.9.3
 
   plugins/tracker-gmail:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/tracker-linkedin:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*

@@ -119,6 +119,10 @@ Referrals (Phase 8; no global send cap — a person is asked at most once per co
       Save the dedicated account's session (headed browser, encrypted at rest) /
       show health / clear a pause after fixing a checkpoint.
   jf linkedin employees --company <name> [--limit <n>] [--live]
+  jf linkedin send [--live] [--watch]
+      Send approved LinkedIn referral asks: one per run (random 45–120 s gaps with
+      --watch), at most linkedin.dailyConnectionCap per day. Any checkpoint pauses.
+  jf linkedin track [--live]      Accepted connections and replies → batch replied.
 Ids can be shortened to their first 8 characters.
 `;
 

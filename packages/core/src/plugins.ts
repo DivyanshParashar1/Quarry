@@ -148,8 +148,9 @@ export function buildContext<C>(loaded: LoadedPlugin, deps: ContextDeps): Plugin
   const wantsDns = loaded.manifest.permissions.dns === true;
   if (wantsDns && !deps.dns) throw new PluginError(`${loaded.manifest.id} needs DNS but no resolver was provided`);
   const gmail = scopeGmail(deps.gmail, loaded.manifest);
+  // No browser for calls that don't need one (e.g. an actor's prepare()); the
+  // plugin fails if it tries to browse without it.
   const wantsBrowser = loaded.manifest.permissions.browser === true;
-  if (wantsBrowser && !deps.browser) throw new PluginError(`${loaded.manifest.id} needs a browser but none was provided`);
   return {
     ...(wantsDns && deps.dns ? { dns: deps.dns } : {}),
     ...(gmail ? { gmail } : {}),

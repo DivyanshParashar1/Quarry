@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, linkedinBrowserFactory, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, linkedinBrowserFactory, pollLinkedInTracker, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -63,6 +63,26 @@ export async function bootstrap() {
     enabled: env.LINKEDIN_ENABLED && env.MODE === 'live',
     openBrowser: linkedinBrowser.open,
   });
+
+  if (env.LINKEDIN_ENABLED && env.MODE === 'live') {
+    // Phase 9 loops: one connection request per minute at most (the loop's own
+    // random gap and daily cap apply), tracking every 30 minutes.
+    const loops: [string, string, () => Promise<unknown>][] = [
+      ['linkedin.send', '* * * * *', async () => runLinkedInSendTick({ ...(await linkedinDeps()), policy: config.outreach, saveSession: linkedinBrowser.save })],
+      ['linkedin.track', '*/30 * * * *', async () => pollLinkedInTracker({ ...(await linkedinDeps()), saveSession: linkedinBrowser.save })],
+    ];
+    for (const [name, cron, fn] of loops) {
+      if (!(await boss.getQueue(name).catch(() => null))) await boss.createQueue(name, { retryLimit: 0, expireInSeconds: 15 * 60 });
+      await boss.schedule(name, cron);
+      await boss.work(name, { localConcurrency: 1, batchSize: 1 }, async () => {
+        const r = await fn();
+        log.info({ loop: name, result: r }, 'linkedin loop ran');
+        return r;
+      });
+    }
+  } else {
+    for (const name of ['linkedin.send', 'linkedin.track']) await boss.unschedule(name).catch(() => {});
+  }
 
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');

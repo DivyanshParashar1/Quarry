@@ -74,6 +74,12 @@
     },
     {
       "path": "./plugins/enricher-linkedin-employees"
+    },
+    {
+      "path": "./plugins/actor-linkedin-referral"
+    },
+    {
+      "path": "./plugins/tracker-linkedin"
     }
   ]
 }
