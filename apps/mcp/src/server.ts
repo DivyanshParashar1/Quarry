@@ -179,6 +179,56 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
   );
 
   server.registerTool(
+    'discover_ats',
+    {
+      title: 'Discover ATS',
+      description:
+        "Detect which ATS (Greenhouse, Lever, Ashby, Workday, SmartRecruiters, SuccessFactors, Taleo) a company uses, from its careers pages (robots.txt respected) and public ATS APIs. Pass a domain when known. save=true adds the company and its detected boards.",
+      inputSchema: {
+        companyName: z.string().min(1).optional(),
+        domain: z.string().min(3).optional(),
+        save: z.boolean().optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    },
+    ({ companyName, domain, save }) =>
+      run(() =>
+        api.send('POST', '/api/companies/discover-ats', {
+          ...(companyName ? { name: companyName } : {}),
+          ...(domain ? { domain } : {}),
+          ...(save ? { save } : {}),
+        }),
+      ),
+  );
+
+  server.registerTool(
+    'discover_companies',
+    {
+      title: 'Discover companies',
+      description:
+        'Crawl a public company list (yc, gcc-journal, wellfound, internshala, hirect), detect each new company\'s ATS and add it. Runs in the background; check recent_companies for results.',
+      inputSchema: {
+        list: z.enum(['yc', 'gcc-journal', 'wellfound', 'internshala', 'hirect']),
+        maxNew: z.number().int().positive().max(1000).optional(),
+        dryRun: z.boolean().optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    },
+    (a) => run(() => api.send('POST', '/api/discovery/run', a)),
+  );
+
+  server.registerTool(
+    'recent_companies',
+    {
+      title: 'Recently discovered companies',
+      description: 'Companies added by discovery in the last N days (default 7), with their detected boards.',
+      inputSchema: { days: z.number().int().min(1).max(90).optional() },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    ({ days }) => run(() => api.get(`/api/companies/discovered${days ? `?days=${days}` : ''}`)),
+  );
+
+  server.registerTool(
     'add_contact',
     {
       title: 'Add contact',

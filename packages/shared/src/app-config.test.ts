@@ -17,6 +17,7 @@ describe('config.yaml', () => {
         maxAutoApprovesPerDay: 10,
         candidateBatch: 20,
       },
+      discovery: { minConfidence: 0.5, lists: {}, alertThreshold: 40, recheckDays: 30, nightly: false },
       plugins: {},
     });
   });

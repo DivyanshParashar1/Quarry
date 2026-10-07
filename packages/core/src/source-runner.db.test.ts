@@ -22,6 +22,8 @@ const adminUrl = testDbAdminUrl();
 
 /** boardToken -> postings to yield, or an error to throw. */
 const boards = new Map<string, RawPosting[] | Error>();
+/** Options each fake fetch saw, by board token. */
+const seenOptions = new Map<string, unknown>();
 
 function fakeSource(id: string): SourcePlugin {
   return {
@@ -35,6 +37,7 @@ function fakeSource(id: string): SourcePlugin {
       sideEffects: 'none',
     },
     async *fetch(_ctx, target) {
+      seenOptions.set(target.boardToken, target.options);
       const b = boards.get(target.boardToken);
       if (b instanceof Error) throw b;
       for (const p of b ?? []) yield p;
@@ -90,6 +93,19 @@ describe.skipIf(!adminUrl)('source runner (postgres)', () => {
   beforeEach(async () => {
     boards.clear();
     await t.db.execute(sql`truncate companies, company_sources, jobs, raw_postings, plugin_runs, events cascade`);
+  });
+
+  it('passes company_sources.config through as SourceTarget.options', async () => {
+    const c = await upsertCompany(t.db, { name: 'Walmart' });
+    await upsertCompanySource(t.db, { companyId: c.id, atsType: 'greenhouse', boardToken: 'wm', config: { searchText: 'intern', locations: ['India'] } });
+    const [row] = await listSourceTargets(t.db, { companyName: 'Walmart' });
+    expect(row!.options).toEqual({ searchText: 'intern', locations: ['India'] });
+    await runSourceTarget(deps, row!);
+    expect(seenOptions.get('wm')).toEqual({ searchText: 'intern', locations: ['India'] });
+    // empty config → no options key at all
+    const plain = await addBoard('Plain', 'greenhouse', 'plain');
+    await runSourceTarget(deps, plain);
+    expect(seenOptions.get('plain')).toBeUndefined();
   });
 
   it('creates canonical jobs and is idempotent on rerun', async () => {

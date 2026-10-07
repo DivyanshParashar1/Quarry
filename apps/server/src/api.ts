@@ -13,10 +13,11 @@ import {
   type DB,
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
-import { OutreachError, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+import { OutreachError, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerOutreachRoutes } from './routes-outreach.js';
 import { registerProfileRoutes } from './routes-profile.js';
 import { registerResumeRoutes } from './routes-resume.js';
+import { registerDiscoveryRoutes } from './routes-discovery.js';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -62,6 +63,10 @@ export interface ApiOptions {
   profileDir?: string;
   /** Directory containing the resume manifest.yaml + blocks/*.tex. */
   resumeDir?: string;
+  /** Full app config (discovery settings etc.); defaults when absent. */
+  config?: AppConfig;
+  /** Page fetcher for company discovery (robots-respecting). */
+  pages?: () => PageFetcher;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -195,6 +200,14 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.autopilotDeps ? { autopilotDeps: opts.autopilotDeps } : {}),
     ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
     ...(opts.profileDir ? { profileDir: opts.profileDir } : {}),
+  });
+
+  registerDiscoveryRoutes(app, {
+    db,
+    config: (opts.config ?? parseAppConfig({})).discovery,
+    ...(opts.log ? { log: opts.log } : {}),
+    ...(opts.pages ? { pages: opts.pages } : {}),
+    ...(opts.llm ? { llm: opts.llm } : {}),
   });
 
   app.all('/api/*', async (_req, reply) => reply.status(404).send({ error: 'not_found' }));

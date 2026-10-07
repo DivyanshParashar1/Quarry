@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, DomainRateLimiter, enqueueSourceFetches, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from './plugins.js';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
@@ -53,6 +53,8 @@ export async function bootstrap() {
     autopilotDeps,
     llm: lazyLLM({ env, config, db, log }),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
+    config,
+    pages: () => createPageFetcher({ limiter }),
     ...(facts ? { profileDir: dirname(facts) } : {}),
     ...(resumeManifest ? { resumeDir: dirname(resumeManifest) } : {}),
   });

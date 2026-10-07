@@ -185,3 +185,30 @@ User-visible shift: the resume is now editable from the dashboard. Each section 
 - **Dependencies**: `yaml` added to `apps/server`. No new third-party packages elsewhere.
 
 Deferred to sub-phase 3+: compile-and-shrink loop for 1-page enforcement; LLM bullet rewrites with the per-bullet guardrail; DB migration retiring the legacy `fact_ids`/`bullets`/`header` columns; `/applications` audit page.
+
+## [Phase 6] — GCC sources: Workday + SmartRecruiters + tenant discovery
+
+- `packages/plugin-sdk`
+  - Manifests accept a leading-label wildcard host (`*.myworkdayjobs.com`); `hostAllowed()` is the single matcher used by ScopedHttp and `fixtureHttp`. Bare `*`, `*.com` and mid-label wildcards are still rejected.
+  - `ScopedHttp.getText()` for HTML/XML; `SourceTarget.options` (per-target overrides from `company_sources.config`); optional `RawPosting.companyName` (for non-company sources, used in Phase 7).
+  - `source-helpers.ts`: `parseRelativePosted` ("Posted 3 Days Ago"), `matchesLocationFilter`, `remotePolicyFromText`.
+  - `ats-tokens.ts`: board-token formats for Workday (`tenant.wdN/Site`, `wdN.myworkdaysite.com/tenant/Site`), SuccessFactors (`career4.successfactors.com/<companyId>` or an SAP-hosted RMK host) and Taleo (`tenant/section`), shared by the plugins and the core detector.
+  - `fixtureHttp` serves `"POST <url>"` routes, text/HTML bodies, extra headers, and request-dependent routes (e.g. a page offset in a POST body).
+- `packages/db` — migration `0006`: `ats_type` gains `workday`, `smartrecruiters`, `successfactors`, `taleo`; `company_sources.config jsonb` + `detected_by`; `companies.discovered_via`, `discovered_at`, `ats_checked_at`. New `discovery-repo.ts`: `saveDiscoveredCompany` (company + boards in one transaction, deduped by domain then name, fills blanks only), `findCompanyByDomain`, `listCompaniesForAtsCheck`, `markSourceStale`, `listRecentlyDiscovered`, `discoveredCountSince`.
+- `plugins/source-workday` — CXS API: paged `POST …/wday/cxs/{tenant}/{site}/jobs` (20/page; `total` read from the first page only) + per-posting detail `GET`. Location filter runs on the list's `locationsText` before any detail request ("N Locations" postings are resolved from the detail). Options `searchText`, `locations`, `maxPostings`, `fetchDetails`, overridable per target. 1 req/s per tenant host. A failing detail keeps the list-level posting; a malformed token is a permanent failure.
+- `plugins/source-smartrecruiters` — `GET /v1/companies/{id}/postings` (100/page) + detail for the job ad (sections assembled job → qualifications → additional → company). 2 req/s. Same location filter/options.
+- `packages/core/discovery`
+  - `detect.ts`: pure `classifyUrl` for all seven ATSs, `scanHtml` (links, embeds, inline Greenhouse/Lever configs, SuccessFactors RMK signature on custom domains), `careerLinks`, `registrableDomain`, `normalizeDomain`, `slugCandidates`.
+  - `robots.ts`: RFC 9309 subset (UA groups, longest match, `*`/`$`), per-origin cache; 4xx = allow, 5xx = disallow, network failure = unreachable.
+  - `page-fetcher.ts`: the only path for visiting arbitrary company sites — https-only (http upgraded), robots checked on every redirect hop, 1 req/2 s per host, body cap.
+  - `discover-ats.ts`: `{domain}/careers`, `/jobs`, `/join-us`, plus `careers.`/`jobs.` subdomains → a redirect onto an ATS host is conclusive (confidence 1) → page scan → one hop of same-site job links → name probes against the Greenhouse/Lever/Ashby/SmartRecruiters public APIs (lower confidence). `discoverAndSave` persists detections ≥ `discovery.minConfidence`.
+  - `lists.ts` + `run.ts`: `discover_companies` list adapters — `yc` (yc-oss `all.json`, hiring + region filter, no LLM), `gcc-journal`, `wellfound`, `internshala`, `hirect` (LLM `extract` over page text, chunked). Batch dedupe, skip known companies, detect, save; `plugin_runs` (`discovery:<list>`) + `discovery.run` events.
+- `apps/cli` — `jf discover_ats <domain|name> [--name] [--save] [--no-probe]`, `jf discover_ats --missing [--limit]`, `jf discover_companies --list <id> [--max-new] [--dry-run] [--concurrency]`. CSV import understands `workday_tenant` / `workday_site` / `smartrecruiters_company_id` columns (URLs accepted and normalised).
+- `apps/server` — `POST /api/companies/discover-ats`, `POST /api/discovery/run` (background, one at a time), `GET /api/companies/discovered`.
+- `apps/mcp` — `discover_ats`, `discover_companies`, `recent_companies` tools (none destructive).
+- `config.yaml` — new `discovery` section (`minConfidence`, per-list `urls`/`regions`/`maxNew`/`enabled`, `alertThreshold`, `recheckDays`, `nightly`).
+- `data/companies.seed.csv` — 280 companies (was 49): 50 Workday tenants, 1 shared-host Workday board and 4 SmartRecruiters boards marked `unverified seed`, plus ~175 GCCs (BFSI, retail, FMCG, pharma, medtech, industrial, semis, SaaS, consulting, Indian majors) seeded with a domain for `jf discover_ats --missing`.
+
+Dependencies: none added.
+
+Known gaps: fixtures for Workday/SmartRecruiters are synthetic (no network access to those hosts while building); the Workday/SR seed boards are from memory and unverified; the "50+ companies from gcc-journal in one run" acceptance needs a live run.

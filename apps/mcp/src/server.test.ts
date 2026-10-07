@@ -48,8 +48,10 @@ describe('jobforge MCP server', () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
-      ['add_company', 'add_contact', 'approve', 'draft_outreach', 'edit_draft', 'find_emails', 'get_job', 'list_jobs', 'list_resume_variants', 'pipeline_status', 'profile_get', 'profile_update_fact', 'reject', 'review_queue', 'run_autopilot', 'run_source', 'tailor_resume'].sort(),
+      expect.arrayContaining(['add_company', 'add_contact', 'approve', 'draft_outreach', 'edit_draft', 'find_emails', 'get_job', 'list_jobs', 'list_resume_variants', 'pipeline_status', 'profile_get', 'profile_update_fact', 'reject', 'review_queue', 'run_autopilot', 'run_source', 'tailor_resume', 'discover_ats', 'discover_companies', 'recent_companies']),
     );
+    // Only `approve` may be destructive.
+    expect(tools.filter((t) => t.annotations?.destructiveHint).map((t) => t.name)).toEqual(['approve']);
     const approve = tools.find((t) => t.name === 'approve')!;
     expect(approve.annotations).toMatchObject({ destructiveHint: true, readOnlyHint: false });
     expect(approve.description).toMatch(/only action with an external side effect/);
@@ -67,6 +69,10 @@ describe('jobforge MCP server', () => {
     expect(calls[2]).toMatchObject({ method: 'PATCH', path: `/api/review/${ID}`, body: { subject: 'New' } });
     await client.callTool({ name: 'profile_update_fact', arguments: { id: 'skill-go', content: 'Go, 4 years' } });
     expect(calls[3]).toMatchObject({ method: 'PUT', path: '/api/profile/facts/skill-go', body: { content: 'Go, 4 years' } });
+    await client.callTool({ name: 'discover_ats', arguments: { companyName: 'Walmart', domain: 'walmart.com', save: true } });
+    expect(calls[4]).toMatchObject({ method: 'POST', path: '/api/companies/discover-ats', body: { name: 'Walmart', domain: 'walmart.com', save: true } });
+    await client.callTool({ name: 'discover_companies', arguments: { list: 'yc', maxNew: 5 } });
+    expect(calls[5]).toMatchObject({ method: 'POST', path: '/api/discovery/run', body: { list: 'yc', maxNew: 5 } });
   });
 
   it('reports API errors as tool errors', async () => {
