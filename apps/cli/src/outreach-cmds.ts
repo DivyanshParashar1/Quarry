@@ -10,6 +10,7 @@ import {
   resolveIdPrefix,
   upsertCompany,
   upsertContact,
+  AmbiguousContactError,
   type DB,
   type ReviewListRow,
 } from '@jobforge/db';
@@ -74,6 +75,8 @@ export async function contactsCommand(sub: string | undefined, v: CmdValues, c: 
       role: v.role,
       email: v.email,
       linkedinUrl: v.linkedin,
+    }).catch((err: unknown) => {
+      throw err instanceof AmbiguousContactError ? new CmdError(err.message) : err;
     });
     c.out(`${created ? 'added' : 'updated'} ${contact.name} at ${company!.name} (${contact.id.slice(0, 8)})${contact.email ? ` <${contact.email}>` : ''}`);
     if (!contact.email) c.out('No email yet: run `jf contacts enrich` to infer one.');

@@ -336,7 +336,14 @@ export const contacts = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    companyNameUniq: uniqueIndex('contacts_company_name_uniq').on(t.companyId, sql`lower(${t.name})`),
+    // A LinkedIn profile identifies a person; the name only does when there is no profile
+    // (two "Rahul Sharma"s at one company are two contacts).
+    companyNameUniq: uniqueIndex('contacts_company_name_uniq')
+      .on(t.companyId, sql`lower(${t.name})`)
+      .where(sql`${t.linkedinUrl} is null`),
+    companyLinkedinUniq: uniqueIndex('contacts_company_linkedin_uniq')
+      .on(t.companyId, t.linkedinUrl)
+      .where(sql`${t.linkedinUrl} is not null`),
     emailIdx: index('contacts_email_idx').on(sql`lower(${t.email})`),
   }),
 );

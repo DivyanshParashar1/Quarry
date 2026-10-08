@@ -78,6 +78,13 @@
       "when": 1791415884570,
       "tag": "0010_exotic_lilith",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791445270836,
+      "tag": "0011_slimy_brood",
+      "breakpoints": true
     }
   ]
 }

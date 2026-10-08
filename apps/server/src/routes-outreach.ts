@@ -23,6 +23,7 @@ import {
   upsertCompany,
   upsertCompanySource,
   upsertContact,
+  AmbiguousContactError,
   ATS_TYPES,
   type DB,
 } from '@jobforge/db';
@@ -156,8 +157,13 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     }
     if (!company) return reply.status(404).send({ error: 'not_found', message: 'unknown company (pass a domain to create it)' });
     if (b.domain && !company.domain) await upsertCompany(db, { name: company.name, domain: b.domain });
-    const { contact, created } = await upsertContact(db, { companyId: company.id, name: b.name, role: b.role, email: b.email, linkedinUrl: b.linkedinUrl });
-    return reply.status(created ? 201 : 200).send(contact);
+    try {
+      const { contact, created } = await upsertContact(db, { companyId: company.id, name: b.name, role: b.role, email: b.email, linkedinUrl: b.linkedinUrl });
+      return reply.status(created ? 201 : 200).send(contact);
+    } catch (err) {
+      if (err instanceof AmbiguousContactError) return reply.status(409).send({ error: 'ambiguous_contact', message: err.message });
+      throw err;
+    }
   });
 
   app.post('/api/contacts/enrich', async (req) => {

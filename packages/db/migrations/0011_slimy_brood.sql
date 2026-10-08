@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS "contacts_company_name_uniq";--> statement-breakpoint
+UPDATE "contacts" SET "linkedin_url" = 'https://www.linkedin.com/in/' || lower(substring("linkedin_url" from '(?i)linkedin\.com/in/([^/?#]+)')) || '/' WHERE "linkedin_url" ~* 'linkedin\.com/in/[^/?#]+';--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "contacts_company_linkedin_uniq" ON "contacts" USING btree ("company_id","linkedin_url") WHERE "contacts"."linkedin_url" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "contacts_company_name_uniq" ON "contacts" USING btree ("company_id",lower("name")) WHERE "contacts"."linkedin_url" is null;

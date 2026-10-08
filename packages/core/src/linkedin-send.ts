@@ -196,6 +196,21 @@ export interface LinkedInTrackSummary {
  * referral threads. Either counts as a reply: the thread is `replied`, the
  * batch stops its follow-ups, and Phase 12 sees `referral.replied`.
  */
+/**
+ * Inbox rows carry only a name, so a name maps to a thread only when it names one
+ * contact we asked; a name shared by several contacts maps to null (never guessed),
+ * so a reply from one "Rahul Sharma" can't mark another's thread.
+ */
+export function threadsByName<T extends { contactId: string; contactName: string }>(threads: T[]): Map<string, T | null> {
+  const byName = new Map<string, T | null>();
+  for (const t of threads) {
+    const key = t.contactName.trim().toLowerCase();
+    const prev = byName.get(key);
+    byName.set(key, prev === undefined || prev?.contactId === t.contactId ? t : null);
+  }
+  return byName;
+}
+
 export async function pollLinkedInTracker(deps: LinkedInDeps & { now?: () => Date }): Promise<LinkedInTrackSummary> {
   const now = deps.now?.() ?? new Date();
   const res: LinkedInTrackSummary = { events: 0, accepted: 0, replies: 0 };
@@ -216,13 +231,16 @@ export async function pollLinkedInTracker(deps: LinkedInDeps & { now?: () => Dat
     signal: AbortSignal.timeout(10 * 60_000),
   });
   const byUrl = new Map(threads.filter((t) => t.linkedinUrl).map((t) => [canonicalProfileUrl(t.linkedinUrl!), t]));
-  const byName = new Map(threads.map((t) => [t.contactName.trim().toLowerCase(), t]));
+  const byName = threadsByName(threads);
   try {
     for await (const e of tracker.plugin.poll(ctx, since) as AsyncIterable<TrackEvent>) {
       res.events++;
       const data = e.data as { profileUrl?: string; name?: string; snippet?: string };
       const t = (data.profileUrl ? byUrl.get(canonicalProfileUrl(data.profileUrl)) : undefined) ?? (data.name ? byName.get(data.name.trim().toLowerCase()) : undefined);
-      if (!t) continue;
+      if (!t) {
+        if (t === null) deps.log.warn({ name: data.name }, 'LinkedIn reply from a name shared by several contacts; not matched');
+        continue;
+      }
       if (e.kind === 'accepted') res.accepted++;
       else res.replies++;
       await appendEvent(deps.db, {

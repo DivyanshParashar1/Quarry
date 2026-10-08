@@ -15,17 +15,52 @@ export interface ContactInput {
   source?: string | undefined;
 }
 
+/** `linkedin.com/in/<slug>` in any form → `https://www.linkedin.com/in/<slug>/`; anything else is kept as given. */
+export function normalizeLinkedinUrl(raw: string | null | undefined): string | null {
+  const s = raw?.trim();
+  if (!s) return null;
+  const m = s.match(/linkedin\.com\/in\/([^/?#"'\s]+)/i);
+  if (!m) return s;
+  let slug = m[1]!;
+  try {
+    slug = decodeURIComponent(slug);
+  } catch {
+    /* keep the raw slug */
+  }
+  return `https://www.linkedin.com/in/${slug.toLowerCase()}/`;
+}
+
+export class AmbiguousContactError extends Error {
+  constructor(name: string, count: number) {
+    super(`${count} contacts named "${name}" at this company have different LinkedIn profiles; pass the LinkedIn URL to pick one`);
+  }
+}
+
 /**
- * Insert or update a contact by (company, case-insensitive name). A supplied
+ * Insert or update a contact. With a LinkedIn URL the profile is the identity
+ * (a same-name contact without a profile is adopted); without one, the
+ * case-insensitive name is, as long as it names a single person. A supplied
  * email is treated as known (confidence 1, source manual) and replaces any
  * inferred one; empty fields never overwrite existing values.
  */
 export async function upsertContact(db: DB, c: ContactInput): Promise<{ contact: ContactRow; created: boolean }> {
+  const linkedinUrl = normalizeLinkedinUrl(c.linkedinUrl);
   return db.transaction(async (tx) => {
-    const [existing] = await tx
+    const sameName = await tx
       .select()
       .from(contacts)
       .where(and(eq(contacts.companyId, c.companyId), sql`lower(${contacts.name}) = lower(${c.name.trim()})`));
+    let existing: ContactRow | undefined;
+    if (linkedinUrl) {
+      [existing] = await tx
+        .select()
+        .from(contacts)
+        .where(and(eq(contacts.companyId, c.companyId), eq(contacts.linkedinUrl, linkedinUrl)));
+      existing ??= sameName.find((r) => r.linkedinUrl === null);
+    } else {
+      existing = sameName.length === 1 ? sameName[0] : sameName.find((r) => r.linkedinUrl === null);
+      if (!existing && sameName.length > 1) throw new AmbiguousContactError(c.name.trim(), sameName.length);
+    }
     const emailFields = c.email
       ? { email: c.email.trim().toLowerCase(), emailConfidence: 1, emailSource: 'manual', status: 'active' as const }
       : {};
@@ -36,7 +71,7 @@ export async function upsertContact(db: DB, c: ContactInput): Promise<{ contact:
           companyId: c.companyId,
           name: c.name.trim(),
           role: c.role ?? null,
-          linkedinUrl: c.linkedinUrl ?? null,
+          linkedinUrl,
           notes: c.notes ?? null,
           source: c.source ?? 'manual',
           ...emailFields,
@@ -48,7 +83,7 @@ export async function upsertContact(db: DB, c: ContactInput): Promise<{ contact:
       .update(contacts)
       .set({
         ...(c.role ? { role: c.role } : {}),
-        ...(c.linkedinUrl ? { linkedinUrl: c.linkedinUrl } : {}),
+        ...(linkedinUrl ? { linkedinUrl } : {}),
         ...(c.notes ? { notes: c.notes } : {}),
         ...emailFields,
         updatedAt: new Date(),
