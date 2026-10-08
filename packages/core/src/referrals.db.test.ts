@@ -19,7 +19,7 @@ import { createFakeProvider, createLLMClient } from '@jobforge/llm';
 import actor from '@jobforge/actor-gmail-outreach';
 import tracker from '@jobforge/tracker-gmail';
 import { normalizePosting } from './normalize.js';
-import { approveReviewItem, draftDueFollowups, OutreachError, pollTracker, runSendTick, type OutreachDeps } from './outreach.js';
+import { approveReviewItem, draftDueFollowups, OutreachError, pollTracker, rejectReviewItem, runSendTick, type OutreachDeps } from './outreach.js';
 import { approveBatch, bulletsFromTex, fanOutReferrals, latexToText, rankReferralContacts, referralPanel } from './referrals.js';
 import { loadProfileData } from './profile-loader.js';
 import { PluginRegistry } from './plugins.js';
@@ -178,10 +178,37 @@ describe.skipIf(!adminUrl)('referral fan-out (postgres)', () => {
     expect(p.items.find((i) => i.channel === 'linkedin')!.status).toBe('approved');
   });
 
+  it('a bounced ask frees its slot: the person is re-asked at their next guessed address, within the cap', async () => {
+    // Pretend Ravi's address was a pattern guess with a runner-up.
+    await t.db.execute(sql`update contacts set email_source = 'pattern:{first}', email_candidates = ${JSON.stringify([
+      { email: 'ravi@acme.com', confidence: 0.6, pattern: '{first}' },
+      { email: 'ravi.recruiter@acme.com', confidence: 0.4, pattern: '{first}.{last}' },
+    ])}::jsonb where id = ${ids.rec!}`);
+    const ravi = gmail.sent().find((m) => m.headers.to?.includes('ravi@acme.com'))!;
+    clock = new Date(clock.getTime() + 60_000);
+    gmail.receive({
+      threadId: ravi.threadId,
+      from: 'Mail Delivery Subsystem <mailer-daemon@googlemail.com>',
+      subject: 'Delivery Status Notification (Failure)',
+      headers: { 'x-failed-recipients': 'ravi@acme.com' },
+      at: clock,
+    });
+    expect(await pollTracker(deps)).toMatchObject({ bounces: 1 });
+    // Free the slot the unapprovable fifth ask (previous test) still holds.
+    const extra = (await listBatchItems(t.db, (await getBatchForJob(t.db, ids.job!))!.id)).find((i) => i.contactId === ids.none)!;
+    await rejectReviewItem(t.db, extra.id, 'test');
+
+    const r = await fanOutReferrals(deps, ids.job!);
+    expect(r.drafted).toEqual([expect.objectContaining({ contactId: ids.rec, channel: 'email' })]);
+    const item = (await getReviewItem(t.db, r.drafted[0]!.reviewItemId))!;
+    expect(item.draft).toMatchObject({ to: 'ravi.recruiter@acme.com' });
+    await expect(approveReviewItem(t.db, config.outreach, item.id)).resolves.toMatchObject({ status: 'approved' });
+  });
+
   it('a reply on one ask marks the batch replied and stops its follow-ups only', async () => {
     clock = new Date(clock.getTime() + 6 * DAY);
     const drafted = await draftDueFollowups(deps);
-    expect(drafted.drafted).toBe(3);
+    expect(drafted.drafted).toBe(2); // Ana and Mona; Ravi's first ask bounced
     const ana = gmail.sent().find((m) => m.headers.to?.includes('ana@acme.com'))!;
     gmail.receive({ threadId: ana.threadId, from: 'Ana Engineer <ana@acme.com>', subject: 'Re: Referral', body: 'Sure, send it over!', at: clock });
     const s = await pollTracker(deps);

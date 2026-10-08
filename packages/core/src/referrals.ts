@@ -159,7 +159,8 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
     return { batch, drafted: [], skipped: [], shortBy: 0, foundContacts: 0 };
   }
 
-  const existing = await listBatchItems(db, batch.id);
+  // A bounced ask never arrived: it frees its slot, and the person can be asked again at their next address.
+  const existing = (await listBatchItems(db, batch.id)).filter((i) => i.threadState !== 'bounced');
   const live = existing.filter((i) => !['rejected', 'cancelled', 'failed'].includes(i.status));
   const inBatch = new Set(existing.map((i) => i.contactId));
   let wanted = requested - live.length;

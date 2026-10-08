@@ -48,7 +48,7 @@ import {
   recordFollowupSent,
   releaseLease,
   restartAction,
-  setContactStatus,
+  recordEmailBounce,
   setState,
   threadsByGmailIds,
   threadsDueForFollowup,
@@ -627,19 +627,21 @@ export async function pollTracker(deps: OutreachDeps, opts: { pluginId?: string;
     const changed = await markThread(db, thread.id, e.kind === 'reply' ? 'replied' : 'bounced', e.at);
     if (!changed) continue;
     const cancelled = await cancelPendingFollowups(db, thread.id, `cancelled: ${e.kind}`);
+    let retry: { nextEmail: string | null } | null = null;
     if (e.kind === 'reply') {
       await confirmContactEmail(db, thread.contactId);
       res.replies++;
       await onThreadReplied(db, thread.id, e.at);
     } else {
-      await setContactStatus(db, thread.contactId, 'bounced');
+      // A guessed address moves on to the next candidate; a known one marks the contact bounced.
+      retry = await recordEmailBounce(db, thread.contactId, failed?.split(',')[0]);
       res.bounces++;
     }
     await appendEvent(db, {
       kind: e.kind === 'reply' ? 'outreach.replied' : 'outreach.bounced',
       subjectType: 'outreach_thread',
       subjectId: thread.id,
-      payload: { from: e.data.from, subject: e.data.subject, snippet: e.data.snippet, cancelledFollowups: cancelled },
+      payload: { from: e.data.from, subject: e.data.subject, snippet: e.data.snippet, cancelledFollowups: cancelled, ...(retry ? { nextEmail: retry.nextEmail } : {}) },
     });
   }
   await setState(db, STATE_TRACKER_CURSOR, now.toISOString());

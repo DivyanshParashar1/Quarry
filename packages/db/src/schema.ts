@@ -330,6 +330,8 @@ export const contacts = pgTable(
     department: text('department'),
     /** Ranked alternative addresses [{ email, confidence, pattern }] from the pattern enricher. */
     emailCandidates: jsonb('email_candidates').notNull().default(sql`'[]'::jsonb`),
+    /** Addresses that bounced; never set again (the enricher would otherwise re-pick its top guess). */
+    bouncedEmails: text('bounced_emails').array().notNull().default(sql`'{}'::text[]`),
     status: contactStatusEnum('status').notNull().default('active'),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

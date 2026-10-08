@@ -166,10 +166,50 @@ export async function setInferredEmail(
         eq(contacts.id, contactId),
         sql`(${contacts.emailSource} is null or ${contacts.emailSource} <> 'manual')`,
         sql`${contacts.status} <> 'bounced'`,
+        e.email ? sql`not (lower(${e.email}) = any(${contacts.bouncedEmails}))` : undefined,
       ),
     )
     .returning({ id: contacts.id });
   return updated.length > 0;
+}
+
+interface EmailCandidate {
+  email: string;
+  confidence: number;
+  pattern?: string;
+}
+
+/**
+ * A sent email bounced. A pattern-guessed address moves on to the next ranked
+ * candidate that hasn't bounced (the person never got the ask, so they stay
+ * askable); a known address, or running out of candidates, marks the contact
+ * bounced. Returns the address that will be used next, if any.
+ */
+export async function recordEmailBounce(db: DB, contactId: string, bouncedEmail?: string | null): Promise<{ nextEmail: string | null }> {
+  return db.transaction(async (tx) => {
+    const [c] = await tx.select().from(contacts).where(eq(contacts.id, contactId)).for('update');
+    if (!c) return { nextEmail: null };
+    const bounced = (bouncedEmail ?? c.email)?.trim().toLowerCase();
+    const bouncedEmails = [...new Set([...c.bouncedEmails, ...(bounced ? [bounced] : [])])];
+    // An older address bounced after we had already moved on: just remember it.
+    if (bounced && c.email && c.email.toLowerCase() !== bounced) {
+      await tx.update(contacts).set({ bouncedEmails, updatedAt: new Date() }).where(eq(contacts.id, contactId));
+      return { nextEmail: c.email };
+    }
+    const guessed = !c.emailSource || c.emailSource.startsWith('pattern:');
+    const next = guessed
+      ? ((c.emailCandidates as EmailCandidate[]) ?? []).find((x) => x?.email && !bouncedEmails.includes(x.email.toLowerCase()))
+      : undefined;
+    await tx
+      .update(contacts)
+      .set(
+        next
+          ? { bouncedEmails, email: next.email.toLowerCase(), emailConfidence: next.confidence, emailSource: `pattern:${next.pattern ?? 'candidate'}`, status: 'active', updatedAt: new Date() }
+          : { bouncedEmails, status: 'bounced', emailConfidence: 0, updatedAt: new Date() },
+      )
+      .where(eq(contacts.id, contactId));
+    return { nextEmail: next?.email.toLowerCase() ?? null };
+  });
 }
 
 export async function setContactStatus(db: DB, contactId: string, status: ContactRow['status']): Promise<void> {

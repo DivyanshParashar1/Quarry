@@ -9,7 +9,10 @@ import {
   getThread,
   listContacts,
   listReviewItems,
+  recordEmailBounce,
   recordPosting,
+  setContactHints,
+  setInferredEmail,
   sql,
   upsertCompany,
   upsertContact,
@@ -284,12 +287,55 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     await expect(draftOutreach(deps, { contactId: ids.jane!, force: true })).rejects.toBeInstanceOf(OutreachError);
   });
 
+  it('a bounced guessed address moves on to the next candidate, and the person can be asked again', async () => {
+    clock = new Date(clock.getTime() + DAY);
+    const { contact } = await upsertContact(t.db, { companyId: ids.company!, name: 'Kim Ng' });
+    await setInferredEmail(t.db, contact.id, { email: 'kng@acme.com', confidence: 0.6, source: 'pattern:{f}{last}' });
+    await setContactHints(t.db, contact.id, {
+      emailCandidates: [
+        { email: 'kng@acme.com', confidence: 0.6, pattern: '{f}{last}' },
+        { email: 'kim.ng@acme.com', confidence: 0.3, pattern: '{first}.{last}' },
+      ],
+    });
+    const item = await draftOutreach(deps, { contactId: contact.id });
+    await approveReviewItem(t.db, deps.policy, item.id, { overrideCompanyCap: true });
+    expect((await runSendTick(deps)).outcomes[0]).toMatchObject({ ok: true });
+    const sent = gmail.sent().at(-1)!;
+    expect(sent.headers.to).toContain('kng@acme.com');
+
+    gmail.receive({
+      threadId: sent.threadId,
+      from: 'Mail Delivery Subsystem <mailer-daemon@googlemail.com>',
+      subject: 'Delivery Status Notification (Failure)',
+      headers: { 'x-failed-recipients': 'kng@acme.com' },
+      at: clock,
+    });
+    expect(await pollTracker(deps, { since: new Date(clock.getTime() - 3600_000) })).toMatchObject({ bounces: 1 });
+    expect((await getContact(t.db, contact.id))!).toMatchObject({
+      status: 'active',
+      email: 'kim.ng@acme.com',
+      emailConfidence: 0.3,
+      emailSource: 'pattern:{first}.{last}',
+      bouncedEmails: ['kng@acme.com'],
+    });
+    // Re-enrichment must not bring the bounced address back.
+    expect(await setInferredEmail(t.db, contact.id, { email: 'KNG@acme.com', confidence: 0.6, source: 'pattern:{f}{last}' })).toBe(false);
+    // The ask never arrived, so the cooldown doesn't block asking at the new address.
+    const again = await draftOutreach(deps, { contactId: contact.id });
+    expect(emailDraftSchema.parse(again.draft).to).toBe('kim.ng@acme.com');
+    await expect(approveReviewItem(t.db, deps.policy, again.id, { overrideCompanyCap: true })).resolves.toMatchObject({ status: 'approved' });
+
+    // Out of candidates: the contact is bounced for good.
+    expect(await recordEmailBounce(t.db, contact.id, 'kim.ng@acme.com')).toEqual({ nextEmail: null });
+    expect((await getContact(t.db, contact.id))!.status).toBe('bounced');
+  });
+
   it('reject is final', async () => {
     const { contact } = await upsertContact(t.db, { companyId: ids.company!, name: 'Ola N', email: 'ola@acme.com' });
     const item = await draftOutreach(deps, { contactId: contact.id });
     await rejectReviewItem(t.db, item.id, 'not now');
     await expect(approveReviewItem(t.db, deps.policy, item.id)).rejects.toMatchObject({ code: 'invalid_state' });
-    expect((await listContacts(t.db, { company: 'acme' })).length).toBe(5);
+    expect((await listContacts(t.db, { company: 'acme' })).length).toBe(6);
   });
 });
 

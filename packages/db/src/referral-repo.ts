@@ -90,6 +90,9 @@ export async function listBatchItems(db: DB, batchId: string): Promise<BatchItem
   return rows.map((r) => ({ ...r, channel: r.pluginId.includes('linkedin') ? 'linkedin' : 'email' }));
 }
 
+/** An ask whose email bounced never reached the person: it doesn't count toward the cooldown or the job's cap. */
+const notBounced = sql`not exists (select 1 from ${outreachThreads} where ${outreachThreads.reviewItemId} = ${reviewItems.id} and ${outreachThreads.state} = 'bounced')`;
+
 /**
  * When a contact was last asked (first contact: outreach or referral ask),
  * counting items that are executed, approved (about to go) or pending —
@@ -111,6 +114,7 @@ export async function lastAskedAt(db: DB, contactId: string, excludeItemId?: str
         inArray(reviewItems.kind, [...FIRST_CONTACT_KINDS]),
         inArray(reviewItems.status, ['pending', 'approved', 'executed']),
         excludeItemId ? ne(reviewItems.id, excludeItemId) : undefined,
+        notBounced,
       ),
     )
     .orderBy(desc(sql`coalesce(${actions.executedAt}, ${reviewItems.decidedAt}, ${reviewItems.createdAt})`))
@@ -129,7 +133,9 @@ export async function contactsAskedSince(db: DB, contactIds: string[], since: Da
         inArray(reviewItems.contactId, contactIds),
         inArray(reviewItems.kind, [...FIRST_CONTACT_KINDS]),
         inArray(reviewItems.status, ['pending', 'approved', 'executed']),
-        sql`${reviewItems.createdAt} >= ${since.toISOString()}::timestamptz or ${reviewItems.status} in ('pending', 'approved')`,
+        // Parenthesised: drizzle's and() doesn't wrap raw SQL, and a bare `or` would escape the other filters.
+        sql`(${reviewItems.createdAt} >= ${since.toISOString()}::timestamptz or ${reviewItems.status} in ('pending', 'approved'))`,
+        notBounced,
       ),
     );
   return new Set(rows.map((r) => r.contactId).filter((x): x is string => !!x));
@@ -146,6 +152,7 @@ export async function committedAsksForJob(db: DB, jobId: string, excludeItemId?:
         eq(reviewItems.kind, 'referral_ask'),
         inArray(reviewItems.status, ['approved', 'executed']),
         excludeItemId ? ne(reviewItems.id, excludeItemId) : undefined,
+        notBounced,
       ),
     );
   return r!.n;
