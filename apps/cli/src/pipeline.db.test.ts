@@ -8,7 +8,7 @@ import { DomainRateLimiter, runSourceTarget, type SourceRunDeps } from '@jobforg
 import { boardUrl } from '@jobforge/source-greenhouse';
 import { postingsUrl } from '@jobforge/source-lever';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
-import { createRegistry } from './plugins.js';
+import { createRegistry } from '@jobforge/plugins';
 
 const adminUrl = testDbAdminUrl();
 const fixture = (plugin: string, f: string) =>

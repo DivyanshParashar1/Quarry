@@ -12,6 +12,7 @@ coverage
 pgdata/
 data/resumes/
 config.yaml
-my_resume.tex# Phase 8+: encrypted LinkedIn session and browser screenshots (never commit)
+my_resume.tex
+# Phase 8+: encrypted LinkedIn session and browser screenshots (never commit)
 data/linkedin/
 data/screenshots/

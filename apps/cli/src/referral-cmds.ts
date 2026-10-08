@@ -23,7 +23,7 @@ import {
 } from '@jobforge/core';
 import { DomainRateLimiter } from '@jobforge/core';
 import { table } from './format.js';
-import { createRegistry } from './plugins.js';
+import { createRegistry } from '@jobforge/plugins';
 import { outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, type CmdCtx } from './outreach-cmds.js';
 

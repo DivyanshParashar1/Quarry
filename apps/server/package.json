@@ -25,6 +25,7 @@
     "@jobforge/enricher-linkedin-employees": "workspace:*",
     "@jobforge/llm": "workspace:*",
     "@jobforge/plugin-sdk": "workspace:*",
+    "@jobforge/plugins": "workspace:*",
     "@jobforge/shared": "workspace:*",
     "@jobforge/source-ashby": "workspace:*",
     "@jobforge/source-gmail-alerts": "workspace:*",

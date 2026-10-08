@@ -86,6 +86,9 @@ importers:
       '@jobforge/matcher-default':
         specifier: workspace:*
         version: link:../../plugins/matcher-default
+      '@jobforge/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -202,6 +205,9 @@ importers:
       '@jobforge/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
+      '@jobforge/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins
       '@jobforge/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -445,6 +451,79 @@ importers:
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/plugins:
+    dependencies:
+      '@jobforge/actor-apply-ashby':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-ashby
+      '@jobforge/actor-apply-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-greenhouse
+      '@jobforge/actor-apply-lever':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-lever
+      '@jobforge/actor-gmail-outreach':
+        specifier: workspace:*
+        version: link:../../plugins/actor-gmail-outreach
+      '@jobforge/actor-linkedin-referral':
+        specifier: workspace:*
+        version: link:../../plugins/actor-linkedin-referral
+      '@jobforge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@jobforge/enricher-contacts-pattern':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-contacts-pattern
+      '@jobforge/enricher-deadline':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-deadline
+      '@jobforge/enricher-linkedin-employees':
+        specifier: workspace:*
+        version: link:../../plugins/enricher-linkedin-employees
+      '@jobforge/matcher-default':
+        specifier: workspace:*
+        version: link:../../plugins/matcher-default
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@jobforge/source-ashby':
+        specifier: workspace:*
+        version: link:../../plugins/source-ashby
+      '@jobforge/source-gmail-alerts':
+        specifier: workspace:*
+        version: link:../../plugins/source-gmail-alerts
+      '@jobforge/source-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/source-greenhouse
+      '@jobforge/source-lever':
+        specifier: workspace:*
+        version: link:../../plugins/source-lever
+      '@jobforge/source-smartrecruiters':
+        specifier: workspace:*
+        version: link:../../plugins/source-smartrecruiters
+      '@jobforge/source-successfactors':
+        specifier: workspace:*
+        version: link:../../plugins/source-successfactors
+      '@jobforge/source-taleo':
+        specifier: workspace:*
+        version: link:../../plugins/source-taleo
+      '@jobforge/source-workday':
+        specifier: workspace:*
+        version: link:../../plugins/source-workday
+      '@jobforge/tailor-resume-latex':
+        specifier: workspace:*
+        version: link:../../plugins/tailor-resume-latex
+      '@jobforge/tracker-gmail':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-gmail
+      '@jobforge/tracker-linkedin':
+        specifier: workspace:*
+        version: link:../../plugins/tracker-linkedin
     devDependencies:
       typescript:
         specifier: ^5.6.3

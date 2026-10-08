@@ -47,7 +47,7 @@ import {
 import { checkClaudeCli } from '@jobforge/llm';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
 import { fmtDate, table } from './format.js';
-import { createRegistry } from './plugins.js';
+import { createRegistry } from '@jobforge/plugins';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';

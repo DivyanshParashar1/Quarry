@@ -4,7 +4,7 @@ import { createLLMFromConfig } from '@jobforge/llm';
 import { createLocalEmbedder } from '@jobforge/embeddings';
 import { createDnsResolver, createGmailClient, DomainRateLimiter, type OutreachDeps, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
-import { createRegistry } from './plugins.js';
+import { createRegistry } from '@jobforge/plugins';
 
 /** The configured LLM client; every call is logged to llm_calls. */
 export function createLLM(env: Env, config: AppConfig, db: DB, log: Logger) {

@@ -25,6 +25,9 @@
       "path": "./packages/embeddings"
     },
     {
+      "path": "./packages/plugins"
+    },
+    {
       "path": "./apps/server"
     },
     {

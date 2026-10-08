@@ -39,7 +39,7 @@ describe('claude-code adapter', () => {
 
   it('pre-approves only the web tools for web-search requests', () => {
     const args = buildClaudeArgs({ ...req, webSearch: true });
-    expect(args.slice(args.indexOf('--allowedTools'))).toEqual(['--allowedTools', 'WebSearch', 'WebFetch']);
+    expect(args.slice(args.indexOf('--allowedTools'))).toEqual(['--allowedTools', 'WebSearch,WebFetch']);
   });
 
   it('spawns the CLI with the prompt on stdin in an empty temp cwd', async () => {

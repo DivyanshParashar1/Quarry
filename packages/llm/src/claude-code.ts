@@ -69,7 +69,8 @@ export function buildClaudeArgs(req: ProviderRequest): string[] {
     '--no-session-persistence',
     '--strict-mcp-config',
     // Phase 10: the CLI's built-in web search (pre-approved, since dontAsk denies everything else).
-    ...(req.webSearch ? ['--allowedTools', 'WebSearch', 'WebFetch'] : []),
+    // One comma-joined value: the flag is variadic, so separate values could swallow a later argument.
+    ...(req.webSearch ? ['--allowedTools', 'WebSearch,WebFetch'] : []),
   ];
 }
 

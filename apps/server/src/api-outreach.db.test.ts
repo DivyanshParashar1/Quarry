@@ -9,7 +9,7 @@ import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing'
 import { createDnsResolver, DomainRateLimiter, loadProfileData, normalizePosting, type OutreachDeps } from '@jobforge/core';
 import { createFakeProvider, createLLMClient } from '@jobforge/llm';
 import { buildApi, requestGuard } from './api.js';
-import { createRegistry } from './plugins.js';
+import { createRegistry } from '@jobforge/plugins';
 import pino from 'pino';
 
 const adminUrl = testDbAdminUrl();
