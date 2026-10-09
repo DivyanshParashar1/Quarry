@@ -2,14 +2,15 @@ import { z } from 'zod';
 import type { Job, LLMClient } from '@jobforge/plugin-sdk';
 import type { LoadedResume } from './manifest-loader.js';
 
-// Technical Skills tailoring:
-//   - The LLM receives the original skills fragment + the JD and emits a new
-//     LaTeX fragment tailored to the role (reorder/trim groups and items).
+// Technical Skills tailoring (v2, Phase 15):
+//   - The LLM receives the JD + the full assembled resume .tex (so it can see
+//     the selected projects' tech-stack lines) and emits only a new skills
+//     LaTeX fragment (reorder/trim groups and items).
+//   - Allowed items = the original skills fragment's items ∪ the tech-stack
+//     items of the selected blocks, so a skill used in a project can surface
+//     even when the skills block missed it. Anything else is rejected.
 //   - The output is validated by a strict allowlist of LaTeX commands before
 //     being used; on any violation we fall back to the original fragment.
-//   - The LLM must not add skills the user never listed — we extract the
-//     catalogue of items from the original fragment and enforce it after
-//     parsing the LLM's output.
 
 export const SYSTEM_PROMPT = `You tailor a LaTeX "Technical Skills" fragment for a specific job.
 You MUST return ONLY the LaTeX fragment, nothing else — no markdown, no fences, no commentary.
@@ -21,8 +22,10 @@ Rules:
 - You may reorder groups so the most JD-relevant group is listed first.
 - You may reorder items inside a group to lead with JD-relevant ones.
 - You may DROP items that are irrelevant to the job.
-- You MAY NOT add items that aren't in the original. If a JD mentions a skill
-  the user doesn't have, do not fabricate it.
+- You may ADD an item only if it is in the "Allowed items" list (they come from
+  the resume's own project tech stacks). Put it in the group where it fits.
+- You MAY NOT add anything else. If a JD mentions a skill the user doesn't have,
+  do not fabricate it.
 - You MAY NOT introduce new LaTeX commands beyond: \\begin, \\end, \\small, \\item, \\textbf, \\textit, \\\\.
 - Do not use \\input, \\include, \\write, \\usepackage, \\def, \\let, \\catcode, or any @ commands.`;
 
@@ -38,9 +41,17 @@ export interface SkillsResult {
   model: string;
 }
 
+export interface SkillsInput {
+  /** The resume assembled with the original skills fragment. */
+  assembledTex: string;
+  /** Selected block ids; their tech-stack items join the allowed catalogue. */
+  includedBlockIds: string[];
+}
+
 export async function tailorSkills(
   resume: LoadedResume,
   job: Job,
+  input: SkillsInput,
   deps: { llm: LLMClient; signal: AbortSignal; maxTokens?: number },
 ): Promise<SkillsResult | null> {
   const skillsBlock = resume.manifest.blocks.find((b) => b.section === 'skills');
@@ -49,10 +60,13 @@ export async function tailorSkills(
   if (!original) return null;
 
   const catalogue = extractItemCatalogue(original);
+  const extra = techStackItems(resume, input.includedBlockIds).filter((i) => !hasCaseInsensitive(catalogue, i));
+  for (const i of extra) catalogue.add(i);
+
   const res = await deps.llm.generate({
     task: 'tailor',
     system: SYSTEM_PROMPT,
-    prompt: buildPrompt(original, job),
+    prompt: buildPrompt(original, job, input.assembledTex, extra),
     schema: skillsOutputSchema,
     maxTokens: deps.maxTokens ?? 600,
     signal: deps.signal,
@@ -71,7 +85,7 @@ export async function tailorSkills(
   return { latex: check.latex, used: true, reason: 'ok', provider: res.provider, model: res.model };
 }
 
-export function buildPrompt(original: string, job: Job): string {
+export function buildPrompt(original: string, job: Job, assembledTex: string, allowedExtra: string[]): string {
   const desc = (job.descriptionMd ?? '').slice(0, 4000);
   return [
     `# Target job`,
@@ -82,13 +96,50 @@ export function buildPrompt(original: string, job: Job): string {
     `## Description`,
     desc || '(no description)',
     ``,
+    `# The full resume as it will be sent (LaTeX):`,
+    resumeBody(assembledTex),
+    ``,
     `# Original "Technical Skills" fragment (verbatim):`,
     original.trim(),
+    ``,
+    `# Allowed items not in the fragment (from the selected projects' tech stacks):`,
+    allowedExtra.length ? allowedExtra.join(', ') : '(none)',
     ``,
     `Return JSON of { latex: "<the tailored fragment>" }.`,
   ]
     .filter((l) => l !== null)
     .join('\n');
+}
+
+/** The resume between \begin{document} and \end{document} (the preamble is noise to the LLM). */
+function resumeBody(tex: string): string {
+  const start = tex.indexOf('\\begin{document}');
+  const end = tex.lastIndexOf('\\end{document}');
+  const body = start >= 0 && end > start ? tex.slice(start + '\\begin{document}'.length, end) : tex;
+  return body.trim().slice(0, 12_000);
+}
+
+/**
+ * Tech-stack items of the selected blocks: the manifest's `tech_stack_line`,
+ * else the block's `\emph{...}` line. Items are comma-separated.
+ */
+export function techStackItems(resume: LoadedResume, includedBlockIds: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const id of includedBlockIds) {
+    const block = resume.blocksById.get(id);
+    if (!block || block.section === 'skills' || block.section === 'header') continue;
+    const line = block.tech_stack_line ?? resume.fragments.get(id)?.match(/\\emph\{([^}]*)\}/)?.[1];
+    if (!line) continue;
+    for (const raw of line.split(/,\s*/)) {
+      const item = raw.trim();
+      if (item && !seen.has(item.toLowerCase())) {
+        seen.add(item.toLowerCase());
+        out.push(item);
+      }
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

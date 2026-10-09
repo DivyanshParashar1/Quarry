@@ -121,8 +121,22 @@ export type RewriteValidation = z.infer<typeof rewriteValidationSchema>;
 // Final tailor output. The plugin assembles + compiles; the runner persists.
 // ---------------------------------------------------------------------------
 
-export const tailorStatusSchema = z.enum(['rendered', 'render_failed', 'selection_failed']);
+/** `overflow` = compiled, but still > 1 page after every fit step; kept, never auto-used. */
+export const tailorStatusSchema = z.enum(['rendered', 'render_failed', 'selection_failed', 'overflow']);
 export type TailorStatus = z.infer<typeof tailorStatusSchema>;
+
+/** What the one-page fit loop did (Phase 15). Stored on the variant. */
+export interface FitInfo {
+  fontPt: number;
+  linespread: number;
+  /** Bullet ids whose shortened text was kept. */
+  shortenedBullets: string[];
+  /** LLM shortening rounds run (0 when typography alone was enough). */
+  rounds: number;
+  /** Compiles performed, including the first. */
+  compiles: number;
+  pages: number;
+}
 
 export interface TailoredResume {
   /** The exact .tex sent to latexmk; archived alongside the PDF. */
@@ -139,4 +153,6 @@ export interface TailoredResume {
   confidence: number;
   provider: string;
   model: string;
+  /** Present when the fit loop ran (i.e. the first compile succeeded). */
+  fit?: FitInfo | null;
 }
