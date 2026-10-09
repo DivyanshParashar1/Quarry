@@ -2,14 +2,6 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-// pdf-parse is CommonJS and ships a top-level test harness that reads a local file
-// when imported bare; we go via the module entry to avoid that. Types live at the
-// package root, so we take the type from there and the implementation from the
-// inner entry point.
-import type _pdfParse from 'pdf-parse';
-// @ts-expect-error pdf-parse ships no types for the inner entry; we borrow the root's.
-import pdfParseImpl from 'pdf-parse/lib/pdf-parse.js';
-const pdfParse = pdfParseImpl as typeof _pdfParse;
 import {
   factSchema,
   preferencesSchema,
@@ -19,7 +11,7 @@ import {
   writePreferencesFile,
   type LLMClient,
 } from '@jobforge/shared';
-import { loadProfile } from '@jobforge/core';
+import { extractPdfText, loadProfile } from '@jobforge/core';
 import type { DB } from '@jobforge/db';
 
 // Full profile editor (PLAN.md §8 Phase 5-ish): facts.yaml + preferences.yaml are
@@ -121,9 +113,9 @@ export function registerProfileRoutes(app: FastifyInstance, o: ProfileRouteOptio
     }
     const buf = await file.toBuffer();
     if (buf.length > 10 * 1024 * 1024) return reply.status(413).send({ error: 'too_large', message: 'max 10MB' });
-    let parsed: Awaited<ReturnType<typeof pdfParse>>;
+    let parsed: Awaited<ReturnType<typeof extractPdfText>>;
     try {
-      parsed = await pdfParse(buf);
+      parsed = await extractPdfText(buf);
     } catch (err) {
       return reply.status(422).send({ error: 'pdf_parse_failed', message: (err as Error).message });
     }
