@@ -1,5 +1,5 @@
 import { PluginRegistry } from '@jobforge/core';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { findUp, type AppConfig } from '@jobforge/shared';
 import greenhouse from '@jobforge/source-greenhouse';
 import lever from '@jobforge/source-lever';
@@ -26,15 +26,36 @@ import tailorResume from '@jobforge/tailor-resume-latex';
 export function createRegistry(config?: AppConfig): PluginRegistry {
   const registry = new PluginRegistry();
   for (const p of [greenhouse, lever, ashby, workday, smartrecruiters, gmailAlerts, successfactors, taleo, linkedinEmployees, linkedinActor, linkedinTracker, deadlineEnricher, applyGreenhouse, applyLever, applyAshby, matcherDefault, contactsPattern, gmailOutreach, gmailTracker, tailorResume]) {
-    registry.register(p, { ...pathDefaults(p.manifest.id), ...(config?.plugins[p.manifest.id] ?? {}) });
+    registry.register(p, { ...pathDefaults(p.manifest.id), ...rootRelative(config?.plugins[p.manifest.id] ?? {}) });
   }
   return registry;
 }
 
-/** Browser actors write screenshots under <repo>/data/screenshots, whatever the cwd. */
-function pathDefaults(id: string): Record<string, unknown> {
+function repoRoot(): string {
   const ws = findUp('pnpm-workspace.yaml');
-  const root = ws ? dirname(ws) : process.cwd();
+  return ws ? dirname(ws) : process.cwd();
+}
+
+/** Path options a plugin reads from disk; relative values in config.yaml mean "from the repo root". */
+const PATH_KEYS = ['manifestPath', 'screenshotDir'];
+
+function rootRelative(cfg: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...cfg };
+  for (const k of PATH_KEYS) {
+    const v = out[k];
+    if (typeof v === 'string' && !isAbsolute(v)) out[k] = join(repoRoot(), v);
+  }
+  return out;
+}
+
+/**
+ * Plugin paths are anchored at the repo root, whatever the cwd (the server runs
+ * from apps/server): browser screenshots under data/screenshots, the resume
+ * manifest under profile/resume.
+ */
+function pathDefaults(id: string): Record<string, unknown> {
+  const root = repoRoot();
+  if (id === 'tailor-resume-latex') return { manifestPath: join(root, 'profile', 'resume', 'manifest.yaml') };
   if (id.startsWith('actor-apply-')) return { screenshotDir: join(root, 'data', 'screenshots', 'apply') };
   if (id === 'actor-linkedin-referral') return { screenshotDir: join(root, 'data', 'screenshots', 'linkedin') };
   return {};

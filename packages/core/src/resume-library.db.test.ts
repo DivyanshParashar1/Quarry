@@ -253,9 +253,42 @@ describe.skipIf(!adminUrl)('resume library (postgres)', () => {
     expect(r.variant.kind).toBe('generated');
     expect((await getJobResume(t.db, job))!.variantId).toBe(r.variant.id);
   });
+
+  it('stops a library run at the first LaTeX failure instead of paying for every combo', async () => {
+    let renders = 0;
+    const failing = defineTailorPlugin<Record<string, never>>({
+      ...stubPlugin(state),
+      async renderFixed(_ctx, req: FixedRenderRequest) {
+        renders++;
+        return {
+          ...result(new Uint8Array(), req.includedBlockIds),
+          pdf: null,
+          pages: null,
+          status: 'render_failed',
+          error: "latexmk failed: exit 12\n! LaTeX Error: File `fullpage.sty' not found.",
+          fit: null,
+        };
+      },
+    });
+    const registry = new PluginRegistry();
+    registry.register(failing);
+    const r = await generateLibrary({ ...deps, registry });
+    expect(renders).toBe(1);
+    expect(r.items.map((i) => [i.status, i.resumeStatus ?? null])).toEqual([
+      ['created', 'render_failed'],
+      ['failed', null],
+    ]);
+    expect(r.items[1]!.error).toBe('skipped: an earlier resume failed to compile (missing LaTeX package fullpage.sty)');
+  });
 });
 
 describe('selector helpers', () => {
+  it('summarises a latexmk failure', async () => {
+    const { latexReason } = await import('./resume-library.js');
+    expect(latexReason("latexmk failed: exit 12\n--- latexmk log (tail) ---\n! LaTeX Error: File `fullpage.sty' not found.")).toBe('missing LaTeX package fullpage.sty');
+    expect(latexReason('latexmk failed\n! Undefined control sequence.')).toBe('! Undefined control sequence.');
+  });
+
   it('rescales cosine similarity to 0–100', () => {
     expect(rescaleSimilarity(0.4, 0.5, 0.9)).toBe(0);
     expect(rescaleSimilarity(0.7, 0.5, 0.9)).toBe(50);

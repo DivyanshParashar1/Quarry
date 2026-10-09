@@ -412,3 +412,7 @@ Design revised with the user before implementation (recorded in `PLAN-phases-15-
 - Dashboard: new **Resumes** tab (library with per-category benchmark averages, per-ATS breakdown per JD, Generate missing / Re-run benchmarks / Scrap & regenerate, benchmark categories and JDs with search-to-pin); the job page shows the selector decision, ATS score card (missing hard requirements, keyword hits/misses, parse checks), library ranking, and Pick resume / Generate new.
 - Config: `resumes.{projectsPerResume, selector, benchmarks}` (documented in `config.example.yaml`). Tailor deps carry a lazy local embedder (model loads on first use).
 - Dependencies: `pdf-parse` moved from `apps/server` to `packages/core` (noted in the plan). No new packages.
+
+### Phase 16 fixes
+- The tailor plugin's `manifestPath` defaults to `<repo>/profile/resume/manifest.yaml`, and relative plugin paths in `config.yaml` resolve from the repo root. The server runs from `apps/server`, where the relative default pointed at a non-existent file (library runs and the job-page tailor failed with ENOENT).
+- A library run stops at the first resume that fails to compile (e.g. a missing LaTeX package) instead of spending a skills LLM call on every remaining combo; the rest are reported as skipped with the reason.

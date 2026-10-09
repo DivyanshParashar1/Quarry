@@ -160,13 +160,18 @@ export async function generateLibrary(
 
   const active = await listLibraryResumes(deps.db);
   const items: LibraryRunItem[] = [];
+  let latexBroken: string | null = null;
   for (const [i, spec] of specs.entries()) {
     const existing = active.find((v) => v.comboKey === spec.key && v.kind === spec.kind && v.profileVersion === profile.version);
     let item: LibraryRunItem;
-    if (existing && !opts.retire) {
+    if (latexBroken) {
+      // Every render would fail the same way (and each one costs an LLM call first).
+      item = { key: spec.key, label: spec.label, kind: spec.kind, status: 'failed', error: `skipped: an earlier resume failed to compile (${latexBroken})` };
+    } else if (existing && !opts.retire) {
       item = { key: spec.key, label: spec.label, kind: spec.kind, variantId: existing.id, status: 'skipped', resumeStatus: existing.status };
     } else {
       item = await renderLibraryResume(deps, profile, spec);
+      if (item.resumeStatus === 'render_failed') latexBroken = latexReason(item.error);
     }
     items.push(item);
     opts.onItem?.(item, i + 1, specs.length);
@@ -192,6 +197,15 @@ export async function generateLibrary(
     },
   });
   return { items, retired };
+}
+
+/** The useful line of a latexmk failure ("File `fullpage.sty' not found"), for the run summary. */
+export function latexReason(error: string | undefined): string {
+  if (!error) return 'LaTeX compile failed';
+  const missing = error.match(/File `([^']+)' not found/);
+  if (missing) return `missing LaTeX package ${missing[1]}`;
+  const bang = error.split('\n').find((l) => l.startsWith('! '));
+  return (bang ?? error.split('\n')[0] ?? 'LaTeX compile failed').slice(0, 200);
 }
 
 async function renderLibraryResume(deps: LibraryDeps, profile: Profile, spec: ResumeComboSpec): Promise<LibraryRunItem> {
