@@ -340,9 +340,12 @@ export interface ResumeVariantRewrites {
   rationale: string;
 }
 
+export type ResumeKind = 'generated' | 'combo' | 'base' | 'tailored';
+
 export interface ResumeVariant {
   id: string;
-  jobId: string;
+  /** Null for library resumes (combo/base). */
+  jobId: string | null;
   profileVersion: string;
   pluginId: string;
   templateId: string;
@@ -360,7 +363,134 @@ export interface ResumeVariant {
   model: string | null;
   error: string | null;
   fit: ResumeFit | null;
+  kind: ResumeKind;
+  comboKey: string | null;
+  label: string | null;
+  parentVariantId: string | null;
+  retiredAt: string | null;
+  atsScore: AtsScore | null;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 16: ATS score, resume library, selector
+// ---------------------------------------------------------------------------
+
+export const ATS_TYPES = ['greenhouse', 'lever', 'ashby', 'workday', 'smartrecruiters', 'successfactors', 'taleo', 'generic'] as const;
+export type AtsType = (typeof ATS_TYPES)[number];
+
+export interface ParseCheck {
+  id: string;
+  score: number;
+  pass: boolean;
+  detail: string;
+}
+
+export interface AtsScore {
+  score: number;
+  atsType: AtsType;
+  parse: { score: number; checks: ParseCheck[] };
+  keywords: { coverage: number | null; matched: string[]; missing: string[]; hardMissing: string[] };
+  notes: string[];
+}
+
+export interface SelectorCandidate {
+  variantId: string;
+  label: string | null;
+  similarity: number | null;
+  ats: number;
+  score: number;
+  benchmark: number | null;
+}
+
+export interface SelectorDecision {
+  atsType: AtsType;
+  category: string | null;
+  candidates: SelectorCandidate[];
+  comboVariantId: string | null;
+  comboAts: AtsScore | null;
+  tailoredVariantId: string | null;
+  tailoredAts: AtsScore | null;
+  kept: 'tailored' | 'combo' | 'generated';
+  weakFit: boolean;
+  note: string | null;
+}
+
+export interface JobResumeSelection {
+  jobId: string;
+  variantId: string;
+  comboVariantId: string | null;
+  selectorScore: number | null;
+  decision: SelectorDecision;
+  decidedAt: string;
+  chosen: ResumeVariant | null;
+  combo: ResumeVariant | null;
+}
+
+export interface JobResumes {
+  variants: ResumeVariant[];
+  selection: JobResumeSelection | null;
+}
+
+export interface SelectResponse {
+  variant: ResumeVariant;
+  decision: SelectorDecision | null;
+  cached: boolean;
+}
+
+export interface BenchmarkCategory {
+  id: string;
+  label: string;
+  titleKeywords: string[];
+  excludeKeywords: string[];
+}
+
+export interface BenchmarkJob {
+  categoryId: string;
+  jobId: string;
+  pinned: boolean;
+  title: string;
+  companyId: string;
+  closedAt: string | null;
+}
+
+export interface LibraryRunItem {
+  key: string;
+  label: string;
+  kind: 'combo' | 'base';
+  variantId?: string;
+  status: 'created' | 'skipped' | 'failed';
+  resumeStatus?: string;
+  error?: string;
+}
+
+export interface LibraryRun {
+  running: boolean;
+  retire: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  done: number;
+  total: number;
+  items: LibraryRunItem[];
+  retired: number;
+  benchmarks: { resumes: number; jobs: number; scored: number } | null;
+  error: string | null;
+}
+
+export interface BenchmarkCell {
+  score: number;
+  coverage: number | null;
+  hardMissing: string[];
+}
+
+export interface LibraryPage {
+  resumes: ResumeVariant[];
+  categories: BenchmarkCategory[];
+  benchmarkJobs: BenchmarkJob[];
+  /** variantId → categoryId → averages */
+  matrix: Record<string, Record<string, { avg: number; byAts: Record<string, number>; jobs: number }>>;
+  scores: Array<{ variantId: string; jobId: string; scores: Record<string, BenchmarkCell> }>;
+  run: LibraryRun;
 }
 
 // ---------------------------------------------------------------------------

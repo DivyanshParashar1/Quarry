@@ -389,3 +389,26 @@ Dependencies: none added (`@jobforge/plugins` is a workspace package).
 - Dashboard — `overflow` status badge; the variant card shows the fit (`fit 9pt × 0.94 · 2 shortened`).
 - Tests: fake-compiler fit tests on the real resume blocks (typography-only fit, shortening with an invented-number revert, overflow, compile-failure revert), a real `latexmk` test that takes a 2-page document to 1 page (skipped without LaTeX), guardrail tests, skills v2 tests (tech-stack-only `Groq` accepted, invented `Kubernetes` rejected), runner overflow test.
 - Roadmap: the planned "sub-phase 3" LLM bullet rewrites (Phase 5.5 deferred list) are dropped; length-only shortening above replaces them.
+
+## [Phase 16] — ATS score checker + resume library and selector
+
+Design revised with the user before implementation (recorded in `PLAN-phases-15-23.md` §16): resumes are generated up front as project combos; per-job tailoring is only the Technical Skills rewrite.
+
+- `packages/core/src/ats-score/` (deterministic, no LLM):
+  - `extractPdfText` — pdf-parse (moved here from the server) with a position-aware page renderer: items on one line separated by a gap get a space (the default renderer glued `\hfill`'d dates to titles), and words hyphenated across a line break are re-joined.
+  - Parse checks: extractable text, encoding (control chars / U+FFFD / ligature codepoints / `(cid:N)`), run-together words, standard section headers, contact (email + phone), parseable date ranges, reading order, column run-ins.
+  - JD keywords: tech lexicon (~140 terms with aliases; ambiguous ones like Go/C/R/Express matched strictly) ∪ the user's stack + skill facts, tiered hard / normal / soft by JD section and inline "required" / "a plus", plus TF-IDF phrases over a sample of the job corpus. Weighted coverage, missing keywords, missing hard requirements.
+  - Per-ATS profiles (greenhouse, lever, ashby, workday, smartrecruiters, successfactors, taleo, generic): keyword-search ATSs weight coverage; parse-and-fill ATSs weight sections, dates and columns. `scoreResume` / `scoreAllAts`.
+  - Fixtures: real pdflatex PDFs — clean (CM Type 1) and broken ligatures (T1 bitmap fonts).
+- Resume library (`packages/core/src/resume-library.ts`):
+  - `generateLibrary` renders every subset of exactly `resumes.projectsPerResume` (3) projects plus `profile/resume/base/*.yaml` (ships `default.yaml` = all blocks). Combos get their skills tailored to their own projects (one LLM call each); base resumes keep the original skills; all go through the Phase 15 fit loop. Existing ones are skipped; `retire` = scrap & regenerate, retiring the old set only once something new rendered (rows and PDFs kept).
+  - Benchmarks: categories (default SWE intern, AI/ML engineer; editable), 5 JDs each auto-picked from open jobs by title keywords + match score (pinned JDs are never replaced); every library resume × JD scored under every ATS profile.
+  - `selectResumeForJob`: earlier decision → resume already made for the job from the current profile → else score every non-retired library resume against the real JD (`0.4·similarity` rescaled 0.5→0 / 0.9→100 `+ 0.6·ATS` for the job's ATS; benchmark averages break near-ties), then rewrite only the chosen combo's skills for the job and keep it when its ATS score is ≥ the combo's. `selector.threshold` (75) only flags a weak fit. Empty library → Phase 15 per-job generation. `force` re-picks and reruns the skills rewrite.
+- Tailor plugin: `listCombos`, `renderFixed` (SDK `TailorPlugin` gains both as optional methods); the skills rewrite can target a job or "no job" (the combo's projects).
+- DB migration `0014`: `resume_variants` gains `kind` (generated|combo|base|tailored), `combo_key`, `label`, `parent_variant_id`, `retired_at`, `ats_score`, `resume_text`, `embedding`; `job_id` is nullable. New `job_resume`, `resume_benchmark_categories`, `resume_benchmark_jobs`, `resume_benchmark_scores`. `latestRenderedResumeForJob` resolves through `job_resume`, so apply and outreach attachments use the selector's choice.
+- Sequencer and autopilot use the selector instead of `runTailor`.
+- Server: `routes-library.ts` — `POST /api/jobs/:id/tailor {force}`, `GET /api/jobs/:id/resume-variants` (+ decision), `/api/resumes/library` (+ `/run`, `/generate {retire}` as a background run that benchmarks when done), categories, pinned JDs, auto-pick, re-scoring.
+- CLI: `jf tailor <jobId> [--force]`, `jf resumes generate [--retire] | list [--all] | bench [--pick]`.
+- Dashboard: new **Resumes** tab (library with per-category benchmark averages, per-ATS breakdown per JD, Generate missing / Re-run benchmarks / Scrap & regenerate, benchmark categories and JDs with search-to-pin); the job page shows the selector decision, ATS score card (missing hard requirements, keyword hits/misses, parse checks), library ranking, and Pick resume / Generate new.
+- Config: `resumes.{projectsPerResume, selector, benchmarks}` (documented in `config.example.yaml`). Tailor deps carry a lazy local embedder (model loads on first use).
+- Dependencies: `pdf-parse` moved from `apps/server` to `packages/core` (noted in the plan). No new packages.

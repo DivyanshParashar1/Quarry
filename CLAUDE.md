@@ -47,6 +47,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `pnpm --filter @jobforge/llm smoke -- --provider claude-code|openrouter` — real-provider smoke test (costs money; manual only)
 - Outreach: `pnpm jf gmail auth`, `jf contacts add|enrich`, `jf outreach draft`, `jf review list|approve`, `jf outreach send [--live]`, `jf outreach track` — see `docs/outreach.md`
 - Referrals: `jf referrals fanout|show|approve <jobId>`, `jf linkedin login|status|resume|employees` (Phase 8)
+- Resumes (Phase 16): `jf resumes generate [--retire] | list | bench [--pick]`, `jf tailor <jobId> [--force]` (selector: best library combo + skills-only rewrite); dashboard Resumes tab
 - Discovery: `jf discover_ats <domain|name> [--save] | --missing`, `jf discover_companies --list yc|gcc-journal|…` (Phase 6)
 - MCP: `.mcp.json` registers `apps/mcp` (needs `pnpm server` running). Never allowlist the `approve` tool.
 - DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)

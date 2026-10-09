@@ -3,11 +3,20 @@ import { ExternalLink, FileText, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { getJson, send, type ResumeVariant } from '@/lib/api';
+import { AtsScoreCard } from '@/components/AtsScoreCard';
+import {
+  getJson,
+  send,
+  type JobResumes,
+  type JobResumeSelection,
+  type ResumeVariant,
+  type SelectorDecision,
+  type SelectResponse,
+} from '@/lib/api';
 import { relativeDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-const STATUS_STYLE: Record<ResumeVariant['status'], string> = {
+export const STATUS_STYLE: Record<ResumeVariant['status'], string> = {
   rendered: 'bg-good text-black',
   validation_failed: 'bg-weak text-black',
   render_failed: 'bg-ok text-black',
@@ -24,10 +33,10 @@ export function ResumePanel({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['resume-variants', jobId],
-    queryFn: () => getJson<{ variants: ResumeVariant[] }>(`/api/jobs/${jobId}/resume-variants`),
+    queryFn: () => getJson<JobResumes>(`/api/jobs/${jobId}/resume-variants`),
   });
-  const tailor = useMutation({
-    mutationFn: () => send<ResumeVariant>(`/api/jobs/${jobId}/tailor`, 'POST'),
+  const select = useMutation({
+    mutationFn: (force: boolean) => send<SelectResponse>(`/api/jobs/${jobId}/tailor`, 'POST', { force }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['resume-variants', jobId] });
       void qc.invalidateQueries({ queryKey: ['job-outreach', jobId] });
@@ -35,40 +44,55 @@ export function ResumePanel({ jobId }: { jobId: string }) {
   });
 
   const variants = q.data?.variants ?? [];
-  const latest = variants[0];
+  const selection = q.data?.selection ?? null;
+  const chosen = selection?.chosen ?? null;
+  const others = variants.filter((v) => v.id !== chosen?.id);
 
   return (
     <Card className="p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Tailored resume</h3>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => tailor.mutate()}
-          disabled={tailor.isPending}
-        >
-          <RefreshCw className={cn('h-3.5 w-3.5', tailor.isPending && 'animate-spin')} />
-          {variants.length ? 'Retailor' : 'Tailor for this job'}
-        </Button>
+        <h3 className="text-sm font-semibold">Resume for this job</h3>
+        <div className="flex gap-2">
+          {!selection && (
+            <Button size="sm" variant="outline" onClick={() => select.mutate(false)} disabled={select.isPending}>
+              <RefreshCw className={cn('h-3.5 w-3.5', select.isPending && 'animate-spin')} />
+              Pick resume
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => select.mutate(true)}
+            disabled={select.isPending}
+            title="Re-pick the best library resume and rewrite its Technical Skills for this job"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', select.isPending && 'animate-spin')} />
+            Generate new
+          </Button>
+        </div>
       </div>
-      {tailor.isPending && <p className="text-sm text-muted-foreground">Assembling blocks and compiling with latexmk…</p>}
-      {tailor.error && <p className="text-sm text-red-600">{(tailor.error as Error).message}</p>}
-      {!latest && !tailor.isPending && (
+      {select.isPending && (
+        <p className="text-sm text-muted-foreground">Scoring the library against this JD, rewriting the skills and compiling…</p>
+      )}
+      {select.error && <p className="text-sm text-red-600">{(select.error as Error).message}</p>}
+      {!selection && !variants.length && !select.isPending && (
         <p className="text-sm text-muted-foreground">
-          No tailored resume yet. The tailor picks which blocks from profile/resume/ to include and renders a one-page PDF; any bullet rewrites are checked against the original.
+          No resume picked yet. The selector scores every library resume (Resumes tab) against this JD, picks the best,
+          then rewrites only its Technical Skills for the job — kept if the ATS score doesn't drop.
         </p>
       )}
-      {latest && <VariantCard variant={latest} />}
-      {variants.length > 1 && (
+      {selection && <SelectionSummary selection={selection} />}
+      {chosen ? <VariantCard variant={chosen} /> : !selection && variants[0] && <VariantCard variant={variants[0]} />}
+      {(selection ? others : variants.slice(1)).length > 0 && (
         <details className="mt-2">
           <summary className="cursor-pointer text-xs text-muted-foreground">
-            {variants.length - 1} older variant(s)
+            {(selection ? others : variants.slice(1)).length} other version(s) for this job
           </summary>
           <ul className="mt-2 flex flex-col gap-2">
-            {variants.slice(1).map((v) => (
+            {(selection ? others : variants.slice(1)).map((v) => (
               <li key={v.id} className="text-xs text-muted-foreground">
-                <Badge className={STATUS_STYLE[v.status]}>{v.status.replace('_', ' ')}</Badge>{' '}
-                {relativeDate(v.createdAt)}
+                <Badge className={STATUS_STYLE[v.status]}>{v.status.replace('_', ' ')}</Badge> {v.kind}
+                {v.atsScore && ` · ATS ${v.atsScore.score}`} · {relativeDate(v.createdAt)}
                 {v.pdfPath && (
                   <>
                     {' · '}
@@ -86,8 +110,60 @@ export function ResumePanel({ jobId }: { jobId: string }) {
   );
 }
 
+const KEPT_LABEL: Record<SelectorDecision['kept'], string> = {
+  tailored: 'library combo + skills tailored to this job',
+  combo: 'library combo as-is',
+  generated: 'generated for this job',
+};
+
+function SelectionSummary({ selection }: { selection: JobResumeSelection }) {
+  const d = selection.decision;
+  const keptAts = d.kept === 'combo' ? d.comboAts : (d.tailoredAts ?? d.comboAts);
+  return (
+    <div className="mb-3 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-medium">{selection.combo?.label ?? selection.chosen?.label ?? 'Resume'}</span>
+        <span className="text-muted-foreground">· {KEPT_LABEL[d.kept]}</span>
+        {selection.selectorScore !== null && <Badge variant="outline">selector {selection.selectorScore}</Badge>}
+        {d.weakFit && <Badge className="bg-weak text-black">weak fit</Badge>}
+        {d.category && <Badge variant="outline">{d.category}</Badge>}
+        <span className="text-muted-foreground">· {relativeDate(selection.decidedAt)}</span>
+      </div>
+      {d.note && <p className="text-xs text-muted-foreground">{d.note}</p>}
+      {keptAts && <AtsScoreCard ats={keptAts} title={`ATS score (${d.atsType})`} compareTo={d.kept === 'tailored' ? d.comboAts : null} />}
+      {d.candidates.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-xs text-muted-foreground">Library ranking ({d.candidates.length})</summary>
+          <table className="mt-1 w-full text-xs">
+            <thead className="text-muted-foreground">
+              <tr>
+                <th className="text-left font-normal">Resume</th>
+                <th className="text-right font-normal">Score</th>
+                <th className="text-right font-normal">ATS</th>
+                <th className="text-right font-normal">Similarity</th>
+                <th className="text-right font-normal">Benchmark</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.candidates.map((c) => (
+                <tr key={c.variantId} className={c.variantId === d.comboVariantId ? 'font-medium' : 'text-muted-foreground'}>
+                  <td>{c.variantId === d.comboVariantId ? '★ ' : ''}{c.label ?? c.variantId.slice(0, 8)}</td>
+                  <td className="text-right">{c.score}</td>
+                  <td className="text-right">{c.ats}</td>
+                  <td className="text-right">{c.similarity ?? '–'}</td>
+                  <td className="text-right">{c.benchmark ?? '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
+    </div>
+  );
+}
+
 /** Only shown when the fit loop changed something. */
-function fitLabel(f: NonNullable<ResumeVariant['fit']>): string {
+export function fitLabel(f: NonNullable<ResumeVariant['fit']>): string {
   const parts: string[] = [];
   if (f.fontPt !== 10 || f.linespread !== 1) parts.push(`fit ${f.fontPt}pt × ${f.linespread}`);
   if (f.shortenedBullets.length) parts.push(`${f.shortenedBullets.length} shortened`);

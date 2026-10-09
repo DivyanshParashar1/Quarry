@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { loadAppConfig, parseAppConfig } from './app-config.js';
+import { DEFAULT_BENCHMARK_CATEGORIES, loadAppConfig, parseAppConfig } from './app-config.js';
 
 describe('config.yaml', () => {
   it('defaults when the file is missing', () => {
@@ -46,6 +46,11 @@ describe('config.yaml', () => {
         profilesPerCompany: 15,
       },
       discovery: { minConfidence: 0.5, lists: {}, alertThreshold: 40, recheckDays: 30, nightly: false },
+      resumes: {
+        projectsPerResume: 3,
+        selector: { similarityWeight: 0.4, similarityLow: 0.5, similarityHigh: 0.9, threshold: 75, tieMargin: 1 },
+        benchmarks: { perCategory: 5, categories: DEFAULT_BENCHMARK_CATEGORIES },
+      },
       plugins: {},
     });
   });
