@@ -508,7 +508,8 @@ export const appState = pgTable('app_state', {
 // Phase 4: tailored resumes
 // ---------------------------------------------------------------------------
 
-export const resumeStatusEnum = pgEnum('resume_status', ['rendered', 'validation_failed', 'render_failed']);
+/** `overflow` (Phase 15): compiled but still > 1 page after every fit step; kept, never auto-used. */
+export const resumeStatusEnum = pgEnum('resume_status', ['rendered', 'validation_failed', 'render_failed', 'overflow']);
 
 /**
  * A grounded resume variant for one job. Bullets cite the profile fact ids they
@@ -543,6 +544,8 @@ export const resumeVariants = pgTable(
     error: text('error'),
     /** Self-reported LLM confidence 0..1 (penalised by the validator); the autopilot gates on this. */
     confidence: real('confidence'),
+    /** Phase 15 one-page fit: { fontPt, linespread, shortenedBullets[], rounds, compiles, pages }. */
+    fit: jsonb('fit'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

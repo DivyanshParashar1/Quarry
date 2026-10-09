@@ -21,6 +21,8 @@ export interface NewResumeVariant {
   model: string | null;
   error: string | null;
   confidence: number | null;
+  /** Phase 15 fit-loop result; null when the compile failed. */
+  fit?: unknown;
 }
 
 export async function insertResumeVariant(db: DB, v: NewResumeVariant): Promise<ResumeVariantRow> {

@@ -21,3 +21,11 @@ plugins:
     batchSize: 12         # jobs per LLM call
     descriptionChars: 3000
     experienceSlackYears: 2
+  tailor-resume-latex:
+    fit:                  # one-page fit loop (Phase 15); these are the defaults
+      minFontPt: 9        # whole document steps 10pt -> 9.5 -> 9
+      fontStepPt: 0.5
+      minLinespread: 0.94 # then \linespread 1.0 -> 0.97 -> 0.94
+      linespreadStep: 0.03
+      maxShortenRounds: 2 # then the LLM shortens the longest bullets (guardrailed)
+      shortenBullets: 4   # bullets per round

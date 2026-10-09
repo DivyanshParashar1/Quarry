@@ -15,6 +15,7 @@ import {
 import {
   getResumeVariant,
   latestRenderedResumeForJob,
+  listReviewItems,
   listResumeVariantsForJob,
   recordPosting,
   upsertCompany,
@@ -151,5 +152,22 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
     expect(r.variant.error).toMatch(/latexmk/);
     const list = await listResumeVariantsForJob(t.db, jobId);
     expect(list.length).toBeGreaterThan(1);
+  });
+
+  it('keeps an overflowing variant out of use and raises an attention item', async () => {
+    const before = await latestRenderedResumeForJob(t.db, jobId);
+    const fit = { fontPt: 9, linespread: 0.94, shortenedBullets: ['exp.screenify.b1'], rounds: 2, compiles: 7, pages: 2 };
+    const overflowRegistry = new PluginRegistry();
+    overflowRegistry.register(stubTailorPlugin({ ...RESULT, pages: 2, status: 'overflow', error: 'resume is 2 pages after every fit step', fit }));
+    const r = await runTailor({ ...deps, registry: overflowRegistry }, { jobId });
+    expect(r.variant.status).toBe('overflow');
+    expect(r.variant.pdfPath).toBeTruthy();
+    expect(r.variant.fit).toEqual(fit);
+    // Still the earlier rendered variant.
+    expect((await latestRenderedResumeForJob(t.db, jobId))?.id).toBe(before?.id);
+
+    const items = (await listReviewItems(t.db, { kind: ['attention'] })).filter((i) => i.jobId === jobId);
+    expect(items).toHaveLength(1);
+    expect(items[0]!.draft).toMatchObject({ reason: 'resume_overflow', variantId: r.variant.id, pages: 2 });
   });
 });

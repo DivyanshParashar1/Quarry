@@ -11,6 +11,7 @@ const STATUS_STYLE: Record<ResumeVariant['status'], string> = {
   rendered: 'bg-good text-black',
   validation_failed: 'bg-weak text-black',
   render_failed: 'bg-ok text-black',
+  overflow: 'bg-weak text-black',
 };
 
 const ISSUE_STYLE = {
@@ -85,6 +86,14 @@ export function ResumePanel({ jobId }: { jobId: string }) {
   );
 }
 
+/** Only shown when the fit loop changed something. */
+function fitLabel(f: NonNullable<ResumeVariant['fit']>): string {
+  const parts: string[] = [];
+  if (f.fontPt !== 10 || f.linespread !== 1) parts.push(`fit ${f.fontPt}pt × ${f.linespread}`);
+  if (f.shortenedBullets.length) parts.push(`${f.shortenedBullets.length} shortened`);
+  return parts.length ? ` · ${parts.join(' · ')}` : '';
+}
+
 function VariantCard({ variant: v }: { variant: ResumeVariant }) {
   const blocks = v.bullets.selectedBlockIds ?? [];
   const rewrites = v.header.rewrites ?? [];
@@ -101,6 +110,7 @@ function VariantCard({ variant: v }: { variant: ResumeVariant }) {
           {reverted > 0 && ` · ${reverted} reverted`}
           {warnings > 0 && ` · ${warnings} warning${warnings === 1 ? '' : 's'}`}
           {v.bullets.pages != null && ` · ${v.bullets.pages}pp`}
+          {v.fit && fitLabel(v.fit)}
         </span>
         {v.provider && (
           <span className="text-muted-foreground">

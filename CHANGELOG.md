@@ -376,3 +376,16 @@ The other Phase 14 items (plugin process isolation, funnel analytics, daily dige
 - **Misc**: `.gitignore` restored for `my_resume.tex`; `--allowedTools` is passed as one comma-joined value; `docker-compose.yml` pins `max_connections=100` (initdb had chosen 20, which the parallel DB tests exhaust).
 
 Dependencies: none added (`@jobforge/plugins` is a workspace package).
+
+## [Phase 15] — Resume engine: one-page fit + skills rewrite v2
+
+- `plugins/tailor-resume-latex/src/fit.ts` — deterministic one-page fit loop after assembly: compile; while over one page, rescale every LaTeX size command for the whole document (10pt → 9.5 → 9pt, floor `fit.minFontPt`), then `\linespread` (1.0 → 0.97 → 0.94, floor `fit.minLinespread`), then LLM bullet shortening; still over → `overflow`. Typography goes into a `%%FIT%%` slot if the preamble has one, else just before `\begin{document}`; `preamble.tex` is never edited. `fix-cm` is loaded when the font is scaled so `\Huge`/`\LARGE` scale exactly.
+- `plugins/tailor-resume-latex/src/shorten.ts` — length-only shortening of the `fit.shortenBullets` (4) longest bullets, up to `fit.maxShortenRounds` (2) rounds. Guardrail (`validateShortening`, `RewriteValidation` shape) reverts any rewrite that adds a number, a proper noun / tech term, or a LaTeX command, isn't shorter, is empty, or has unbalanced braces/`$` or an unescaped `%`. A round whose `.tex` fails to compile is reverted as a whole.
+- `skills.ts` v2 — the prompt gets the JD + the full assembled resume; allowed items = the skills fragment's items ∪ the selected blocks' tech-stack items (`tech_stack_line`, else `\emph{...}`). Anything else is still rejected.
+- Plugin config `fit: { enabled, minFontPt, fontStepPt, minLinespread, linespreadStep, maxShortenRounds, shortenBullets }` (documented in `config.example.yaml`).
+- `packages/plugin-sdk` — `TailorStatus` gains `overflow`; `TailoredResume.fit` (`FitInfo`: fontPt, linespread, shortenedBullets, rounds, compiles, pages).
+- `packages/db` — migration `0013`: `resume_status` enum gains `overflow`; `resume_variants.fit jsonb`.
+- `packages/core` — the tailor runner stores `fit`, records `overflow` variants (PDF kept) and raises an `attention` review item; autopilot skips them (`tailor_overflow`); the sequencer already only uses `rendered` variants.
+- Dashboard — `overflow` status badge; the variant card shows the fit (`fit 9pt × 0.94 · 2 shortened`).
+- Tests: fake-compiler fit tests on the real resume blocks (typography-only fit, shortening with an invented-number revert, overflow, compile-failure revert), a real `latexmk` test that takes a 2-page document to 1 page (skipped without LaTeX), guardrail tests, skills v2 tests (tech-stack-only `Groq` accepted, invented `Kubernetes` rejected), runner overflow test.
+- Roadmap: the planned "sub-phase 3" LLM bullet rewrites (Phase 5.5 deferred list) are dropped; length-only shortening above replaces them.

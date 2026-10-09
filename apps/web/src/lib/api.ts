@@ -294,7 +294,17 @@ export interface ResumeData {
   preamble: string;
 }
 
-export type ResumeStatus = 'rendered' | 'validation_failed' | 'render_failed';
+export type ResumeStatus = 'rendered' | 'validation_failed' | 'render_failed' | 'overflow';
+
+/** Phase 15 one-page fit result. */
+export interface ResumeFit {
+  fontPt: number;
+  linespread: number;
+  shortenedBullets: string[];
+  rounds: number;
+  compiles: number;
+  pages: number;
+}
 
 export interface GuardrailIssue {
   kind: 'invented_number' | 'invented_term' | 'too_long' | 'empty' | 'unknown_bullet_id' | 'unknown_block_id';
@@ -349,6 +359,7 @@ export interface ResumeVariant {
   provider: string | null;
   model: string | null;
   error: string | null;
+  fit: ResumeFit | null;
   createdAt: string;
 }
 

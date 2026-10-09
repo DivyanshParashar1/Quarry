@@ -45,6 +45,7 @@ export type AutopilotReason =
   | 'tailor_confidence'
   | 'tailor_validation'
   | 'tailor_render_failed'
+  | 'tailor_overflow'
   | 'draft_confidence'
   | 'auto_approve_cap'
   | 'company_cap'
@@ -163,6 +164,10 @@ export async function runAutopilot(deps: AutopilotRunDeps, opts: { limit?: numbe
     }
     if (variant.status === 'render_failed') {
       decisions.push({ ...base, stage: 'tailor', reason: 'tailor_render_failed', note: variant.error ?? 'LaTeX render failed' });
+      continue;
+    }
+    if (variant.status === 'overflow') {
+      decisions.push({ ...base, stage: 'tailor', reason: 'tailor_overflow', note: variant.error ?? 'resume is over one page' });
       continue;
     }
     if ((variant.confidence ?? 0) < policy.confidenceFloor.tailor) {

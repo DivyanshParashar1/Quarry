@@ -7,6 +7,7 @@ import type { Logger } from '@jobforge/shared';
 import type { Job, RewriteValidation, TailorSelection, TailoredResume } from '@jobforge/plugin-sdk';
 import {
   appendEvent,
+  createReviewItem,
   finishPluginRun,
   getActiveProfile,
   getJobDetail,
@@ -104,7 +105,7 @@ export async function runTailor(
       pdfBytes = raw.pdf.byteLength;
     }
 
-    const dbStatus = raw.status === 'rendered' ? 'rendered' : 'render_failed';
+    const dbStatus = raw.status === 'rendered' || raw.status === 'overflow' ? raw.status : 'render_failed';
 
     const variant = await insertResumeVariant(deps.db, {
       jobId: job.id,
@@ -132,7 +133,29 @@ export async function runTailor(
       model: raw.model,
       error: raw.error,
       confidence: raw.confidence,
+      fit: raw.fit ?? null,
     });
+
+    if (dbStatus === 'overflow') {
+      // Kept for the dashboard, but autopilot/sequencer only use 'rendered' variants.
+      await createReviewItem(deps.db, {
+        kind: 'attention',
+        pluginId,
+        jobId: job.id,
+        contactId: null,
+        companyId: detail.company.id,
+        draft: {
+          title: `Resume for ${job.company} — ${job.title} is ${raw.pages} pages`,
+          message:
+            'Still over one page after the smallest font, tightest line spacing and bullet shortening. ' +
+            'Trim the block selection or shorten bullets in profile/resume/, then re-tailor. Approve to dismiss.',
+          reason: 'resume_overflow',
+          variantId: variant.id,
+          pages: raw.pages,
+          fit: raw.fit ?? null,
+        },
+      });
+    }
 
     await finishPluginRun(deps.db, runId, {
       status: 'succeeded',
@@ -144,6 +167,7 @@ export async function runTailor(
         pages: raw.pages,
         confidence: raw.confidence,
         rewrites: raw.selection.bullet_rewrites.length,
+        fit: raw.fit ?? null,
       },
     });
     await appendEvent(deps.db, {
@@ -156,6 +180,7 @@ export async function runTailor(
         blocks: raw.selection.included_block_ids.length,
         rewrites: raw.selection.bullet_rewrites.length,
         confidence: raw.confidence,
+        fit: raw.fit ?? null,
       },
     });
 
