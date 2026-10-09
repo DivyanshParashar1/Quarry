@@ -363,3 +363,16 @@ Known gaps: "10–30 new companies/week, each with a working source" needs the l
 - `packages/core/sequencer.ts` — when at least that many review items are pending, the tick still expires, syncs, advances and queues applications for jobs already in flight, but admits no new jobs and fans out no new asks. The summary / `autopilot.sequence` event carry `paused: "review_queue_full (N pending ≥ max)"`; the Applications page shows it after "Run sequencer now".
 
 The other Phase 14 items (plugin process isolation, funnel analytics, daily digest email) are not started.
+
+## [Fixes after Phases 6–14] — issues from the agent log, verified against live sites
+
+- **Shared plugin list**: `@jobforge/plugins` (`createRegistry`) replaces the two copies in the CLI and server (the server's lacked `matcher-default`); a test fails if a `plugins/*` package isn't registered.
+- **Contacts**: identity is the LinkedIn profile when there is one, the name otherwise (migration `0011`: partial unique indexes, stored profile URLs normalised). Two same-name people are two contacts; a bare name matching several profiles is refused (CLI error, HTTP 409). The LinkedIn tracker no longer guesses between same-name contacts.
+- **Bounces**: a bounced pattern-guessed address moves to the next ranked candidate; known addresses and exhausted candidates still mark the contact bounced. `contacts.bounced_emails` (migration `0012`) stops re-enrichment from re-picking a bounced address. A bounced ask doesn't count toward the cooldown or the job's referral cap, so the fan-out can re-ask at the new address.
+- **Bug**: `contactsAskedSince` had an unparenthesised `or` in raw SQL that escaped the other filters.
+- **source-workday**: stub list entries (`bulletFields` only) are skipped instead of failing the board; a 422 says the tenant/site may have moved. Fixtures recorded from State Street and Abbott.
+- **Seeds**: all 52 Workday/SmartRecruiters boards checked live. Walmart (`wd504`), Lilly (`wd115`) and Expedia (`wd108`) moved data centre; Qualcomm and Dell left Workday (domain only now); Franklin Templeton and Visa are correct but returned 0 postings. 50/52 return postings.
+- **Apply forms**: the Greenhouse, Lever and Ashby question parsers were run against live public forms (Stripe, Spotify, Linear) and read every question correctly (no submission made).
+- **Misc**: `.gitignore` restored for `my_resume.tex`; `--allowedTools` is passed as one comma-joined value; `docker-compose.yml` pins `max_connections=100` (initdb had chosen 20, which the parallel DB tests exhaust).
+
+Dependencies: none added (`@jobforge/plugins` is a workspace package).
