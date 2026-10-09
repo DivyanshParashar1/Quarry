@@ -15,6 +15,61 @@ const routeSchema = z
   .strict();
 export type LLMRouteOverride = z.infer<typeof routeSchema>;
 
+export const benchmarkCategorySchema = z
+  .object({
+    id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+    label: z.string().min(1),
+    titleKeywords: z.array(z.string().min(1)).min(1),
+    excludeKeywords: z.array(z.string().min(1)).default([]),
+  })
+  .strict();
+export type BenchmarkCategoryConfig = z.infer<typeof benchmarkCategorySchema>;
+
+export const DEFAULT_BENCHMARK_CATEGORIES: BenchmarkCategoryConfig[] = [
+  {
+    id: 'swe-intern',
+    label: 'SWE intern',
+    titleKeywords: ['software engineer intern', 'software engineering intern', 'software developer intern', 'swe intern', 'sde intern', 'backend intern', 'full stack intern', 'full-stack intern'],
+    excludeKeywords: ['senior', 'staff', 'principal', 'manager'],
+  },
+  {
+    id: 'ai-engineer',
+    label: 'AI/ML engineer',
+    titleKeywords: ['ai engineer', 'ml engineer', 'machine learning engineer', 'llm engineer', 'applied ai', 'genai', 'generative ai', 'ai/ml'],
+    excludeKeywords: ['senior', 'staff', 'principal', 'manager', 'director'],
+  },
+];
+
+export const resumesConfigSchema = z
+  .object({
+    /** Projects in every library combo (every subset of exactly this many). */
+    projectsPerResume: z.number().int().min(1).max(10).default(3),
+    selector: z
+      .object({
+        /** Combined score = similarity·w + ats·(1−w); similarity rescaled to 0–100. */
+        similarityWeight: z.number().min(0).max(1).default(0.4),
+        /** Cosine at/below `low` → 0, at/above `high` → 100. */
+        similarityLow: z.number().min(-1).max(1).default(0.5),
+        similarityHigh: z.number().min(-1).max(1).default(0.9),
+        /** Below this, the decision is flagged as a weak fit (nothing is blocked). */
+        threshold: z.number().min(0).max(100).default(75),
+        /** Scores within this many points count as a tie; benchmark averages break it. */
+        tieMargin: z.number().min(0).max(20).default(1),
+      })
+      .strict()
+      .default({}),
+    benchmarks: z
+      .object({
+        perCategory: z.number().int().min(1).max(20).default(5),
+        /** Seeded into the DB once; edit them on the Resumes page afterwards. */
+        categories: z.array(benchmarkCategorySchema).default(DEFAULT_BENCHMARK_CATEGORIES),
+      })
+      .strict()
+      .default({}),
+  })
+  .strict();
+export type ResumesConfig = z.infer<typeof resumesConfigSchema>;
+
 export const appConfigSchema = z
   .object({
     llm: z
@@ -200,6 +255,8 @@ export const appConfigSchema = z
       })
       .strict()
       .default({}),
+    /** Phase 16: resume library (combos up front), per-job selector, benchmarks. */
+    resumes: resumesConfigSchema.default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })

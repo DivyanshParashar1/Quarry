@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Job } from './types.js';
 
 // Block-based tailoring (CLAUDE.md pivot):
 //   - The profile exposes a library of LaTeX fragments ("blocks") under
@@ -155,4 +156,27 @@ export interface TailoredResume {
   model: string;
   /** Present when the fit loop ran (i.e. the first compile succeeded). */
   fit?: FitInfo | null;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 16: resume library (combos generated up front)
+// ---------------------------------------------------------------------------
+
+/** One library resume to render: a project combination, or a base resume file. */
+export interface ResumeComboSpec {
+  /** Sorted block ids joined with '+'; stable across runs. */
+  key: string;
+  label: string;
+  kind: 'combo' | 'base';
+  includedBlockIds: string[];
+  /** combo → skills tailored to its projects; base → original skills. */
+  skills: 'projects' | 'none';
+}
+
+/** What the Technical Skills section is tailored to in a fixed render. */
+export type SkillsTarget = { mode: 'none' } | { mode: 'projects' } | { mode: 'job'; job: Job };
+
+export interface FixedRenderRequest {
+  includedBlockIds: string[];
+  skills: SkillsTarget;
 }

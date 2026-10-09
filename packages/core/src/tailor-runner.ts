@@ -14,6 +14,7 @@ import {
   insertResumeVariant,
   startPluginRun,
   type DB,
+  type NewResumeVariant,
   type ResumeVariantRow,
 } from '@jobforge/db';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
@@ -67,20 +68,7 @@ export async function runTailor(
   if (!profile) throw new NoTailorProfileError();
   const detail = await getJobDetail(deps.db, opts.jobId, profile.version);
   if (!detail) throw new NoTailorJobError(opts.jobId);
-  const job: Job = {
-    id: detail.id,
-    companyId: detail.company.id,
-    company: detail.company.name,
-    title: detail.title,
-    normalizedTitle: detail.title,
-    locations: detail.locations,
-    remotePolicy: detail.remotePolicy as Job['remotePolicy'],
-    seniority: detail.seniority,
-    descriptionMd: detail.descriptionMd,
-    applyUrl: detail.applyUrl,
-    postedAt: detail.postedAt,
-    embedding: null,
-  };
+  const job = jobFromDetail(detail);
 
   const log = deps.log.child({ plugin: pluginId, jobId: job.id });
   const signal = AbortSignal.timeout(deps.timeoutMs ?? 5 * 60_000);
@@ -91,50 +79,13 @@ export async function runTailor(
   try {
     const raw = (await loaded.plugin.tailor(ctx, job, profile)) as TailoredResume;
 
-    const dirName = `${job.id}-${Date.now()}`;
-    const outDir = join(resumeDir, dirName);
-    await mkdir(outDir, { recursive: true });
-    const texPath = join(outDir, 'resume.tex');
-    await writeFile(texPath, raw.tex, 'utf8');
-
-    let pdfPath: string | null = null;
-    let pdfBytes: number | null = null;
-    if (raw.pdf) {
-      pdfPath = join(outDir, 'resume.pdf');
-      await writeFile(pdfPath, raw.pdf);
-      pdfBytes = raw.pdf.byteLength;
-    }
-
-    const dbStatus = raw.status === 'rendered' || raw.status === 'overflow' ? raw.status : 'render_failed';
-
-    const variant = await insertResumeVariant(deps.db, {
+    const variant = await persistRendered({ ...deps, resumeDir }, raw, {
       jobId: job.id,
       profileVersion: profile.version,
       pluginId,
-      templateId: 'jakes-resume',
-      // Legacy columns — kept until the Phase 2 migration retires them.
-      factIds: [],
-      bullets: {
-        selectedBlockIds: raw.selection.included_block_ids,
-        texPath,
-        pages: raw.pages,
-      },
-      header: {
-        rewrites: raw.selection.bullet_rewrites,
-        techStackRewrites: raw.selection.tech_stack_rewrites,
-        skillsReorder: raw.selection.skills_reorder,
-        rationale: raw.selection.rationale,
-      },
-      validationReport: raw.report,
-      status: dbStatus,
-      pdfPath,
-      pdfBytes,
-      provider: raw.provider,
-      model: raw.model,
-      error: raw.error,
-      confidence: raw.confidence,
-      fit: raw.fit ?? null,
+      dirName: `${job.id}-${Date.now()}`,
     });
+    const dbStatus = variant.status;
 
     if (dbStatus === 'overflow') {
       // Kept for the dashboard, but autopilot/sequencer only use 'rendered' variants.
@@ -200,7 +151,90 @@ export async function runTailor(
   }
 }
 
-function defaultResumeDir(): string {
+export function jobFromDetail(detail: NonNullable<Awaited<ReturnType<typeof getJobDetail>>>): Job {
+  return {
+    id: detail.id,
+    companyId: detail.company.id,
+    company: detail.company.name,
+    title: detail.title,
+    normalizedTitle: detail.title,
+    locations: detail.locations,
+    remotePolicy: detail.remotePolicy as Job['remotePolicy'],
+    seniority: detail.seniority,
+    descriptionMd: detail.descriptionMd,
+    applyUrl: detail.applyUrl,
+    postedAt: detail.postedAt,
+    embedding: null,
+  };
+}
+
+export interface PersistMeta {
+  jobId: string | null;
+  profileVersion: string;
+  pluginId: string;
+  /** Folder under resumeDir for resume.tex / resume.pdf. */
+  dirName: string;
+  kind?: NewResumeVariant['kind'];
+  comboKey?: string | null;
+  label?: string | null;
+  parentVariantId?: string | null;
+}
+
+/** Write a plugin's .tex/.pdf under resumeDir and insert the resume_variants row. */
+export async function persistRendered(
+  deps: { db: DB; resumeDir?: string },
+  raw: TailoredResume,
+  meta: PersistMeta,
+): Promise<ResumeVariantRow> {
+  const outDir = join(deps.resumeDir ?? defaultResumeDir(), meta.dirName);
+  await mkdir(outDir, { recursive: true });
+  const texPath = join(outDir, 'resume.tex');
+  await writeFile(texPath, raw.tex, 'utf8');
+
+  let pdfPath: string | null = null;
+  let pdfBytes: number | null = null;
+  if (raw.pdf) {
+    pdfPath = join(outDir, 'resume.pdf');
+    await writeFile(pdfPath, raw.pdf);
+    pdfBytes = raw.pdf.byteLength;
+  }
+
+  const status = raw.status === 'rendered' || raw.status === 'overflow' ? raw.status : 'render_failed';
+  return insertResumeVariant(deps.db, {
+    jobId: meta.jobId,
+    profileVersion: meta.profileVersion,
+    pluginId: meta.pluginId,
+    templateId: 'jakes-resume',
+    // Legacy columns — kept until the Phase 2 migration retires them.
+    factIds: [],
+    bullets: {
+      selectedBlockIds: raw.selection.included_block_ids,
+      texPath,
+      pages: raw.pages,
+    },
+    header: {
+      rewrites: raw.selection.bullet_rewrites,
+      techStackRewrites: raw.selection.tech_stack_rewrites,
+      skillsReorder: raw.selection.skills_reorder,
+      rationale: raw.selection.rationale,
+    },
+    validationReport: raw.report,
+    status,
+    pdfPath,
+    pdfBytes,
+    provider: raw.provider,
+    model: raw.model,
+    error: raw.error,
+    confidence: raw.confidence,
+    fit: raw.fit ?? null,
+    kind: meta.kind ?? 'generated',
+    comboKey: meta.comboKey ?? null,
+    label: meta.label ?? null,
+    parentVariantId: meta.parentVariantId ?? null,
+  });
+}
+
+export function defaultResumeDir(): string {
   const anchor = findUp('pnpm-workspace.yaml', dirname(fileURLToPath(import.meta.url)));
   const root = anchor ? dirname(anchor) : process.cwd();
   return resolve(root, 'data', 'resumes');

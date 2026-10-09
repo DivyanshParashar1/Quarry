@@ -24,3 +24,4 @@ export * from './deadline-runner.js';
 export * from './apply.js';
 export * from './sequencer.js';
 export * from './ats-score/index.js';
+export * from './resume-library.js';

@@ -53,5 +53,10 @@ async function renderPage(page: PageData): Promise<string> {
 /** Text as an ATS parser would see it (pdf.js extraction, no OCR). */
 export async function extractPdfText(pdf: Uint8Array | Buffer): Promise<PdfText> {
   const r = await pdfParse(Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf), { pagerender: renderPage as never });
-  return { text: r.text, pages: r.numpages };
+  return { text: dehyphenate(r.text), pages: r.numpages };
+}
+
+/** Re-join words LaTeX hyphenated across a line break ("Kuber-\nnetes" → "Kubernetes"), as ATS parsers do. */
+export function dehyphenate(text: string): string {
+  return text.replace(/([A-Za-z])-\n([a-z])/g, '$1$2');
 }

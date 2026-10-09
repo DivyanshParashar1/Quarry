@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   analyzeResumeText,
   atsProfileFor,
+  dehyphenate,
   buildDictionary,
   buildIdf,
   extractJdKeywords,
@@ -129,6 +130,10 @@ describe('scoreResume', () => {
   it('caps an unreadable PDF', () => {
     const s = scoreResume({ resumeText: '  ', parse: analyzeResumeText('  '), jd, dictionary: dict, atsType: 'generic' });
     expect(s.score).toBeLessThanOrEqual(10);
+  });
+
+  it('re-joins words hyphenated across a line break', () => {
+    expect(dehyphenate('Redis, Kuber-\nnetes and end-to-end\nCI/CD')).toBe('Redis, Kubernetes and end-to-end\nCI/CD');
   });
 
   it('maps company_sources.ats to a profile', () => {

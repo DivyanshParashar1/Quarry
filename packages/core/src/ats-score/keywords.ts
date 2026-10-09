@@ -94,7 +94,7 @@ export function sectionLines(jd: string): Array<{ line: string; section: Section
 export interface ExtractOptions {
   dictionary: Dictionary;
   /** Inverse document frequency over the job corpus; enables TF-IDF phrases. */
-  idf?: Idf;
+  idf?: Idf | undefined;
   maxPhrases?: number;
 }
 

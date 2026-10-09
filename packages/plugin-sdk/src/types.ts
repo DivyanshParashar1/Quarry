@@ -130,7 +130,7 @@ export interface MatchResult {
   /** Self-reported LLM confidence 0..1 (null for deterministic methods). The autopilot gates on this. */
   confidence: number | null;
 }
-import type { TailoredResume } from './tailor.js';
+import type { FixedRenderRequest, ResumeComboSpec, TailoredResume } from './tailor.js';
 /** What a tailor plugin returns (PLAN.md §7). See `TailoredResume`. */
 export type TailoredArtifacts = TailoredResume;
 
@@ -172,6 +172,10 @@ export interface MatcherPlugin<C = unknown> extends BasePlugin {
 }
 export interface TailorPlugin<C = unknown> extends BasePlugin {
   tailor(ctx: PluginContext<C>, job: Job, profile: Profile): Promise<TailoredArtifacts>;
+  /** Phase 16: every library resume to generate up front (project combos + base resumes). */
+  listCombos?(ctx: PluginContext<C>, opts: { projectsPerResume: number }): Promise<ResumeComboSpec[]>;
+  /** Phase 16: render a fixed block selection, skills tailored per `req.skills`, fitted to one page. */
+  renderFixed?(ctx: PluginContext<C>, req: FixedRenderRequest): Promise<TailoredArtifacts>;
 }
 /** I = what prepare() takes, D = the draft it proposes, R = what execute() reports. */
 export interface ActorPlugin<C = unknown, I = ActionInput, D = ActionDraft, R = ActionResult> extends BasePlugin {

@@ -12,16 +12,16 @@ import type { LoadedResume } from './manifest-loader.js';
 //   - The output is validated by a strict allowlist of LaTeX commands before
 //     being used; on any violation we fall back to the original fragment.
 
-export const SYSTEM_PROMPT = `You tailor a LaTeX "Technical Skills" fragment for a specific job.
+export const SYSTEM_PROMPT = `You tailor a LaTeX "Technical Skills" fragment for a resume (a specific job, or a general target).
 You MUST return ONLY the LaTeX fragment, nothing else — no markdown, no fences, no commentary.
 
 Rules:
 - Keep the exact outer structure: \\begin{itemize}[leftmargin=0.15in, label={}] ... \\end{itemize}
   with one \\small{\\item{ ... }} wrapper, and group lines in the form:
   \\textbf{<Group>}{: item, item, item} \\\\
-- You may reorder groups so the most JD-relevant group is listed first.
-- You may reorder items inside a group to lead with JD-relevant ones.
-- You may DROP items that are irrelevant to the job.
+- You may reorder groups so the most target-relevant group is listed first.
+- You may reorder items inside a group to lead with target-relevant ones.
+- You may DROP items that are irrelevant to the target.
 - You may ADD an item only if it is in the "Allowed items" list (they come from
   the resume's own project tech stacks). Put it in the group where it fits.
 - You MAY NOT add anything else. If a JD mentions a skill the user doesn't have,
@@ -48,9 +48,13 @@ export interface SkillsInput {
   includedBlockIds: string[];
 }
 
+/**
+ * `job` null = no specific job (a library combo): lead with what the resume's
+ * own projects show, keep broad coverage.
+ */
 export async function tailorSkills(
   resume: LoadedResume,
-  job: Job,
+  job: Job | null,
   input: SkillsInput,
   deps: { llm: LLMClient; signal: AbortSignal; maxTokens?: number },
 ): Promise<SkillsResult | null> {
@@ -85,16 +89,25 @@ export async function tailorSkills(
   return { latex: check.latex, used: true, reason: 'ok', provider: res.provider, model: res.model };
 }
 
-export function buildPrompt(original: string, job: Job, assembledTex: string, allowedExtra: string[]): string {
-  const desc = (job.descriptionMd ?? '').slice(0, 4000);
+export function buildPrompt(original: string, job: Job | null, assembledTex: string, allowedExtra: string[]): string {
+  const target = job
+    ? [
+        `# Target job`,
+        `Company: ${job.company}`,
+        `Title: ${job.title}`,
+        job.seniority ? `Seniority: ${job.seniority}` : null,
+        ``,
+        `## Description`,
+        (job.descriptionMd ?? '').slice(0, 4000) || '(no description)',
+      ]
+    : [
+        `# Target`,
+        `No specific job: this is a general resume built around the projects below.`,
+        `Lead with the skills these projects and experiences actually demonstrate`,
+        `(see their tech-stack lines), then keep broad coverage of the rest.`,
+      ];
   return [
-    `# Target job`,
-    `Company: ${job.company}`,
-    `Title: ${job.title}`,
-    job.seniority ? `Seniority: ${job.seniority}` : null,
-    ``,
-    `## Description`,
-    desc || '(no description)',
+    ...target,
     ``,
     `# The full resume as it will be sent (LaTeX):`,
     resumeBody(assembledTex),

@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   pgEnum,
   date,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 
 // Phase 0/1: companies, company_sources, raw_postings, jobs, plugin_runs, events.
@@ -517,13 +518,21 @@ export const resumeStatusEnum = pgEnum('resume_status', ['rendered', 'validation
  * `pdfPath` is null when Typst wasn't available (or render failed) but the
  * bullets + validation report still live here so the user can see why.
  */
+/**
+ * Phase 16: what a variant is.
+ *   generated = per-job tailor (Phase 15 path; also the fallback when the library is empty)
+ *   combo     = a library resume: one project combination, skills tailored to its projects
+ *   base      = a library resume from profile/resume/base/*.yaml (fixed selection, original skills)
+ *   tailored  = a combo with the Technical Skills rewritten for one job
+ */
+export const resumeKindEnum = pgEnum('resume_kind', ['generated', 'combo', 'base', 'tailored']);
+
 export const resumeVariants = pgTable(
   'resume_variants',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    jobId: uuid('job_id')
-      .notNull()
-      .references(() => jobs.id, { onDelete: 'cascade' }),
+    /** Null for library resumes (combo/base), which belong to no job. */
+    jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'cascade' }),
     profileVersion: text('profile_version').notNull(),
     pluginId: text('plugin_id').notNull(),
     templateId: text('template_id').notNull(),
@@ -546,11 +555,92 @@ export const resumeVariants = pgTable(
     confidence: real('confidence'),
     /** Phase 15 one-page fit: { fontPt, linespread, shortenedBullets[], rounds, compiles, pages }. */
     fit: jsonb('fit'),
+    // Phase 16: resume library.
+    kind: resumeKindEnum('kind').notNull().default('generated'),
+    /** Sorted selected block ids joined with '+' (combo/base/tailored). */
+    comboKey: text('combo_key'),
+    /** Human label: "FlashSeat + CRDT + DrillMirror", or the base resume's name. */
+    label: text('label'),
+    /** tailored → the combo it was built from. */
+    parentVariantId: uuid('parent_variant_id').references((): AnyPgColumn => resumeVariants.id, { onDelete: 'set null' }),
+    /** Retired library resumes are never reused; rows and PDFs stay so past sends still resolve. */
+    retiredAt: timestamp('retired_at', { withTimezone: true }),
+    /** AtsScore against its own job (generated/tailored), under that job's ATS. */
+    atsScore: jsonb('ats_score'),
+    /** Text extracted from the PDF (what an ATS sees); cached for scoring. */
+    resumeText: text('resume_text'),
+    /** Embedding of resumeText (bge, normalised). */
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIM }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     jobIdx: index('resume_variants_job_idx').on(t.jobId, t.createdAt),
+    libraryIdx: index('resume_variants_library_idx').on(t.kind, t.retiredAt),
   }),
+);
+
+/**
+ * Phase 16: the resume the selector decided a job should use (library combo
+ * as-is, or its per-job tailored version). Every consumer (apply, outreach
+ * attachments, sequencer) resolves a job's resume through this row first.
+ */
+export const jobResume = pgTable('job_resume', {
+  jobId: uuid('job_id')
+    .primaryKey()
+    .references(() => jobs.id, { onDelete: 'cascade' }),
+  variantId: uuid('variant_id')
+    .notNull()
+    .references(() => resumeVariants.id, { onDelete: 'cascade' }),
+  /** The library resume the decision started from (null when generated from scratch). */
+  comboVariantId: uuid('combo_variant_id').references(() => resumeVariants.id, { onDelete: 'set null' }),
+  selectorScore: real('selector_score'),
+  /** { candidates: [{ variantId, similarity, ats, score }], comboAts, tailoredAts, kept, weakFit } */
+  decision: jsonb('decision').notNull(),
+  decidedAt: timestamp('decided_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Phase 16: job categories the library is benchmarked against ("SWE intern", "AI/ML engineer"). */
+export const resumeBenchmarkCategories = pgTable('resume_benchmark_categories', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  /** A job title must contain one of these (case-insensitive) to be auto-picked. */
+  titleKeywords: text('title_keywords').array().notNull().default(sql`'{}'::text[]`),
+  /** …and none of these. */
+  excludeKeywords: text('exclude_keywords').array().notNull().default(sql`'{}'::text[]`),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Phase 16: the benchmark JDs per category. `pinned` = chosen by the user (auto-pick never replaces it). */
+export const resumeBenchmarkJobs = pgTable(
+  'resume_benchmark_jobs',
+  {
+    categoryId: text('category_id')
+      .notNull()
+      .references(() => resumeBenchmarkCategories.id, { onDelete: 'cascade' }),
+    jobId: uuid('job_id')
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    pinned: boolean('pinned').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.categoryId, t.jobId] }) }),
+);
+
+/** Phase 16: one library resume × one benchmark JD, scored under every ATS profile. */
+export const resumeBenchmarkScores = pgTable(
+  'resume_benchmark_scores',
+  {
+    variantId: uuid('variant_id')
+      .notNull()
+      .references(() => resumeVariants.id, { onDelete: 'cascade' }),
+    jobId: uuid('job_id')
+      .notNull()
+      .references(() => jobs.id, { onDelete: 'cascade' }),
+    /** { [atsType]: { score, coverage, hardMissing[] } } */
+    scores: jsonb('scores').notNull(),
+    computedAt: timestamp('computed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ pk: primaryKey({ columns: [t.variantId, t.jobId] }) }),
 );
 
 // ---------------------------------------------------------------------------

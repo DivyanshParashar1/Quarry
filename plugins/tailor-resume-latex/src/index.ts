@@ -2,8 +2,10 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import {
   defineTailorPlugin,
+  type FixedRenderRequest,
   type Job,
   type PluginContext,
+  type ResumeComboSpec,
   type Profile,
   type TailoredResume,
   type TailorSelection,
@@ -15,12 +17,14 @@ import { selectBlocks } from './selector.js';
 import { tailorSkills, type SkillsResult } from './skills.js';
 import { DEFAULT_FIT, extractBullets, fitToOnePage, type BulletRef } from './fit.js';
 import { llmShortener } from './shorten.js';
+import { listBaseResumes, listProjectCombos, orderBySections } from './combos.js';
 
 export * from './manifest-loader.js';
 export * from './assembler.js';
 export * from './compile.js';
 export * from './fit.js';
 export * from './shorten.js';
+export * from './combos.js';
 export {
   selectBlocks,
   selectionOutputSchema,
@@ -74,7 +78,7 @@ export const PLUGIN_ID = 'tailor-resume-latex';
 export default defineTailorPlugin<TailorConfig>({
   manifest: {
     id: PLUGIN_ID,
-    version: '0.4.0',
+    version: '0.5.0',
     stage: 'tailor',
     description:
       'Block-based resume tailoring: LLM picks fragments from profile/resume/, optionally regenerates the Technical Skills section, compiles via latexmk and fits the result to one page.',
@@ -86,6 +90,8 @@ export default defineTailorPlugin<TailorConfig>({
   async tailor(ctx, job, profile) {
     return tailorOne(ctx, job, profile);
   },
+  listCombos,
+  renderFixed,
 });
 
 export async function tailorOne(
@@ -117,6 +123,21 @@ export async function tailorOne(
     selection = deterministicSelection(resume);
   }
 
+  return renderSelection(ctx, resume, selection, job, { provider, model });
+}
+
+/**
+ * Assemble a selection, rewrite the skills (for `skillsFor`: a job, `null` =
+ * the resume's own projects, `'none'` = keep the original), compile and fit.
+ */
+export async function renderSelection(
+  ctx: PluginContext<TailorConfig>,
+  resume: LoadedResume,
+  selection: TailorSelection,
+  skillsFor: Job | null | 'none',
+  label: { provider: string; model: string },
+): Promise<TailoredResume> {
+  const { provider, model } = label;
   const assemble = (fragmentOverrides: Record<string, string> = {}) =>
     assembleTex({
       resume,
@@ -129,11 +150,11 @@ export async function tailorOne(
 
   let tex = assemble();
   let skills: SkillsResult | null = null;
-  if (ctx.config.mode === 'llm' && ctx.config.tailorSkills && ctx.llm) {
+  if (skillsFor !== 'none' && ctx.config.mode === 'llm' && ctx.config.tailorSkills && ctx.llm) {
     try {
       skills = await tailorSkills(
         resume,
-        job,
+        skillsFor,
         { assembledTex: tex, includedBlockIds: selection.included_block_ids },
         { llm: ctx.llm, signal: ctx.signal },
       );
@@ -148,6 +169,7 @@ export async function tailorOne(
     }
   }
   const providerLabel = skills?.used ? `${provider}+skills` : provider;
+  const llmModel = skills?.used && model === 'none' ? skills.model : model;
 
   try {
     const compile = (src: string) =>
@@ -175,7 +197,7 @@ export async function tailorOne(
       error: fitted.overflow ? `resume is ${fitted.pages} pages after every fit step` : null,
       confidence: selection.confidence,
       provider: fitted.fit.rounds > 0 ? `${providerLabel}+shorten` : providerLabel,
-      model,
+      model: llmModel,
       fit: fitted.fit,
     };
   } catch (err) {
@@ -195,6 +217,29 @@ export async function tailorOne(
       fit: null,
     };
   }
+}
+
+/** Phase 16: library resumes to generate up front. */
+export async function listCombos(ctx: PluginContext<TailorConfig>, opts: { projectsPerResume: number }): Promise<ResumeComboSpec[]> {
+  const resume = await loadResume(resolve(ctx.config.manifestPath));
+  return [...listProjectCombos(resume, opts.projectsPerResume), ...(await listBaseResumes(resume))];
+}
+
+/** Phase 16: render a fixed block selection (a library combo, or a combo tailored to one job). */
+export async function renderFixed(ctx: PluginContext<TailorConfig>, req: FixedRenderRequest): Promise<TailoredResume> {
+  const resume = await loadResume(resolve(ctx.config.manifestPath));
+  const unknown = req.includedBlockIds.filter((id) => !resume.blocksById.has(id));
+  if (unknown.length) throw new Error(`renderFixed: unknown block id(s) ${unknown.join(', ')}`);
+  const selection: TailorSelection = {
+    included_block_ids: orderBySections(resume, req.includedBlockIds),
+    bullet_rewrites: [],
+    tech_stack_rewrites: [],
+    skills_reorder: [],
+    rationale: req.skills.mode === 'job' ? 'library combo; skills tailored to the job' : `library ${req.skills.mode === 'projects' ? 'combo' : 'base'} resume`,
+    confidence: 1,
+  };
+  const skillsFor = req.skills.mode === 'job' ? req.skills.job : req.skills.mode === 'projects' ? null : 'none';
+  return renderSelection(ctx, resume, selection, skillsFor, { provider: 'deterministic', model: 'none' });
 }
 
 /** `\resumeItem` bullets of the selected blocks (skills and header have none worth shortening). */
