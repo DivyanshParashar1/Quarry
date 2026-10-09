@@ -132,9 +132,52 @@ describe('source-workday', () => {
   });
 
   it('rejects an unexpected list shape', async () => {
-    const http = fixtureHttp({ [`POST ${jobsApiUrl(board)}`]: { body: { jobPostings: [{ nope: 1 }] } } }, domains);
+    const http = fixtureHttp({ [`POST ${jobsApiUrl(board)}`]: { body: { jobPostings: 'nope' } } }, domains);
     await expect(
       collect(plugin.fetch(testContext(configSchema.parse({}), http), testTarget('walmart.wd5/WalmartExternal'))),
     ).rejects.toThrow(/unexpected Workday response/);
+  });
+
+  it('explains a 422 (unknown or moved tenant/site) as a permanent failure', async () => {
+    const http = fixtureHttp({ [`POST ${jobsApiUrl(board)}`]: { status: 422, body: { errorCode: 'HTTP_422' } } }, domains);
+    const err = await collect(plugin.fetch(testContext(configSchema.parse({}), http), testTarget('walmart.wd5/WalmartExternal'))).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(HttpError);
+    expect((err as HttpError).permanent).toBe(true);
+    expect((err as HttpError).message).toMatch(/moved data centre/);
+  });
+});
+
+// Recorded from live tenants (2026-10-09), not hand-built.
+describe('source-workday against recorded responses', () => {
+  it('skips stub entries (bulletFields only) instead of failing the board', async () => {
+    const abbott = parseWorkdayToken('abbott.wd5/abbottcareers');
+    const http = fixtureHttp(
+      {
+        [`POST ${jobsApiUrl(abbott)}`]: (init: HttpRequestInit) =>
+          (JSON.parse(init.body ?? '{}') as { offset: number }).offset === 0 ? { file: fixture('real-abbott-page-0-with-stub.json') } : { body: { total: 0, jobPostings: [] } },
+      },
+      domains,
+    );
+    const cfg = configSchema.parse({ fetchDetails: false, maxPostings: 50 });
+    const postings = await collect(plugin.fetch(testContext(cfg, http), testTarget('abbott.wd5/abbottcareers', 'Abbott')));
+    expect(postings).toHaveLength(19); // 20 entries, one stub
+    for (const p of postings) expect(rawPostingSchema.safeParse(p).success).toBe(true);
+  });
+
+  it('maps a real State Street page and details', async () => {
+    const ss = parseWorkdayToken('statestreet.wd1/Global');
+    const realDetails = JSON.parse(readFileSync(fixture('real-statestreet-details.json'), 'utf8')) as Record<string, unknown>;
+    const routes: Record<string, FixtureRouteSpec> = { [`POST ${jobsApiUrl(ss)}`]: { file: fixture('real-statestreet-page-0.json') } };
+    // The first posting's detail really answers 403 "permission denied" (recorded as such).
+    for (const [path, body] of Object.entries(realDetails)) routes[detailApiUrl(ss, path)] = { status: (body as { httpStatus?: number }).httpStatus ?? 200, body };
+    const cfg = configSchema.parse({ maxPostings: 2 });
+    const postings = await collect(plugin.fetch(testContext(cfg, fixtureHttp(routes, domains)), testTarget('statestreet.wd1/Global', 'State Street')));
+    expect(postings).toHaveLength(2);
+    const p = postings[1]!;
+    expect(p).toMatchObject({ externalId: 'R-797933', title: 'Financial Reporting, Assistant Vice President', locations: ['Toronto, Ontario'] });
+    expect(p.url).toBe('https://statestreet.wd1.myworkdayjobs.com/Global/job/Toronto-Ontario/Financial-Reporting--Assistant-Vice-President_R-797933');
+    expect(p.descriptionHtml!.length).toBeGreaterThan(200);
+    // A refused detail keeps the list-level posting ("5 Locations" can't be resolved without it).
+    expect(postings[0]).toMatchObject({ externalId: 'R-792664', descriptionHtml: null, locations: [] });
   });
 });

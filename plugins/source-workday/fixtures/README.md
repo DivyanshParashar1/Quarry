@@ -1,20 +1,15 @@
 # source-workday fixtures
 
-**Synthetic.** The session that wrote this plugin had no network access to
-`*.myworkdayjobs.com`, so these files were hand-built from the CXS API shape
-commonly observed on public Workday career sites:
+- `real-*.json` were **recorded from live tenants on 2026-10-09**:
+  - `real-statestreet-page-0.json`: `POST https://statestreet.wd1.myworkdayjobs.com/wday/cxs/statestreet/Global/jobs`
+    (`{"appliedFacets":{},"limit":20,"offset":0,"searchText":""}`).
+  - `real-statestreet-details.json`: two detail `GET`s for that page. The first really answers
+    `403 permission denied`, which the plugin must survive by keeping the list-level posting.
+  - `real-abbott-page-0-with-stub.json`: an Abbott list page containing a stub entry
+    (`{"bulletFields":[...]}` with no title or path), which real boards return now and then.
+- `walmart-*.json` are hand-built scenario fixtures (paging, "N Locations", location filter). Their
+  shapes match the recorded files.
 
-- `POST https://{tenant}.wdN.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs`
-  body `{"appliedFacets":{},"limit":20,"offset":N,"searchText":""}` →
-  `{ total, jobPostings: [{ title, externalPath, locationsText, postedOn, bulletFields }] }`
-  (`total` is only reliable on the first page).
-- `GET https://{tenant}.wdN.myworkdayjobs.com/wday/cxs/{tenant}/{site}{externalPath}` →
-  `{ jobPostingInfo: { title, jobDescription, location, additionalLocations, startDate, jobReqId, externalUrl, remoteType, ... }, hiringOrganization }`.
-
-Re-record against a real tenant before trusting the mapping, e.g.
-
-```sh
-curl -s -X POST -H 'content-type: application/json' \
-  -d '{"appliedFacets":{},"limit":20,"offset":0,"searchText":""}' \
-  https://walmart.wd5.myworkdayjobs.com/wday/cxs/walmart/WalmartExternal/jobs > walmart-page-0.json
-```
+Things learned from the live run: unknown or moved tenants/sites answer `422` with no redirect
+(tenants move data centres, e.g. `walmart.wd5` → `walmart.wd504`), and a site can exist with zero
+postings once a company leaves Workday.

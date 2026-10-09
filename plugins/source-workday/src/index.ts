@@ -44,8 +44,9 @@ const targetOptions = options.partial();
 
 const listPosting = z
   .object({
-    title: z.string(),
-    externalPath: z.string(),
+    // Real boards include stubs with only bulletFields (no title or link); they are skipped.
+    title: z.string().nullable().optional(),
+    externalPath: z.string().nullable().optional(),
     locationsText: z.string().nullable().optional(),
     postedOn: z.string().nullable().optional(),
     bulletFields: z.array(z.string()).nullable().optional(),
@@ -80,7 +81,7 @@ const detailResponse = z
   })
   .passthrough();
 
-type ListPosting = z.infer<typeof listPosting>;
+type ListPosting = z.infer<typeof listPosting> & { title: string; externalPath: string };
 type Detail = z.infer<typeof detailResponse>;
 
 /** "2 Locations" style summaries carry no place names; we need the detail to filter. */
@@ -142,12 +143,27 @@ async function* fetchBoard(ctx: PluginContext<WorkdayConfig>, b: WorkdayBoard, o
   let total: number | null = null;
   let yielded = 0;
   let skipped = 0;
+  let stubs = 0;
   for (;;) {
-    const body = await ctx.http.getJson(jobsApiUrl(b), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: opts.searchText }),
-    });
+    const body = await ctx.http
+      .getJson(jobsApiUrl(b), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: opts.searchText }),
+      })
+      .catch((err: unknown) => {
+        // An unknown tenant/site answers 422. Tenants move data centres (wd5 -> wd504) without a
+        // redirect, so say what to check rather than just the status.
+        if (err instanceof HttpError && err.status === 422 && offset === 0) {
+          throw new HttpError(
+            `Workday site ${b.host}/${b.site} not found (422). The tenant may have moved data centre or site; ` +
+              'find the current URL on the company careers page (or run `jf discover_ats --recheck`) and update the board token',
+            err.url,
+            422,
+          );
+        }
+        throw err;
+      });
     const parsed = listResponse.safeParse(body);
     if (!parsed.success) {
       throw new PluginError(`unexpected Workday response for ${b.host}/${b.site}: ${parsed.error.message}`);
@@ -155,8 +171,13 @@ async function* fetchBoard(ctx: PluginContext<WorkdayConfig>, b: WorkdayBoard, o
     // Workday reports the real total on the first page only (later pages often say 0).
     if (total === null) total = parsed.data.total ?? null;
     const page = parsed.data.jobPostings;
-    for (const item of page) {
+    for (const raw of page) {
       if (yielded >= opts.maxPostings) return;
+      if (!raw.title || !raw.externalPath) {
+        stubs++;
+        continue;
+      }
+      const item = raw as ListPosting;
       const listed = listLocations(item);
       if (listed.length && !matchesLocationFilter(listed, opts.locations)) {
         skipped++;
@@ -185,7 +206,7 @@ async function* fetchBoard(ctx: PluginContext<WorkdayConfig>, b: WorkdayBoard, o
     offset += page.length;
     if (!page.length || page.length < PAGE_SIZE || (total !== null && total > 0 && offset >= total)) break;
   }
-  ctx.log.debug({ board: `${b.host}/${b.site}`, total, yielded, skipped }, 'workday board fetched');
+  ctx.log.debug({ board: `${b.host}/${b.site}`, total, yielded, skipped, stubs }, 'workday board fetched');
 }
 
 export default defineSourcePlugin<WorkdayConfig>({
