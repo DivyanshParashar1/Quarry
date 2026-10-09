@@ -52,6 +52,19 @@ export async function createLocalEmbedder(opts: LocalEmbedderOptions = {}): Prom
  * normalizes. Texts sharing words are similar, so ranking logic is testable
  * without downloading a model.
  */
+/** Same as createLocalEmbedder, but the model only loads on the first embed() call. */
+export function createLazyEmbedder(opts: LocalEmbedderOptions = {}): Embedder {
+  let inner: Promise<Embedder> | null = null;
+  return {
+    dim: EMBEDDING_DIM,
+    model: opts.model ?? DEFAULT_EMBEDDING_MODEL,
+    async embed(texts) {
+      inner ??= createLocalEmbedder(opts);
+      return (await inner).embed(texts);
+    },
+  };
+}
+
 export function createHashEmbedder(dim = EMBEDDING_DIM): Embedder & { calls: string[][] } {
   const calls: string[][] = [];
   return {

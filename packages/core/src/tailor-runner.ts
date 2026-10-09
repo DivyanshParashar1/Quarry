@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Logger } from '@jobforge/shared';
+import type { Logger, ResumesConfig } from '@jobforge/shared';
 import type { Job, RewriteValidation, TailorSelection, TailoredResume } from '@jobforge/plugin-sdk';
 import {
   appendEvent,
@@ -47,6 +47,8 @@ export interface TailorRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {
   /** Where to write rendered PDFs/.tex (defaults to <repoRoot>/data/resumes). */
   resumeDir?: string;
   timeoutMs?: number;
+  /** Phase 16 resume library / selector settings (config.yaml `resumes`); defaults when absent. */
+  resumes?: ResumesConfig;
 }
 
 export interface TailorRunResult {

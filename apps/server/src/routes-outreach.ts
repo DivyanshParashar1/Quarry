@@ -1,5 +1,6 @@
 import { createReadStream, existsSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
+import { publicVariant } from './routes-library.js';
 import { z } from 'zod';
 import type { AppConfig } from '@jobforge/shared';
 import {
@@ -10,7 +11,6 @@ import {
   getJobDetail,
   getResumeVariant,
   listContacts,
-  listResumeVariantsForJob,
   listReviewItems,
   listSourceTargets,
   listThreads,
@@ -34,7 +34,6 @@ import {
   enrichContacts,
   rejectReviewItem,
   runAutopilot,
-  runTailor,
   runDeadlines,
   runSequencer,
   type SequencerDeps,
@@ -240,27 +239,11 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
   });
 
   // --- resume variants (tailor) ---------------------------------------------
-  const tailor = async () => {
-    if (!o.tailorDeps) throw Object.assign(new Error('tailoring is not configured on this server'), { statusCode: 503 });
-    return o.tailorDeps();
-  };
-
-  app.get('/api/jobs/:id/resume-variants', async (req) => {
-    const { id } = idParams.parse(req.params);
-    return { variants: await listResumeVariantsForJob(db, id) };
-  });
-
-  app.post('/api/jobs/:id/tailor', async (req, reply) => {
-    const { id } = idParams.parse(req.params);
-    const deps = await tailor();
-    const r = await runTailor(deps, { jobId: id });
-    return reply.status(201).send(r.variant);
-  });
-
+  // Per-job tailoring + the library live in routes-library.ts (Phase 16).
   app.get('/api/resume-variants/:id', async (req, reply) => {
     const { id } = idParams.parse(req.params);
     const v = await getResumeVariant(db, id);
-    return v ?? reply.status(404).send({ error: 'not_found' });
+    return v ? publicVariant(v) : reply.status(404).send({ error: 'not_found' });
   });
 
   // --- autopilot -------------------------------------------------------------

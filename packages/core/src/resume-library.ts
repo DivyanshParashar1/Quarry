@@ -15,6 +15,7 @@ import {
   listBenchmarkJobs,
   listBenchmarkScores,
   listLibraryResumes,
+  listResumeVariantsForJob,
   retireLibraryResumes,
   sampleJobDescriptions,
   setJobResume,
@@ -26,7 +27,7 @@ import {
 } from '@jobforge/db';
 import { cosine, jobEmbeddingText } from '@jobforge/embeddings';
 import type { Job, Profile, ResumeComboSpec, TailoredResume, TailorPlugin } from '@jobforge/plugin-sdk';
-import type { ResumesConfig } from '@jobforge/shared';
+import { resumesConfigSchema, type ResumesConfig } from '@jobforge/shared';
 import {
   analyzeResumeText,
   atsProfileFor,
@@ -53,8 +54,11 @@ import { DEFAULT_TAILOR, jobFromDetail, NoTailorJobError, NoTailorProfileError, 
 //     job (similarity + ATS against the real JD), then a per-job skills rewrite
 //     that is kept only if it doesn't lower the ATS score.
 
-export interface LibraryDeps extends TailorRunDeps {
-  policy: ResumesConfig;
+/** TailorRunDeps; `resumes` (config.yaml) falls back to the defaults. */
+export type LibraryDeps = TailorRunDeps;
+
+export function resumesPolicy(deps: TailorRunDeps): ResumesConfig {
+  return deps.resumes ?? resumesConfigSchema.parse({});
 }
 
 // ---------------------------------------------------------------------------
@@ -152,7 +156,7 @@ export async function generateLibrary(
   if (!profile) throw new NoTailorProfileError();
   const { loaded, plugin } = tailorPlugin(deps);
   const listCtx = buildContext(loaded, { ...deps, log: deps.log, signal: AbortSignal.timeout(60_000) });
-  const specs: ResumeComboSpec[] = await plugin.listCombos(listCtx, { projectsPerResume: deps.policy.projectsPerResume });
+  const specs: ResumeComboSpec[] = await plugin.listCombos(listCtx, { projectsPerResume: resumesPolicy(deps).projectsPerResume });
 
   const active = await listLibraryResumes(deps.db);
   const items: LibraryRunItem[] = [];
@@ -221,8 +225,8 @@ async function renderLibraryResume(deps: LibraryDeps, profile: Profile, spec: Re
 // Benchmarks
 // ---------------------------------------------------------------------------
 
-export async function ensureCategories(deps: { db: DB; policy: ResumesConfig }): Promise<BenchmarkCategoryRow[]> {
-  await ensureBenchmarkCategories(deps.db, deps.policy.benchmarks.categories);
+export async function ensureCategories(deps: TailorRunDeps): Promise<BenchmarkCategoryRow[]> {
+  await ensureBenchmarkCategories(deps.db, resumesPolicy(deps).benchmarks.categories);
   return listBenchmarkCategories(deps.db);
 }
 
@@ -238,7 +242,7 @@ export async function autoPickBenchmarks(deps: LibraryDeps, opts: { categoryId?:
       titleKeywords: c.titleKeywords,
       excludeKeywords: c.excludeKeywords,
       profileVersion: profile?.version ?? null,
-      limit: deps.policy.benchmarks.perCategory - pinned.length,
+      limit: resumesPolicy(deps).benchmarks.perCategory - pinned.length,
       excludeJobIds: pinned.map((p) => p.jobId),
     });
     for (const p of picks) await addBenchmarkJob(deps.db, { categoryId: c.id, jobId: p.jobId, pinned: false });
@@ -356,6 +360,28 @@ export async function selectResumeForJob(deps: LibraryDeps, jobId: string, opts:
   const detail = await getJobDetail(deps.db, jobId, profile.version);
   if (!detail) throw new NoTailorJobError(jobId);
   const job = jobFromDetail(detail);
+
+  // A resume already made for this job from the current profile (e.g. tailored
+  // before the library existed) is adopted as-is.
+  if (!opts.force) {
+    const own = (await listResumeVariantsForJob(deps.db, jobId)).find((v) => v.status === 'rendered' && v.profileVersion === profile.version);
+    if (own) {
+      const decision: SelectorDecision = {
+        atsType: atsProfileFor(await atsTypeForJob(deps.db, jobId)),
+        category: null,
+        candidates: [],
+        comboVariantId: own.parentVariantId,
+        comboAts: null,
+        tailoredVariantId: own.id,
+        tailoredAts: (own.atsScore as AtsScore | null) ?? null,
+        kept: own.kind === 'tailored' ? 'tailored' : 'generated',
+        weakFit: false,
+        note: 'existing resume for this job',
+      };
+      await setJobResume(deps.db, { jobId, variantId: own.id, comboVariantId: own.parentVariantId, selectorScore: null, decision });
+      return { variant: own, decision, cached: true };
+    }
+  }
   const atsType = atsProfileFor(await atsTypeForJob(deps.db, jobId));
   const ctx = await atsContext(deps.db, profile);
   const jd = extractJdKeywords(job.descriptionMd ?? '', { dictionary: ctx.dictionary, idf: ctx.idf });
@@ -366,7 +392,7 @@ export async function selectResumeForJob(deps: LibraryDeps, jobId: string, opts:
 
   // Score every library resume against this JD.
   const jobVec = await jobVector(deps, job);
-  const { similarityWeight, similarityLow, similarityHigh, threshold, tieMargin } = deps.policy.selector;
+  const { similarityWeight, similarityLow, similarityHigh, threshold, tieMargin } = resumesPolicy(deps).selector;
   const scored: Array<SelectorCandidate & { v: ResumeVariantRow; ats_: AtsScore }> = [];
   for (const v of library) {
     const { text, embedding } = await ensureScoring(deps, v);

@@ -1,5 +1,6 @@
 import type { AppConfig, Env, LLMClient, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
+import { createLazyEmbedder } from '@jobforge/embeddings';
 import { createLLMFromConfig } from '@jobforge/llm';
 import { createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
@@ -55,6 +56,11 @@ export function lazyTailorDeps(o: {
       limiter: o.limiter,
       dryRun: o.env.MODE !== 'live',
       llm: createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }),
+      resumes: o.config.resumes,
+      embed: createLazyEmbedder({
+        model: o.config.embeddings.model,
+        ...(o.config.embeddings.cacheDir ? { cacheDir: o.config.embeddings.cacheDir } : {}),
+      }),
     });
 }
 

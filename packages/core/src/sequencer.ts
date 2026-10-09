@@ -9,7 +9,6 @@ import {
   getReviewItem,
   jobsInState,
   listRankedJobs,
-  listResumeVariantsForJob,
   listBatchItems,
   pipelineStateCounts,
   releaseLease,
@@ -30,7 +29,8 @@ import { draftApplication, type ApplyDeps } from './apply.js';
 import { isDeadlineImminent } from './deadline-runner.js';
 import { approveReviewItem, OutreachError, referralLimitProblem } from './outreach.js';
 import { fanOutReferrals, type FanOutDeps } from './referrals.js';
-import { runTailor, type TailorRunDeps } from './tailor-runner.js';
+import { selectResumeForJob } from './resume-library.js';
+import type { TailorRunDeps } from './tailor-runner.js';
 
 // Phase 12: referral-first, apply-on-deadline. Per job:
 //   candidate         passed the match + tailor gates
@@ -198,14 +198,13 @@ async function admitCandidates(deps: SequencerDeps, limit: number | undefined, s
     if (await getPipelineState(db, job.id)) continue;
     const matchConfidence = await loadMatchConfidence(db, job.id, profile.version);
     if (matchConfidence !== null && matchConfidence < policy.confidenceFloor.match) continue;
-    let variant: ResumeVariantRow | undefined = (await listResumeVariantsForJob(db, job.id)).find((v) => v.status === 'rendered' && v.profileVersion === profile.version);
-    if (!variant) {
-      try {
-        variant = (await runTailor(deps.tailorDeps, { jobId: job.id })).variant;
-      } catch (err) {
-        deps.log.warn({ jobId: job.id, err: (err as Error).message }, 'sequencer: tailor failed');
-        continue;
-      }
+    // Phase 16: the selector picks a library resume (+ per-job skills rewrite), re-using an earlier decision.
+    let variant: ResumeVariantRow;
+    try {
+      variant = (await selectResumeForJob(deps.tailorDeps, job.id)).variant;
+    } catch (err) {
+      deps.log.warn({ jobId: job.id, err: (err as Error).message }, 'sequencer: resume selection failed');
+      continue;
     }
     if (variant.status !== 'rendered' || (variant.confidence ?? 0) < policy.confidenceFloor.tailor) continue;
     if (await enterPipeline(db, job.id, { matchScore: job.score, matchConfidence, tailorConfidence: variant.confidence, resumeVariantId: variant.id })) {

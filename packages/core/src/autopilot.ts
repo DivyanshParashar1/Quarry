@@ -5,7 +5,6 @@ import {
   contactsEmailedAtCompanySince,
   listContacts,
   listRankedJobs,
-  listResumeVariantsForJob,
   openOutreachForContact,
   sql,
   threadsForContact,
@@ -17,7 +16,8 @@ import {
   type ReviewItemRow,
 } from '@jobforge/db';
 import { draftOutreach, type OutreachDeps } from './outreach.js';
-import { runTailor, type TailorRunDeps } from './tailor-runner.js';
+import { selectResumeForJob } from './resume-library.js';
+import type { TailorRunDeps } from './tailor-runner.js';
 
 // Autopilot (user ask: "LLM is the sole acting guide; only confused jobs → review").
 // For each top-ranked job that hasn't been outreached yet:
@@ -143,19 +143,15 @@ export async function runAutopilot(deps: AutopilotRunDeps, opts: { limit?: numbe
       (await Promise.all(contacts.map(async (c) => (await threadsForContact(deps.db, c.id)).map(() => c.id)))).flat(),
     );
 
-    // Resume variant: reuse the latest rendered one for this job (any profile version),
-    // or run the tailor now. Any validation error or render failure => escalate.
-    const variants = await listResumeVariantsForJob(deps.db, row.id);
-    let variant: ResumeVariantRow | undefined = variants.find((v) => v.status === 'rendered' && v.profileVersion === profile.version);
-    if (!variant) {
-      try {
-        const r = await runTailor(deps.tailorDeps, { jobId: row.id });
-        variant = r.variant;
-      } catch (err) {
-        log.warn({ jobId: row.id, err: (err as Error).message }, 'autopilot: tailor threw');
-        decisions.push({ ...base, stage: 'tailor', reason: 'tailor_render_failed', note: (err as Error).message });
-        continue;
-      }
+    // Resume variant (Phase 16): the selector's earlier decision for this job, or a
+    // fresh pick from the library. Any validation error or render failure => escalate.
+    let variant: ResumeVariantRow;
+    try {
+      variant = (await selectResumeForJob(deps.tailorDeps, row.id)).variant;
+    } catch (err) {
+      log.warn({ jobId: row.id, err: (err as Error).message }, 'autopilot: tailor threw');
+      decisions.push({ ...base, stage: 'tailor', reason: 'tailor_render_failed', note: (err as Error).message });
+      continue;
     }
     base.tailorConfidence = variant.confidence;
     if (variant.status === 'validation_failed') {

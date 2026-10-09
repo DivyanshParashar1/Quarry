@@ -148,7 +148,7 @@ describe.skipIf(!adminUrl)('resume library (postgres)', () => {
       limiter: new DomainRateLimiter(),
       dryRun: true,
       resumeDir: await mkdtemp(join(tmpdir(), 'jf-library-')),
-      policy: resumesConfigSchema.parse({
+      resumes: resumesConfigSchema.parse({
         benchmarks: {
           perCategory: 5,
           categories: [

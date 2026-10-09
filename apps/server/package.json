@@ -20,6 +20,7 @@
     "@jobforge/actor-linkedin-referral": "workspace:*",
     "@jobforge/core": "workspace:*",
     "@jobforge/db": "workspace:*",
+    "@jobforge/embeddings": "workspace:*",
     "@jobforge/enricher-contacts-pattern": "workspace:*",
     "@jobforge/enricher-deadline": "workspace:*",
     "@jobforge/enricher-linkedin-employees": "workspace:*",

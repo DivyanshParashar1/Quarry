@@ -190,6 +190,9 @@ importers:
       '@jobforge/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@jobforge/embeddings':
+        specifier: workspace:*
+        version: link:../../packages/embeddings
       '@jobforge/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern

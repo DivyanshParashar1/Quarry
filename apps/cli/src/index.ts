@@ -6,6 +6,8 @@ import { createLogger, findUp, loadAppConfig, loadEnv, type AppConfig, type Env 
 import {
   countJobs,
   createDb,
+  listBenchmarkJobs,
+  listLibraryResumes,
   listCompaniesForAtsCheck,
   getActiveProfile,
   listRankedJobs,
@@ -38,7 +40,12 @@ import {
   runDeadlines,
   runSequencer,
   runMatch,
-  runTailor,
+  autoPickBenchmarks,
+  categoryAverages,
+  ensureCategories,
+  generateLibrary,
+  runBenchmarks,
+  selectResumeForJob,
   SOURCE_PLUGIN_FOR_ATS,
   startBoss,
   waitForJobs,
@@ -90,10 +97,16 @@ Usage:
   jf match [--rescore] [--limit <n>] [--no-embed]
       Score open jobs against the active profile: hard filters, similarity
       prefilter, then the LLM rubric. Already-scored jobs are skipped unless --rescore.
-  jf tailor <jobId>
-      Produce a grounded, one-page tailored resume PDF (Jake's resume LaTeX template).
-      Every bullet traces to a profile fact; invented numbers/terms are dropped.
+  jf tailor <jobId> [--force]
+      Pick the best resume from the library for this job (ATS + similarity vs the JD),
+      then rewrite only its Technical Skills for the job, kept if the ATS score holds.
+      An earlier decision is reused unless --force. Empty library → full per-job tailor.
       Requires \`latexmk\` (TeX Live) on PATH.
+  jf resumes generate [--retire] | list [--all] | bench [--pick]
+      Resume library (Phase 16): render every project combo (resumes.projectsPerResume)
+      + profile/resume/base/*.yaml once; --retire = scrap & regenerate. list = library
+      with benchmark averages; bench = ATS-score the library against the benchmark JDs
+      (--pick re-picks each category's auto JDs first).
   jf autopilot [--limit <n>] [--live]
       autopilot.strategy = referrals (default, Phase 12): one sequencer tick —
       admit top matches that pass the match + tailor gates, fan out referral asks
@@ -193,6 +206,8 @@ async function main(argv: string[]): Promise<number> {
       live: { type: 'boolean' },
       watch: { type: 'boolean' },
       force: { type: 'boolean' },
+      retire: { type: 'boolean' },
+      pick: { type: 'boolean' },
       list: { type: 'string' },
       'max-new': { type: 'string' },
       'dry-run': { type: 'boolean' },
@@ -345,7 +360,11 @@ async function main(argv: string[]): Promise<number> {
 
     if (cmd === 'tailor') {
       if (!sub) throw new UsageError('missing <jobId>');
-      return await tailorCommand(sub, env, config, db, log);
+      return await tailorCommand(sub, !!values.force, env, config, db, log);
+    }
+
+    if (cmd === 'resumes') {
+      return await resumesCommand(sub, { retire: !!values.retire, all: !!values.all, pick: !!values.pick }, env, config, db, log);
     }
 
     if (cmd === 'autopilot' && config.autopilot.strategy === 'referrals') {
@@ -576,34 +595,86 @@ async function fetchCommand(
   }
 }
 
-async function tailorCommand(jobArg: string, env: Env, config: AppConfig, db: Db, log: Log): Promise<number> {
+async function tailorCommand(jobArg: string, force: boolean, env: Env, config: AppConfig, db: Db, log: Log): Promise<number> {
   const jobId = await resolveIdPrefix(db, 'jobs', jobArg);
+  await warnIfNoLatex();
+  console.log(`selecting a resume for job ${jobId.slice(0, 8)}${force ? ' (forced)' : ''} …`);
+  const r = await selectResumeForJob(tailorDeps({ env, config, db, log }), jobId, { force });
+  const d = r.decision;
+  if (r.cached) console.log('(earlier decision reused; --force to redo)');
+  if (d) {
+    for (const c of d.candidates.slice(0, 5)) {
+      const sim = c.similarity === null ? '  -' : String(c.similarity).padStart(3);
+      console.log(`  ${c.variantId === d.comboVariantId ? '*' : ' '} ${String(c.score).padStart(3)}  ats ${String(c.ats).padStart(3)}  sim ${sim}  ${c.label ?? c.variantId.slice(0, 8)}`);
+    }
+    const ats = d.kept === 'combo' ? d.comboAts : d.tailoredAts ?? d.comboAts;
+    console.log(`kept: ${d.kept}${d.weakFit ? ' (weak fit)' : ''} · ATS (${d.atsType}) ${ats?.score ?? 'n/a'}${d.note ? ` · ${d.note}` : ''}`);
+    if (ats?.keywords.hardMissing.length) console.log(`missing hard requirements: ${ats.keywords.hardMissing.join(', ')}`);
+  }
+  console.log(`variant ${r.variant.id.slice(0, 8)} · ${r.variant.kind} · ${r.variant.status}`);
+  if (r.variant.status === 'rendered' && r.variant.pdfPath) console.log(`\nPDF: ${r.variant.pdfPath} (${r.variant.pdfBytes} bytes)`);
+  else if (r.variant.error) console.log(`\nnote: ${r.variant.error}`);
+  return r.variant.status === 'rendered' ? 0 : 1;
+}
+
+async function warnIfNoLatex(): Promise<void> {
   const check = await checkLatex();
   if (!check.ok) {
-    process.stderr.write(
-      `warning: ${check.error}. Install TeX Live (which provides latexmk + pdflatex) or set LATEX_BIN; `
-        + 'bullets and validation report will still be saved.\n',
-    );
+    process.stderr.write(`warning: ${check.error}. Install TeX Live (which provides latexmk + pdflatex) or set LATEX_BIN.\n`);
   } else if (check.version) {
     process.stdout.write(`using ${check.version}\n`);
   }
-  const llm = createLLM(env, config, db, log);
-  console.log(`tailoring job ${jobId.slice(0, 8)} (block-based assembler) …`);
-  const r = await runTailor(
-    { db, registry: createRegistry(config), log, llm, limiter: new DomainRateLimiter(), dryRun: env.MODE !== 'live' },
-    { jobId },
-  );
-  const blocks = r.selection.included_block_ids.length;
-  const rewrites = r.selection.bullet_rewrites.length;
-  console.log(
-    `variant ${r.variant.id.slice(0, 8)} · ${r.variant.status} · ${blocks} blocks · ${rewrites} bullet rewrites`,
-  );
-  if (r.variant.status === 'rendered' && r.variant.pdfPath) {
-    console.log(`\nPDF: ${r.variant.pdfPath} (${r.variant.pdfBytes} bytes)`);
-  } else if (r.variant.error) {
-    console.log(`\nnote: ${r.variant.error}`);
+}
+
+async function resumesCommand(
+  sub: string | undefined,
+  flags: { retire: boolean; all: boolean; pick: boolean },
+  env: Env,
+  config: AppConfig,
+  db: Db,
+  log: Log,
+): Promise<number> {
+  const deps = tailorDeps({ env, config, db, log });
+  if (sub === 'generate') {
+    await warnIfNoLatex();
+    console.log(flags.retire ? 'scrap & regenerate: rendering a fresh library …' : 'rendering missing library resumes …');
+    const r = await generateLibrary(deps, {
+      retire: flags.retire,
+      onItem: (i, done, total) =>
+        console.log(`  [${done}/${total}] ${i.status.padEnd(7)} ${i.kind.padEnd(5)} ${i.label}${i.resumeStatus ? ` · ${i.resumeStatus}` : ''}${i.error ? ` · ${i.error.split('\n')[0]}` : ''}`),
+    });
+    if (flags.retire) console.log(`retired ${r.retired} earlier resume(s)`);
+    if (!(await listBenchmarkJobs(db)).length) await autoPickBenchmarks(deps);
+    const b = await runBenchmarks(deps);
+    console.log(`benchmarks: ${b.resumes} resumes × ${b.jobs} JDs → ${b.scored} scored`);
+    return r.items.some((i) => i.status === 'failed') ? 1 : 0;
   }
-  return r.variant.status === 'rendered' ? 0 : 1;
+  if (sub === 'bench') {
+    if (flags.pick) {
+      const picked = await autoPickBenchmarks(deps);
+      for (const [cat, ids] of Object.entries(picked)) console.log(`  ${cat}: ${ids.length} JD(s)`);
+    }
+    const b = await runBenchmarks(deps);
+    console.log(`benchmarks: ${b.resumes} resumes × ${b.jobs} JDs → ${b.scored} scored`);
+    return 0;
+  }
+  if (sub === 'list' || !sub) {
+    const resumes = await listLibraryResumes(db, { includeRetired: flags.all });
+    const categories = await ensureCategories(deps);
+    const avgs = new Map<string, Map<string, number>>();
+    for (const c of categories) avgs.set(c.id, await categoryAverages(db, c.id, resumes.map((r) => r.id)));
+    console.log(`${'id'.padEnd(8)}  ${'kind'.padEnd(5)}  ${'status'.padEnd(10)}  ${categories.map((c) => c.id.slice(0, 11).padEnd(11)).join('  ')}  label`);
+    for (const r of resumes) {
+      const cells = categories.map((c) => {
+        const v = avgs.get(c.id)?.get(r.id);
+        return (v === undefined ? '-' : String(Math.round(v))).padEnd(11);
+      });
+      console.log(`${r.id.slice(0, 8)}  ${r.kind.padEnd(5)}  ${(r.retiredAt ? 'retired' : r.status).padEnd(10)}  ${cells.join('  ')}  ${r.label ?? ''}`);
+    }
+    if (!resumes.length) console.log('(empty — run `jf resumes generate`)');
+    return 0;
+  }
+  throw new UsageError(`unknown resumes subcommand "${sub}"`);
 }
 
 async function autopilotCommand(

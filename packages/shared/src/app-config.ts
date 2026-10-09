@@ -36,7 +36,7 @@ export const DEFAULT_BENCHMARK_CATEGORIES: BenchmarkCategoryConfig[] = [
     id: 'ai-engineer',
     label: 'AI/ML engineer',
     titleKeywords: ['ai engineer', 'ml engineer', 'machine learning engineer', 'llm engineer', 'applied ai', 'genai', 'generative ai', 'ai/ml'],
-    excludeKeywords: ['senior', 'staff', 'principal', 'manager', 'director'],
+    excludeKeywords: ['senior', 'staff', 'principal', 'manager', 'director', 'phd', 'architect'],
   },
 ];
 

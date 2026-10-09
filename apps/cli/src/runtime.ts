@@ -1,7 +1,7 @@
 import type { AppConfig, Env, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
 import { createLLMFromConfig } from '@jobforge/llm';
-import { createLocalEmbedder } from '@jobforge/embeddings';
+import { createLazyEmbedder, createLocalEmbedder } from '@jobforge/embeddings';
 import { createDnsResolver, createGmailClient, DomainRateLimiter, type OutreachDeps, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
 import { createRegistry } from '@jobforge/plugins';
@@ -65,5 +65,10 @@ export function tailorDeps(
     limiter: new DomainRateLimiter(),
     dryRun: !(o.live || o.env.MODE === 'live'),
     llm: createLLM(o.env, o.config, o.db, o.log),
+    resumes: o.config.resumes,
+    embed: createLazyEmbedder({
+      model: o.config.embeddings.model,
+      ...(o.config.embeddings.cacheDir ? { cacheDir: o.config.embeddings.cacheDir } : {}),
+    }),
   };
 }
