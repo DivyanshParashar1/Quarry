@@ -17,6 +17,7 @@ import {
   type BrowserHandle,
 } from '@jobforge/plugin-sdk';
 import { fakeBrowser, fakeCredentials, fakeGmail, fixtureHttp, testContext } from '@jobforge/plugin-sdk/testing';
+import { CONSENT_KEY, UnknownLayoutError } from '@jobforge/plugin-sdk';
 import plugin, { activeStep, applyUrlFor, configSchema, externalPath, listboxFields, questionKey, type WorkdayApplyConfig } from './index.js';
 
 const fx = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));
@@ -83,7 +84,8 @@ function approve(d: ApplicationDraft): ApprovedDraft<ApplicationDraft> {
 }
 
 type Extra = { key: string; label: string; kind: 'text' | 'select' | 'checkbox'; value: string; selector: string };
-async function draft(cfg: WorkdayApplyConfig, inp: ApplyInput, extra: Extra[] = [], answers: Record<string, string> = {}) {
+async function draft(cfg: WorkdayApplyConfig, inp: ApplyInput, extra: Extra[] = [], given: Record<string, string> = {}) {
+  const answers: Record<string, string> = { [CONSENT_KEY]: 'Yes', ...given };
   const d = await plugin.prepare(testContext(cfg, http()), inp);
   return applicationDraftSchema.parse({
     ...d,
@@ -161,9 +163,11 @@ describe('actor-apply-workday', () => {
     const h = http();
     const d = await plugin.prepare(testContext(config(), h), inputA());
     expect(h.calls).toEqual([detailApiUrl(parseWorkdayToken(A_TOKEN), externalPath(A_JOB))]);
-    expect(d).toMatchObject({ ats: 'workday', jobUrl: A_JOB, applyUrl: A_APPLY, missingRequired: [] });
+    // Your consent to the tenant's account terms is the one thing the profile can't answer.
+    expect(d).toMatchObject({ ats: 'workday', jobUrl: A_JOB, applyUrl: A_APPLY, missingRequired: [expect.stringMatching(/I accept Acme's Workday candidate account terms/)] });
     expect(Object.fromEntries(d.fields.map((f) => [f.key, f.value]))).toEqual({
       resume: '/tmp/resume.pdf',
+      [CONSENT_KEY]: null,
       'my-information:first_name': 'Divyansh',
       'my-information:last_name': 'Parashar',
       'my-information:city': 'Bengaluru',
@@ -176,7 +180,7 @@ describe('actor-apply-workday', () => {
     const d = await plugin.prepare(testContext(config(), http()), inputB());
     expect(d.applyUrl).toBe(B_APPLY);
     expect(d.fields.map((f) => f.key)).toEqual(expect.arrayContaining([Q_YEARS, Q_RELOCATE]));
-    expect(d.missingRequired).toEqual(['How many years of professional software experience do you have?', 'Are you willing to relocate?']);
+    expect(d.missingRequired).toEqual([expect.stringMatching(/consent/), 'How many years of professional software experience do you have?', 'Are you willing to relocate?']);
   });
 
   it('prepare refuses a posting that no longer accepts applications', async () => {
@@ -216,7 +220,7 @@ describe('actor-apply-workday', () => {
     expect(clicks).toEqual(expect.arrayContaining(['[role="option"]:has-text("LinkedIn")', '[role="option"]:has-text("Male")', '[role="option"]:has-text("Yes")']));
     expect(browser.actions.find((a) => a.type === 'check' && a.selector === '#terms')).toBeTruthy();
     expect(r.screenshots.map((s) => s.split('/k1-')[1])).toEqual([
-      'verify-email.png', 'autofill.png', 'my-information.png', 'my-experience.png', 'application-questions.png', 'voluntary-disclosures.png', 'self-identify.png', 'review.png',
+      'verify-email.png', 'autofill-with-resume.png', 'my-information.png', 'my-experience.png', 'application-questions.png', 'voluntary-disclosures.png', 'self-identify.png', 'review.png',
     ]);
   });
 
@@ -308,7 +312,10 @@ describe('actor-apply-workday', () => {
     const events: string[] = [];
     const cfg = config();
     const ctx = testContext(cfg, http(), { browser: browser as BrowserHandle, gmail: fakeGmail('me@gmail.com'), credentials: fakeCredentials({ 'workday.wd5.myworkdayjobs.com/workday:me@gmail.com': 'x' }), emit: (k) => events.push(k) });
-    await expect(plugin.execute(ctx, approve(await draft(cfg, inputA(), answersA)), 'k6')).rejects.toThrow(/layout not recognised/);
+    const err = await plugin.execute(ctx, approve(await draft(cfg, inputA(), answersA)), 'k6').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(UnknownLayoutError);
+    expect((err as UnknownLayoutError).message).toMatch(/layout not recognised/);
+    expect((err as UnknownLayoutError).screenshots.at(-1)).toMatch(/unknown\.png$/);
     expect(events).toEqual(['step_failed']);
   });
 
