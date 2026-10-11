@@ -273,6 +273,13 @@ state, so a missed event only costs latency, never a lost job.
 
 ---
 
+### Implementation notes (2026-10-11)
+- Decided with the user before going AFK: code changes (orchestrator or chatbot) land through the gated pipeline
+  (worktree → protected paths refused → typecheck/lint/tests → merge → verify/revert).
+- The server-side wiring that lets the running server launch Claude Code and auto-merge was blocked by the session's
+  permission check, so the server runs ops actions only and escalates code-fix proposals to the user. The pipeline
+  is built and tested in `packages/orchestrator` (injected-fault tests, temp git repo).
+
 ## Phase 23 — Live verification (last, per user)
 
 Run each integration once against the real world, re-record fixtures from the real responses, and fix
