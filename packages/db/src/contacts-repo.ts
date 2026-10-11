@@ -1,6 +1,6 @@
-import { and, asc, eq, ilike, isNotNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, isNotNull, sql, type SQL } from 'drizzle-orm';
 import type { DB } from './client.js';
-import { companies, contacts } from './schema.js';
+import { companies, contactImports, contacts } from './schema.js';
 
 export type ContactRow = typeof contacts.$inferSelect;
 export type CompanyRow = typeof companies.$inferSelect;
@@ -229,4 +229,70 @@ export async function confirmContactEmail(db: DB, contactId: string): Promise<vo
       updatedAt: new Date(),
     })
     .where(eq(contacts.id, contactId));
+}
+
+// ---------------------------------------------------------------------------
+// Phase 17: contact imports
+// ---------------------------------------------------------------------------
+
+export type ContactImportRow = typeof contactImports.$inferSelect;
+
+export async function createContactImport(
+  db: DB,
+  r: { filename: string; format: string; report: unknown; rows: unknown },
+): Promise<ContactImportRow> {
+  const [row] = await db.insert(contactImports).values(r).returning();
+  return row!;
+}
+
+export async function getContactImport(db: DB, id: string): Promise<ContactImportRow | null> {
+  const [r] = await db.select().from(contactImports).where(eq(contactImports.id, id));
+  return r ?? null;
+}
+
+export async function listContactImports(db: DB, limit = 20): Promise<Omit<ContactImportRow, 'rows'>[]> {
+  return db
+    .select({
+      id: contactImports.id,
+      filename: contactImports.filename,
+      format: contactImports.format,
+      status: contactImports.status,
+      report: contactImports.report,
+      result: contactImports.result,
+      createdAt: contactImports.createdAt,
+      committedAt: contactImports.committedAt,
+    })
+    .from(contactImports)
+    .orderBy(desc(contactImports.createdAt))
+    .limit(limit);
+}
+
+/** preview → committed|discarded, once. Returns null when the import was no longer a preview. */
+export async function finishContactImport(
+  db: DB,
+  id: string,
+  status: 'committed' | 'discarded',
+  result: unknown = null,
+): Promise<ContactImportRow | null> {
+  const [r] = await db
+    .update(contactImports)
+    .set({ status, result, committedAt: new Date() })
+    .where(and(eq(contactImports.id, id), eq(contactImports.status, 'preview')))
+    .returning();
+  return r ?? null;
+}
+
+export async function setContactImportFields(
+  db: DB,
+  contactId: string,
+  f: { linkedinDegree?: number | null; connectedOn?: string | null; phone?: string | null; importId?: string | null; source?: string },
+): Promise<void> {
+  const patch = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined));
+  if (!Object.keys(patch).length) return;
+  await db.update(contacts).set({ ...patch, updatedAt: new Date() }).where(eq(contacts.id, contactId));
+}
+
+/** id, name, domain of every company (for matching imported company names). */
+export async function listCompaniesForMatching(db: DB): Promise<Array<{ id: string; name: string; domain: string | null }>> {
+  return db.select({ id: companies.id, name: companies.name, domain: companies.domain }).from(companies);
 }

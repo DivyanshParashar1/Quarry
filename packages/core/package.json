@@ -18,6 +18,7 @@
     "@jobforge/embeddings": "workspace:*",
     "@jobforge/plugin-sdk": "workspace:*",
     "@jobforge/shared": "workspace:*",
+    "exceljs": "^4.4.0",
     "pdf-parse": "^1.1.4",
     "pg-boss": "^12.36.0",
     "pino": "^9.14.0",

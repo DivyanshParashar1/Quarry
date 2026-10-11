@@ -25,3 +25,5 @@ export * from './apply.js';
 export * from './sequencer.js';
 export * from './ats-score/index.js';
 export * from './resume-library.js';
+export * from './csv.js';
+export * from './contact-import/index.js';

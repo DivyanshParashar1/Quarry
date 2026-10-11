@@ -335,6 +335,13 @@ export const contacts = pgTable(
     bouncedEmails: text('bounced_emails').array().notNull().default(sql`'{}'::text[]`),
     status: contactStatusEnum('status').notNull().default('active'),
     notes: text('notes'),
+    // Phase 17: imported contacts.
+    /** 1 = a connection of the user's LinkedIn account (from the Connections export); null = unknown. */
+    linkedinDegree: integer('linkedin_degree'),
+    connectedOn: date('connected_on'),
+    phone: text('phone'),
+    /** The contact_imports row that last touched this contact. */
+    importId: uuid('import_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -350,6 +357,26 @@ export const contacts = pgTable(
     emailIdx: index('contacts_email_idx').on(sql`lower(${t.email})`),
   }),
 );
+
+/**
+ * Phase 17: one uploaded contact sheet. `preview` holds the analysis (EDA report +
+ * normalised rows) until the user confirms; `committed` records what was written.
+ */
+export const contactImportStatusEnum = pgEnum('contact_import_status', ['preview', 'committed', 'discarded']);
+
+export const contactImports = pgTable('contact_imports', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  filename: text('filename').notNull(),
+  /** linkedin_connections | generic */
+  format: text('format').notNull(),
+  status: contactImportStatusEnum('status').notNull().default('preview'),
+  report: jsonb('report').notNull(),
+  rows: jsonb('rows').notNull(),
+  /** { contactsCreated, contactsUpdated, companiesCreated, skipped: [{ line, reason }] } */
+  result: jsonb('result'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  committedAt: timestamp('committed_at', { withTimezone: true }),
+});
 
 /** attention (Phase 9): a human must fix something (e.g. a LinkedIn checkpoint) before a paused loop resumes. */
 export const reviewKindEnum = pgEnum('review_kind', ['application', 'outreach', 'followup', 'referral_ask', 'attention']);

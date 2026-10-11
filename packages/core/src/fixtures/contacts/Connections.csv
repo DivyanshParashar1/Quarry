@@ -1,0 +1,9 @@
+Notes:
+"When exporting your connection data, you may notice that some of the email addresses are missing. You will only see email addresses for connections who have allowed their connections to see or download their email address using this setting https://www.linkedin.com/psettings/privacy/email. You can learn more here https://www.linkedin.com/help/linkedin/answer/261"
+
+First Name,Last Name,URL,Email Address,Company,Position,Connected On
+Aarav,Mehta,https://www.linkedin.com/in/aarav-mehta-12ab34,,Acme Payments,Software Engineer II,05 Mar 2024
+Isha,Verma,https://www.linkedin.com/in/ishaverma,isha.verma@example.com,Globex,Senior Data Scientist,17 Jan 2025
+Rohan,Gupta,https://www.linkedin.com/in/rohan-gupta-9f,,Initech Pvt. Ltd.,Engineering Manager,02 Aug 2023
+Neha,,https://www.linkedin.com/in/neha-s-77,,,Student,11 Jun 2025
+Aarav,Mehta,https://www.linkedin.com/in/aarav-mehta-12ab34,,Acme Payments,Software Engineer II,05 Mar 2024
