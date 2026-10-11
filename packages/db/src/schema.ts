@@ -722,3 +722,47 @@ export const jobPipelineState = pgTable(
     stateIdx: index('job_pipeline_state_state_idx').on(t.state, t.enteredStateAt),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Phase 22: orchestrator incidents
+// ---------------------------------------------------------------------------
+
+/**
+ * One problem the monitor found, from detection to resolution. `fingerprint` is
+ * "<check>:<subject>"; at most one unresolved incident per fingerprint. The
+ * actions taken, expert plans and code fixes are appended to `log`.
+ */
+export const incidents = pgTable(
+  'incidents',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    checkId: text('check_id').notNull(),
+    fingerprint: text('fingerprint').notNull(),
+    /** open | acting | verifying | resolved | escalated */
+    status: text('status').notNull().default('open'),
+    severity: text('severity').notNull(),
+    summary: text('summary').notNull(),
+    expert: text('expert'),
+    diagnosis: text('diagnosis'),
+    /** The finding's latest data (counts, ids, failure capture paths). */
+    data: jsonb('data').notNull().default(sql`'{}'::jsonb`),
+    /** Append-only: plans, actions and their results, code fixes, reverts. */
+    log: jsonb('log').notNull().default(sql`'[]'::jsonb`),
+    /** Failed fix attempts (a second one escalates to the user). */
+    attempts: integer('attempts').notNull().default(0),
+    /** Newest evidence the check saw (e.g. the latest failure). */
+    evidenceAt: timestamp('evidence_at', { withTimezone: true }),
+    /** When the last action was taken; evidence newer than this means it didn't help. */
+    actedAt: timestamp('acted_at', { withTimezone: true }),
+    /** A merged code fix is watched until this moment. */
+    verifyUntil: timestamp('verify_until', { withTimezone: true }),
+    llmCostUsd: real('llm_cost_usd').notNull().default(0),
+    openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => ({
+    openFingerprint: uniqueIndex('incidents_open_fingerprint_uniq').on(t.fingerprint).where(sql`status <> 'resolved'`),
+    statusIdx: index('incidents_status_idx').on(t.status, t.updatedAt),
+  }),
+);

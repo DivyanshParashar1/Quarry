@@ -35,7 +35,8 @@ import {
   updatePendingDraft,
   type ReviewItemRow,
 } from '@jobforge/db';
-import { buildContext } from './plugins.js';
+import { buildContext, type LoadedPlugin } from './plugins.js';
+import { isPluginPaused, tenantOverrides, withTenantOverrides } from './ops-state.js';
 import { coreApprovedDraft, isCoreApproved, loadJobForOutreach, OutreachError, type OutreachDeps } from './outreach.js';
 import type { RawBrowser } from './browser.js';
 
@@ -88,7 +89,7 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
   if (open) throw new OutreachError(`an application for this job is already ${open.status}`, 'duplicate');
 
   const pluginId = APPLY_ACTORS[target.ats];
-  const actor = deps.registry.actor(pluginId);
+  const actor = await withOverrides(deps, deps.registry.actor(pluginId));
   const input: ApplyInput = {
     job,
     ats: target.ats,
@@ -148,7 +149,9 @@ export async function runApplyTick(deps: ApplyDeps): Promise<ApplyTickResult> {
   const owner = randomUUID();
   if (!(await tryLease(deps.db, 'apply.send', owner, 20 * 60_000))) return { ...out, skipped: 'locked' };
   try {
-    const due = (await Promise.all(APPLY_PLUGIN_IDS.map((id) => approvedDueItems(deps.db, now, 20, id)))).flat();
+    const active = [];
+    for (const id of APPLY_PLUGIN_IDS) if (!(await isPluginPaused(deps.db, id, now))) active.push(id);
+    const due = (await Promise.all(active.map((id) => approvedDueItems(deps.db, now, 20, id)))).flat();
     for (const item of due) {
       const fresh = await getReviewItem(deps.db, item.id);
       if (fresh?.status !== 'approved') continue;
@@ -186,11 +189,14 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
     }
     await restartAction(db, claim.action.id);
   }
-  const actor = deps.registry.actor(item.pluginId);
+  const actor = await withOverrides(deps, deps.registry.actor(item.pluginId));
   const log = deps.log.child({ plugin: item.pluginId, reviewItemId: item.id });
   if (!isCoreApproved(approved)) throw new Error('refusing to execute a draft the core did not approve');
   try {
-    const ctx = buildContext(actor, { ...deps, browser: await deps.openBrowser!(), log, signal: AbortSignal.timeout(5 * 60_000) });
+    // Phase 22: the actor's own audit events (account_created, step_failed with its failure capture) feed the orchestrator.
+    const onEvent = (kind: string, data: Record<string, unknown>) =>
+      void appendEvent(db, { kind, subjectType: 'review_item', subjectId: item.id, payload: data }).catch((e: unknown) => log.warn({ err: (e as Error).message }, 'could not record a plugin event'));
+    const ctx = buildContext(actor, { ...deps, browser: await deps.openBrowser!(), log, signal: AbortSignal.timeout(5 * 60_000), onEvent });
     const result = (await actor.plugin.execute(ctx, approved, key)) as ApplicationResult;
     await finishAction(db, claim.action.id, { status: 'succeeded', result, at: now });
     if (deps.dryRun) {
@@ -260,6 +266,13 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
     log.warn({ err: error }, 'application failed');
     return { ...base, ok: false, error };
   }
+}
+
+/** Phase 22: the actor with any stored per-tenant overrides (orchestrator- or user-set) merged into its config. */
+async function withOverrides<P extends LoadedPlugin>(deps: ApplyDeps, loaded: P): Promise<P> {
+  const r = withTenantOverrides(loaded, (await tenantOverrides(deps.db))[loaded.manifest.id]);
+  if (r.error) deps.log.warn({ plugin: loaded.manifest.id, err: r.error }, 'stored tenant override ignored (invalid)');
+  return r.loaded as P;
 }
 
 async function reopenWithQuestions(deps: ApplyDeps, item: ReviewItemRow, draft: ApplicationDraft, questions: FormQuestion[]): Promise<void> {

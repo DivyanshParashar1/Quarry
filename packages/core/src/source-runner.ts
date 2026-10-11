@@ -13,6 +13,7 @@ import {
 } from '@jobforge/db';
 import { normalizePosting } from './normalize.js';
 import { emitStage } from './triggers.js';
+import { isPluginPaused } from './ops-state.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 /** Which source plugin serves each ATS type. */
@@ -47,6 +48,8 @@ export interface SourceRunSummary {
   error?: string;
   /** True when retrying can't help (e.g. 404 board). */
   permanent?: boolean;
+  /** Phase 22: skipped because the plugin is paused. */
+  paused?: boolean;
 }
 
 /**
@@ -73,6 +76,12 @@ export async function runSourceTarget(deps: SourceRunDeps, row: SourceTargetRow)
     return summary;
   }
 
+  if (await isPluginPaused(deps.db, pluginId)) {
+    // Phase 22: the orchestrator (or you) paused this plugin; the board is fetched again once it resumes.
+    summary.error = `${pluginId} is paused`;
+    summary.paused = true;
+    return summary;
+  }
   const loaded = deps.registry.source(pluginId);
   const log = deps.log.child({ plugin: pluginId, company: row.companyName, board: row.boardToken });
   const runId = await startPluginRun(deps.db, {

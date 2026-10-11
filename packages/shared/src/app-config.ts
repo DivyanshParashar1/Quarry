@@ -70,6 +70,57 @@ export const resumesConfigSchema = z
   .strict();
 export type ResumesConfig = z.infer<typeof resumesConfigSchema>;
 
+export const orchestratorConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    /** Run a monitor pass this often (plus on failure events). */
+    intervalMinutes: z.number().int().min(1).max(240).default(15),
+    /** LLM spend per calendar day (UTC); above it LLM steps pause until tomorrow and experts stop. */
+    dailyLlmBudgetUsd: z.number().min(0).default(5),
+    /** Gated code fixes (Claude Code in a worktree; typecheck + lint + tests; protected paths refused). */
+    autoFix: z.boolean().default(true),
+    maxCodeFixesPerDay: z.number().int().min(0).max(20).default(3),
+    /** After a merged fix, watch the failing check this long; a regression reverts the merge. */
+    verifyWindowMin: z.number().int().min(1).default(60),
+    /** Thresholds of the deterministic monitor. */
+    checks: z
+      .object({
+        /** Consecutive failed fetches of one board. */
+        sourceErrorStreak: z.number().int().min(1).default(3),
+        /** Failed / unrecognised applications of one actor in 24 h. */
+        applyFailures: z.number().int().min(1).default(2),
+        /** Hours a job may sit in a pipeline state before it is "stuck". */
+        stuckHours: z
+          .object({ referral_pending: z.number().positive().default(96), ready_to_apply: z.number().positive().default(48) })
+          .strict()
+          .default({}),
+        /** Pending review items. */
+        reviewBacklog: z.number().int().min(1).default(300),
+        /** Bounces / sends over 7 days (with at least minSends sends). */
+        bounceRate: z.number().min(0).max(1).default(0.15),
+        minSends: z.number().int().min(1).default(10),
+        /** Plugin errors of one kind in 24 h (resume fit, tailoring). */
+        stageFailures: z.number().int().min(1).default(5),
+      })
+      .strict()
+      .default({}),
+    codeFix: z
+      .object({
+        /** The Claude Code CLI. */
+        command: z.string().default('claude'),
+        model: z.string().optional(),
+        timeoutMin: z.number().int().min(1).max(180).default(30),
+        /** Run in the worktree before Claude (dependencies). */
+        setup: z.array(z.array(z.string()).min(1)).default([['pnpm', 'install', '--frozen-lockfile', '--prefer-offline']]),
+        /** All must pass before a merge. */
+        gates: z.array(z.array(z.string()).min(1)).default([['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'test']]),
+      })
+      .strict()
+      .default({}),
+  })
+  .strict();
+export type OrchestratorConfig = z.infer<typeof orchestratorConfigSchema>;
+
 export const appConfigSchema = z
   .object({
     llm: z
@@ -81,6 +132,7 @@ export const appConfigSchema = z
             outreach: routeSchema.optional(),
             extract: routeSchema.optional(),
             research: routeSchema.optional(),
+            orchestrator: routeSchema.optional(),
           })
           .strict()
           .default({}),
@@ -272,6 +324,8 @@ export const appConfigSchema = z
       .default({}),
     /** Phase 16: resume library (combos up front), per-job selector, benchmarks. */
     resumes: resumesConfigSchema.default({}),
+    /** Phase 22: the orchestrator — health checks, expert diagnosis, ops actions, gated code fixes. */
+    orchestrator: orchestratorConfigSchema.default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })

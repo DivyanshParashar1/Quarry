@@ -411,3 +411,17 @@ export async function lastEvent(db: DB, kind: string): Promise<typeof events.$in
   const [r] = await db.select().from(events).where(eq(events.kind, kind)).orderBy(desc(events.createdAt)).limit(1);
   return r ?? null;
 }
+
+/** Phase 22: one board by id. */
+export async function getCompanySource(db: DB, id: string): Promise<typeof companySources.$inferSelect | null> {
+  const [r] = await db.select().from(companySources).where(eq(companySources.id, id));
+  return r ?? null;
+}
+
+/** Phase 22: pause / resume a board (paused boards are not fetched). */
+export async function setCompanySourceStatus(db: DB, id: string, status: 'active' | 'paused', note?: string): Promise<void> {
+  await db
+    .update(companySources)
+    .set({ status, ...(note ? { lastError: note } : {}) })
+    .where(eq(companySources.id, id));
+}

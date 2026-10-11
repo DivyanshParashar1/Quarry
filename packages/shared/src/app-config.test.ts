@@ -52,6 +52,21 @@ describe('config.yaml', () => {
         selector: { similarityWeight: 0.4, similarityLow: 0.5, similarityHigh: 0.9, threshold: 75, tieMargin: 1 },
         benchmarks: { perCategory: 5, categories: DEFAULT_BENCHMARK_CATEGORIES },
       },
+      orchestrator: {
+        enabled: true,
+        intervalMinutes: 15,
+        dailyLlmBudgetUsd: 5,
+        autoFix: true,
+        maxCodeFixesPerDay: 3,
+        verifyWindowMin: 60,
+        checks: { sourceErrorStreak: 3, applyFailures: 2, stuckHours: { referral_pending: 96, ready_to_apply: 48 }, reviewBacklog: 300, bounceRate: 0.15, minSends: 10, stageFailures: 5 },
+        codeFix: {
+          command: 'claude',
+          timeoutMin: 30,
+          setup: [['pnpm', 'install', '--frozen-lockfile', '--prefer-offline']],
+          gates: [['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'test']],
+        },
+      },
       plugins: {},
     });
   });

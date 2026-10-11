@@ -18,6 +18,7 @@ export * from './alert-runner.js';
 export * from './browser.js';
 export * from './session-store.js';
 export * from './credentials.js';
+export * from './ops-state.js';
 export * from './referrals.js';
 export * from './linkedin.js';
 export * from './linkedin-send.js';

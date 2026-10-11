@@ -39,6 +39,8 @@ const EnvSchema = z.object({
   LINKEDIN_STATE_PATH: z.string().optional(),
   /** Key for the session file when no OS keychain is available (32+ chars). Never logged. */
   JOBFORGE_SESSION_KEY: z.string().min(32).optional(),
+  /** Phase 22: ntfy topic URL (e.g. https://ntfy.sh/<secret-topic>) for problems only a human can fix. Never logged. */
+  NTFY_URL: z.string().url().optional(),
   /** Show the browser (debugging / first login). */
   BROWSER_HEADLESS: z
     .enum(['true', 'false', '1', '0', ''])
