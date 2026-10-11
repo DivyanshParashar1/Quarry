@@ -106,7 +106,8 @@ export async function registerOutreachWorkers(
   const loops: [string, string, (d: OutreachDeps) => Promise<unknown>, boolean][] = [
     [QUEUES.outreachSend, '* * * * *', runSendTick, opts.live && opts.gmailConnected],
     [QUEUES.outreachTrack, '*/10 * * * *', (d) => pollTracker(d), opts.gmailConnected],
-    [QUEUES.outreachFollowups, '17 * * * *', draftDueFollowups, opts.gmailConnected],
+    // Phase 18: follow-up drafting moved into the hourly sweeper (an LLM step, autopilot only); unscheduled here.
+    [QUEUES.outreachFollowups, '17 * * * *', draftDueFollowups, false],
   ];
   for (const [name, cron, fn, on] of loops) {
     if (!(await boss.getQueue(name).catch(() => null))) {

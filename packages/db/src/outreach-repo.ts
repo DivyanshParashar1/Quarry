@@ -459,3 +459,20 @@ export async function threadForReviewItem(db: DB, reviewItemId: string): Promise
   const [r] = await db.select().from(outreachThreads).where(eq(outreachThreads.reviewItemId, reviewItemId));
   return r ?? null;
 }
+
+/**
+ * Another message on a thread that is not a follow-up (Phase 18: the full LinkedIn
+ * message after a connection note was accepted): lastSentAt and the next follow-up
+ * move, the follow-up count doesn't.
+ */
+export async function recordThreadMessage(db: DB, threadId: string, messageId: string, at: Date, nextFollowupAt: Date | null): Promise<void> {
+  await db
+    .update(outreachThreads)
+    .set({
+      messageIds: sql`array_append(${outreachThreads.messageIds}, ${messageId})`,
+      lastSentAt: at,
+      nextFollowupAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(outreachThreads.id, threadId));
+}

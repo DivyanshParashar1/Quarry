@@ -15,8 +15,8 @@ describe('config.yaml', () => {
         perContactCooldownDays: 30,
         referralMinEmailConfidence: 0.3,
         spacingMinutes: [4, 11],
-        followupDays: [5, 7],
-        maxFollowups: 2,
+        followupDays: [1],
+        maxFollowups: 1,
       },
       resume: { name: '', contact: '', headline: '' },
       autopilot: {
@@ -45,7 +45,8 @@ describe('config.yaml', () => {
         searchKeywords: ['software engineer', 'SDE', 'developer'],
         profilesPerCompany: 15,
       },
-      discovery: { minConfidence: 0.5, lists: {}, alertThreshold: 40, recheckDays: 30, nightly: false },
+      discovery: { minConfidence: 0.5, lists: {}, alertThreshold: 40, recheckDays: 30, nightly: true },
+      sweeper: { fetchEveryHours: 6, runOnStart: true, matchLimit: 150 },
       resumes: {
         projectsPerResume: 3,
         selector: { similarityWeight: 0.4, similarityLow: 0.5, similarityHigh: 0.9, threshold: 75, tieMargin: 1 },

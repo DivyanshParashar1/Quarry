@@ -63,7 +63,8 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
   });
 
   const config = parseAppConfig({
-    outreach: { dailyCap: 3, perCompanyPerWeek: 2, spacingMinutes: [5, 5] },
+    // Pinned to the pre-Phase-18 timing: this suite tests the engine (two follow-ups), not the defaults.
+    outreach: { dailyCap: 3, perCompanyPerWeek: 2, spacingMinutes: [5, 5], followupDays: [5, 7], maxFollowups: 2 },
     plugins: { 'actor-gmail-outreach': { senderName: 'Asha Rao', signature: 'Asha' } },
   });
 

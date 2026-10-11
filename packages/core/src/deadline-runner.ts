@@ -12,6 +12,7 @@ import {
   type DB,
 } from '@jobforge/db';
 import { loadCompanyRef } from './contacts-runner.js';
+import { emitStage } from './triggers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 export const DEADLINE_ENRICHER = 'enricher-deadline';
@@ -65,7 +66,11 @@ export async function runDeadlines(
       const e = (await loaded.plugin.enrich(ctx, job, company)) as unknown as DeadlineEstimate;
       await saveDeadline(deps.db, id, e, now);
       summary.estimated++;
-      if (e.deadline) summary.withDate++;
+      if (e.deadline) {
+        summary.withDate++;
+        // A job already in the pipeline may now be due to apply (deadline imminent).
+        emitStage({ kind: 'job.advance', jobId: id, reason: 'deadline.inferred' });
+      }
       await appendEvent(deps.db, {
         kind: 'job.deadline_inferred',
         subjectType: 'job',

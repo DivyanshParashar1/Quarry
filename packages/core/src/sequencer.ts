@@ -10,6 +10,7 @@ import {
   jobsInState,
   listRankedJobs,
   listBatchItems,
+  listReviewItems,
   pipelineStateCounts,
   releaseLease,
   reviewCounts,
@@ -27,7 +28,7 @@ import { applicationDraftSchema } from '@jobforge/plugin-sdk';
 import { loadMatchConfidence } from './autopilot.js';
 import { draftApplication, type ApplyDeps } from './apply.js';
 import { isDeadlineImminent } from './deadline-runner.js';
-import { approveReviewItem, OutreachError, referralLimitProblem } from './outreach.js';
+import { approveReviewItem, OUTREACH_ACTOR, OutreachError, referralLimitProblem } from './outreach.js';
 import { fanOutReferrals, type FanOutDeps } from './referrals.js';
 import { selectResumeForJob } from './resume-library.js';
 import type { TailorRunDeps } from './tailor-runner.js';
@@ -101,12 +102,45 @@ export async function runSequencer(deps: SequencerDeps, opts: { limit?: number }
   return { admitted, steps, counts: await pipelineStateCounts(deps.db), ...(paused ? { paused } : {}) };
 }
 
+/**
+ * Phase 18: advance ONE job as far as it can go right now (the event-trigger
+ * path: a job was matched, a referral replied, a deadline came in). Same steps
+ * and guards as the hourly run, restricted to this job; a per-job lease keeps
+ * two triggers for the same job from overlapping.
+ */
+export async function advancePipelineJob(deps: SequencerDeps, jobId: string): Promise<SequencerStep[]> {
+  const owner = randomUUID();
+  const lease = `pipeline.job:${jobId}`;
+  if (!(await tryLease(deps.db, lease, owner, 15 * 60_000))) return [];
+  const steps: SequencerStep[] = [];
+  try {
+    const now = deps.now?.() ?? new Date();
+    if (!(await getPipelineState(deps.db, jobId))) {
+      if (await backpressure(deps)) return steps;
+      await admitCandidates(deps, 1, steps, jobId);
+    }
+    if (!(await backpressure(deps))) await fanOutCandidates(deps, steps, jobId);
+    await checkWaits(deps, now, steps, jobId);
+    await queueApplications(deps, steps, jobId);
+    if (steps.length) await appendEvent(deps.db, { kind: 'autopilot.advance', subjectType: 'job', subjectId: jobId, payload: { steps: steps.map((s) => `${s.from ?? '∅'}→${s.to ?? '∅'}:${s.reason}`) } });
+  } finally {
+    await releaseLease(deps.db, lease, owner);
+  }
+  return steps;
+}
+
 /** Phase 14: hold new work back while the review queue is backed up. */
 async function backpressure(deps: SequencerDeps): Promise<string | undefined> {
   const max = deps.policy.maxPendingReviews;
   if (max === null) return undefined;
   const { pending } = await reviewCounts(deps.db);
   return pending >= max ? `review_queue_full (${pending} pending ≥ ${max})` : undefined;
+}
+
+/** Rows in these states, optionally only one job (the per-job trigger path). */
+async function rowsIn(db: DB, states: PipelineState[], only?: string): Promise<PipelineRow[]> {
+  const rows = await jobsInState(db, states);
+  return only ? rows.filter((r) => r.jobId === only) : rows;
 }
 
 async function step(deps: SequencerDeps, steps: SequencerStep[], row: PipelineRow, to: PipelineState, reason: string, meta: Record<string, unknown> = {}, note?: string): Promise<boolean> {
@@ -143,8 +177,8 @@ async function syncApplications(deps: SequencerDeps, steps: SequencerStep[]): Pr
 }
 
 /** referral_pending → ready_to_apply: a reply, the wait elapsed, or the deadline is near. */
-async function checkWaits(deps: SequencerDeps, now: Date, steps: SequencerStep[]): Promise<void> {
-  for (const row of await jobsInState(deps.db, ['referral_pending'])) {
+async function checkWaits(deps: SequencerDeps, now: Date, steps: SequencerStep[], only?: string): Promise<void> {
+  for (const row of await rowsIn(deps.db, ['referral_pending'], only)) {
     const batch = await getBatchForJob(deps.db, row.jobId);
     const [job] = await deps.db.execute<{ inferred_deadline: string | null; deadline_confidence: number | null }>(
       sql`select inferred_deadline, deadline_confidence from jobs where id = ${row.jobId}`,
@@ -159,8 +193,8 @@ async function checkWaits(deps: SequencerDeps, now: Date, steps: SequencerStep[]
 }
 
 /** Queue the application review item (Phase 11), or flag a manual apply when the ATS isn't supported. */
-async function queueApplications(deps: SequencerDeps, steps: SequencerStep[]): Promise<void> {
-  for (const row of await jobsInState(deps.db, ['ready_to_apply'])) {
+async function queueApplications(deps: SequencerDeps, steps: SequencerStep[], only?: string): Promise<void> {
+  for (const row of await rowsIn(deps.db, ['ready_to_apply'], only)) {
     const meta = row.metadata as { applyReviewItemId?: string; manualApply?: boolean; applyError?: string };
     if (meta.applyReviewItemId || meta.manualApply) continue;
     try {
@@ -184,14 +218,16 @@ async function queueApplications(deps: SequencerDeps, steps: SequencerStep[]): P
 }
 
 /** Take on new top-ranked jobs that pass the match + tailor gates, up to maxConcurrentJobs in flight. */
-async function admitCandidates(deps: SequencerDeps, limit: number | undefined, steps: SequencerStep[]): Promise<number> {
+async function admitCandidates(deps: SequencerDeps, limit: number | undefined, steps: SequencerStep[], only?: string): Promise<number> {
   const { policy, db } = deps;
   const counts = await pipelineStateCounts(db);
   const room = policy.maxConcurrentJobs - counts.candidate - counts.referral_pending;
   if (room <= 0) return 0;
   const profile = await getActiveProfile(db);
   if (!profile) return 0;
-  const ranked = await listRankedJobs(db, { profileVersion: profile.version, methods: ['llm'], minScore: policy.minMatchScore, sort: 'score', limit: Math.min(limit ?? policy.candidateBatch, 100) + 50 });
+  const ranked = only
+    ? { rows: (await listRankedJobs(db, { profileVersion: profile.version, methods: ['llm'], minScore: policy.minMatchScore, sort: 'score', limit: 1, jobIds: [only] })).rows }
+    : await listRankedJobs(db, { profileVersion: profile.version, methods: ['llm'], minScore: policy.minMatchScore, sort: 'score', limit: Math.min(limit ?? policy.candidateBatch, 100) + 50 });
   let admitted = 0;
   for (const job of ranked.rows) {
     if (admitted >= Math.min(room, limit ?? policy.candidateBatch)) break;
@@ -216,9 +252,9 @@ async function admitCandidates(deps: SequencerDeps, limit: number | undefined, s
 }
 
 /** candidate → referral_pending: fan out N asks and auto-approve the confident ones. */
-async function fanOutCandidates(deps: SequencerDeps, steps: SequencerStep[]): Promise<void> {
+async function fanOutCandidates(deps: SequencerDeps, steps: SequencerStep[], only?: string): Promise<void> {
   const { policy, db } = deps;
-  for (const row of await jobsInState(db, ['candidate'])) {
+  for (const row of await rowsIn(db, ['candidate'], only)) {
     try {
       const r = await fanOutReferrals(deps.fanOutDeps, row.jobId, { count: policy.referralsPerJob ?? deps.outreachPolicy.perJobReferralCap });
       const items = await listBatchItems(db, r.batch.id);
@@ -237,9 +273,24 @@ async function fanOutCandidates(deps: SequencerDeps, steps: SequencerStep[]): Pr
 }
 
 async function autoApproveAsks(deps: SequencerDeps, ids: string[]): Promise<number> {
+  return autoApprove(deps, ids, 'referral_ask');
+}
+
+/**
+ * Phase 18: email follow-ups clear the same gate as asks (draft confidence ≥
+ * confidenceFloor.outreach, shared daily budget). Manual LinkedIn follow-ups
+ * stay pending: the user sends those by hand anyway.
+ */
+export async function autoApproveFollowups(deps: SequencerDeps): Promise<number> {
+  if (!deps.policy.autoApproveReferrals) return 0;
+  const pending = await listReviewItems(deps.db, { status: ['pending'], kind: ['followup'], limit: 500 });
+  return autoApprove(deps, pending.filter((i) => i.pluginId === OUTREACH_ACTOR).map((i) => i.id), 'followup');
+}
+
+async function autoApprove(deps: SequencerDeps, ids: string[], kind: 'referral_ask' | 'followup'): Promise<number> {
   const { db, policy } = deps;
   const [used] = await db.execute<{ n: number }>(sql`
-    select count(*)::int as n from review_items where decided_by = 'autopilot' and kind = 'referral_ask'
+    select count(*)::int as n from review_items where decided_by = 'autopilot' and kind in ('referral_ask', 'followup')
       and decided_at >= now() - interval '24 hours'`);
   let budget = policy.maxAutoApprovedAsksPerDay - (used?.n ?? 0);
   let approved = 0;
@@ -249,11 +300,11 @@ async function autoApproveAsks(deps: SequencerDeps, ids: string[]): Promise<numb
     const conf = (item?.draft as { confidence?: number | null } | undefined)?.confidence ?? 0;
     if (!item || item.status !== 'pending' || conf < policy.confidenceFloor.outreach) continue; // low confidence → human review
     if (await referralLimitProblem(db, deps.outreachPolicy, item, deps.now?.() ?? new Date())) continue;
-    const ok = await transitionReviewItem(db, id, ['pending'], 'approved', { decided: true, decidedBy: 'autopilot', confidence: conf, decisionNote: `autopilot: ask confidence ${conf.toFixed(2)}` });
+    const ok = await transitionReviewItem(db, id, ['pending'], 'approved', { decided: true, decidedBy: 'autopilot', confidence: conf, decisionNote: `autopilot: ${kind === 'followup' ? 'follow-up' : 'ask'} confidence ${conf.toFixed(2)}` });
     if (ok) {
       approved++;
       budget--;
-      await appendEvent(db, { kind: 'autopilot.approved', subjectType: 'review_item', subjectId: id, payload: { kind: 'referral_ask', confidence: conf } });
+      await appendEvent(db, { kind: 'autopilot.approved', subjectType: 'review_item', subjectId: id, payload: { kind, confidence: conf } });
     }
   }
   return approved;

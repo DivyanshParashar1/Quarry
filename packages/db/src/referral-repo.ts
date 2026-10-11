@@ -64,6 +64,10 @@ export interface BatchItemRow {
   decidedBy: string | null;
   error: string | null;
   createdAt: Date;
+  /** Phase 17/18: manual LinkedIn drafts — message | note. */
+  linkedinKind: string | null;
+  /** Phase 18: a pending/approved/sent after-accept message on this ask's thread. */
+  acceptedMessage: boolean;
 }
 
 export async function listBatchItems(db: DB, batchId: string): Promise<BatchItemRow[]> {
@@ -81,6 +85,9 @@ export async function listBatchItems(db: DB, batchId: string): Promise<BatchItem
       decidedBy: reviewItems.decidedBy,
       error: reviewItems.error,
       createdAt: reviewItems.createdAt,
+      linkedinKind: sql<string | null>`${reviewItems.draft}->>'kind'`,
+      acceptedMessage: sql<boolean>`exists (select 1 from review_items f where f.thread_id = ${outreachThreads.id}
+        and f.kind = 'followup' and f.draft->>'purpose' = 'after_accept' and f.status in ('pending', 'approved', 'executed'))`,
     })
     .from(reviewItems)
     .leftJoin(contacts, eq(contacts.id, reviewItems.contactId))

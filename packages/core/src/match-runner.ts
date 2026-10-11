@@ -9,6 +9,7 @@ import {
   startPluginRun,
   type DB,
 } from '@jobforge/db';
+import { emitStage } from './triggers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 export interface MatchRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {
@@ -74,6 +75,7 @@ export async function runMatch(
     const results = validResults(await loaded.plugin.score(ctx, jobs, profile), new Set(rows.map((r) => r.id)), log);
     await saveMatchResults(deps.db, profile.version, pluginId, results);
     for (const r of results) summary[r.method]++;
+    emitStage({ kind: 'job.matched', jobIds: results.filter((r) => r.method === 'llm').map((r) => r.jobId) });
     summary.unscored = rows.length - results.length;
     await finishPluginRun(deps.db, runId, {
       status: 'succeeded',

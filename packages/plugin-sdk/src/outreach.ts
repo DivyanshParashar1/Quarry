@@ -206,6 +206,11 @@ export const linkedinManualDraftSchema = z
   .object({
     channel: z.literal('linkedin_manual'),
     kind: z.enum(['message', 'note']),
+    /**
+     * Phase 18: ask = the first contact; after_accept = the full message once a connection
+     * note was accepted; followup = the 24 h nudge on a sent message.
+     */
+    purpose: z.enum(['ask', 'after_accept', 'followup']).default('ask'),
     profileUrl: z.string().url().refine((u) => /^https:\/\/(www\.)?linkedin\.com\/in\//.test(u), 'must be a linkedin.com/in/ profile URL'),
     toName: z.string().min(1),
     text: z.string().trim().min(20).max(LINKEDIN_MESSAGE_MAX),

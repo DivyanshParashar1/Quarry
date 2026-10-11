@@ -120,10 +120,10 @@ export const appConfigSchema = z
           .tuple([z.number().min(0), z.number().min(0)])
           .default([4, 11])
           .refine(([a, b]) => a <= b, 'min must be <= max'),
-        /** Days to wait before follow-up 1, 2, ... (length caps the number of follow-ups). */
-        followupDays: z.array(z.number().positive()).max(5).default([5, 7]),
-        /** Hard ceiling on follow-ups per thread (PLAN.md §8: up to 2). */
-        maxFollowups: z.number().int().min(0).max(5).default(2),
+        /** Days to wait before follow-up 1, 2, ... (length caps the number of follow-ups). Phase 18: one, after 24 h. */
+        followupDays: z.array(z.number().positive()).max(5).default([1]),
+        /** Hard ceiling on follow-ups per thread. */
+        maxFollowups: z.number().int().min(0).max(5).default(1),
       })
       .strict()
       .default({}),
@@ -250,8 +250,23 @@ export const appConfigSchema = z
         alertThreshold: z.number().int().positive().default(40),
         /** Phase 13: re-check each company's ATS this often. */
         recheckDays: z.number().int().positive().default(30),
-        /** Phase 13: run the nightly discovery loop (server, MODE=live not required: it only reads public pages). */
-        nightly: z.boolean().default(false),
+        /** Phase 13: run the nightly discovery loop (server, MODE=live not required: it only reads public pages). On since Phase 18. */
+        nightly: z.boolean().default(true),
+      })
+      .strict()
+      .default({}),
+    /**
+     * Phase 18: the sweeper — one idempotent pass on server start and hourly. Free steps (board
+     * fetch, alerts, reply tracking, deadline expiry) always run; LLM steps only with autopilot.enabled.
+     */
+    sweeper: z
+      .object({
+        /** Re-fetch a board when its last fetch is older than this. */
+        fetchEveryHours: z.number().positive().max(168).default(6),
+        /** Run one sweep as soon as the server starts (catch-up after downtime). */
+        runOnStart: z.boolean().default(true),
+        /** Max jobs scored by the LLM matcher per sweep. */
+        matchLimit: z.number().int().min(1).max(1000).default(150),
       })
       .strict()
       .default({}),

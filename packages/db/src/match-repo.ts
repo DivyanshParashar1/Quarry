@@ -162,6 +162,8 @@ export interface RankedJobFilter {
   sort?: 'score' | 'posted';
   limit?: number;
   offset?: number;
+  /** Only these jobs (Phase 18 per-job trigger). */
+  jobIds?: string[];
 }
 
 export interface RankedJobRow {
@@ -188,6 +190,7 @@ export async function listRankedJobs(db: DB, f: RankedJobFilter): Promise<{ rows
   const version = f.profileVersion ?? '';
   const conds: SQL[] = [];
   if (!f.includeClosed) conds.push(isNull(jobs.closedAt));
+  if (f.jobIds) conds.push(f.jobIds.length ? inArray(jobs.id, f.jobIds) : sql`false`);
   if (f.q) conds.push(ilike(jobs.title, `%${escapeLike(f.q)}%`));
   if (f.company) conds.push(ilike(companies.name, `%${escapeLike(f.company)}%`));
   if (f.location) {

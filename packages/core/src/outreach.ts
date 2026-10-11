@@ -64,6 +64,7 @@ import {
 } from '@jobforge/db';
 import { requireGmail } from './capabilities.js';
 import { loadCompanyRef } from './contacts-runner.js';
+import { emitStage } from './triggers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 // Outreach engine (PLAN.md §8 Phase 3, §9 safety rules):
@@ -562,6 +563,11 @@ export async function draftDueFollowups(deps: OutreachDeps): Promise<{ drafted: 
     try {
       if (!profile) throw new OutreachError('no profile loaded', 'no_profile');
       const contact = await getContact(db, t.contactId);
+      if (t.channel === 'linkedin') {
+        // Phase 18: a hand-sent LinkedIn message gets a follow-up draft the user sends by hand too.
+        if (await draftLinkedInFollowup(deps, t, contact, profile, now)) res.drafted++;
+        continue;
+      }
       if (!contact?.email || contact.status !== 'active') {
         await markThread(db, t.id, 'closed', now);
         continue;
@@ -658,6 +664,51 @@ export async function pollTracker(deps: OutreachDeps, opts: { pluginId?: string;
   return res;
 }
 
+async function draftLinkedInFollowup(
+  deps: OutreachDeps,
+  t: ThreadRow,
+  contact: Awaited<ReturnType<typeof getContact>>,
+  profile: NonNullable<Awaited<ReturnType<typeof getActiveProfile>>>,
+  now: Date,
+): Promise<boolean> {
+  const { db } = deps;
+  const first = t.reviewItemId ? await getReviewItem(db, t.reviewItemId) : null;
+  // Only threads opened by the manual actor (the dormant automated one never schedules follow-ups).
+  if (first?.pluginId !== LINKEDIN_MANUAL_ACTOR || !contact?.linkedinUrl || contact.status !== 'active') {
+    await markThread(db, t.id, 'closed', now);
+    return false;
+  }
+  const [last] = await executedItemsForThread(db, t.id, t.reviewItemId);
+  const company = (await loadCompanyRef(db, contact.companyId))!;
+  const job = t.jobId ? await loadJob(db, t.jobId).catch(() => null) : null;
+  const draft = await prepareDraft(deps, LINKEDIN_MANUAL_ACTOR, {
+    kind: 'followup',
+    job,
+    company,
+    contact: { ...company.contacts.find((c) => c.id === contact.id)!, email: '' },
+    profile,
+    previous: {
+      subject: t.subject,
+      body: ((last ?? first).draft as { text?: string }).text ?? '',
+      sentAt: t.lastSentAt,
+      followupNumber: t.followupsSent + 1,
+      gmailThreadId: t.gmailThreadId,
+      messageIds: t.messageIds,
+    },
+  });
+  const item = await createReviewItem(db, {
+    kind: 'followup',
+    pluginId: LINKEDIN_MANUAL_ACTOR,
+    jobId: t.jobId,
+    contactId: t.contactId,
+    companyId: t.companyId,
+    threadId: t.id,
+    draft,
+  });
+  await appendEvent(db, { kind: 'review.created', subjectType: 'review_item', subjectId: item.id, payload: { kind: 'followup', threadId: t.id, channel: 'linkedin' } });
+  return true;
+}
+
 /**
  * A reply on a referral thread (email or LinkedIn): the whole batch is
  * `replied`, its other threads stop getting follow-ups, and the autopilot
@@ -674,6 +725,7 @@ export async function onThreadReplied(db: DB, threadId: string, at: Date): Promi
     ...(b ? { subjectId: b.jobId } : {}),
     payload: { batchId, threadId, firstReply: r.first, cancelledFollowups: r.cancelledFollowups },
   });
+  if (b) emitStage({ kind: 'job.advance', jobId: b.jobId, reason: 'referral.replied' });
 }
 
 /**

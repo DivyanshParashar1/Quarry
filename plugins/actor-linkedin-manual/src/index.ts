@@ -50,6 +50,40 @@ function wordCount(s: string): number {
   return s.split(/\s+/).filter(Boolean).length;
 }
 
+export const FOLLOWUP_SYSTEM_PROMPT = `You write a short LinkedIn follow-up from a job candidate to someone they messaged about a referral a day ago and who hasn't replied.
+
+Rules:
+- Start with "Hi <first name>,". One or two sentences: a polite, low-pressure nudge about the same role; offer the easy path (forward the resume, or point to the right person).
+- Don't repeat the first message, add no new claims or numbers, no guilt-tripping, no emojis, no placeholders.
+- End with the sign-off name given (or none).
+
+Also return "confidence" 0..1 that it is ready to send as-is.`;
+
+export function followupSchema() {
+  return z.object({
+    text: z
+      .string()
+      .trim()
+      .min(30)
+      .max(600)
+      .refine((t) => !PLACEHOLDER_RE.test(t), 'contains a placeholder like [Name]; write the real text'),
+    confidence: z.number().min(0).max(1),
+  });
+}
+
+export function followupPrompt(input: OutreachActionInput): string {
+  const signOff = input.profile.preferences.application?.first_name ?? null;
+  return [
+    `# Recipient: ${input.contact.name} at ${input.company.name}`,
+    `# Role: ${input.job?.title ?? '(the role from the first message)'}`,
+    '',
+    `# The message sent ${input.previous?.sentAt.toDateString() ?? 'yesterday'} (no reply yet)`,
+    input.previous?.body ?? '',
+    '',
+    `Write the follow-up.${signOff ? ` Sign off as "${signOff}".` : ''}`,
+  ].join('\n');
+}
+
 export function messageSchema(maxWords: number, bulletIds: string[]) {
   const ids = new Set(bulletIds);
   return z.object({
@@ -123,6 +157,27 @@ export default defineActorPlugin<LinkedInManualConfig, OutreachActionInput, Link
   // No side effects: an LLM call and validation only.
   async prepare(ctx, input) {
     if (!input.contact.linkedinUrl) throw new Error(`${input.contact.name} has no LinkedIn profile URL`);
+    if (input.kind === 'followup') {
+      const res = await ctx.llm!.generate({
+        task: 'outreach',
+        system: FOLLOWUP_SYSTEM_PROMPT,
+        prompt: followupPrompt(input),
+        schema: followupSchema(),
+        maxTokens: 300,
+        signal: ctx.signal,
+      });
+      return linkedinManualDraftSchema.parse({
+        channel: 'linkedin_manual',
+        kind: 'message',
+        purpose: 'followup',
+        profileUrl: input.contact.linkedinUrl,
+        toName: input.contact.name,
+        text: res.data.text,
+        jobTitle: input.job?.title ?? null,
+        jobUrl: input.job?.applyUrl ?? null,
+        confidence: res.data.confidence,
+      });
+    }
     const kind = draftKind(input.contact);
     const bullets = input.resumeBullets ?? [];
     const ids = bullets.map((b) => b.id);

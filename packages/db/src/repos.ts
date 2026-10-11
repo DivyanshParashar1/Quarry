@@ -387,3 +387,27 @@ export async function pipelineStatus(db: DB): Promise<{
     .orderBy(asc(companies.name));
   return { lastRuns: [...lastRuns], failingSources };
 }
+
+/**
+ * Phase 18: boards the sweeper should fetch — not paused, not excluded, and not
+ * attempted (successfully or not) since `before`. Attempts come from plugin_runs,
+ * so a failing board is retried once per interval, not every sweep.
+ */
+export async function sourcesDueForFetch(db: DB, before: Date): Promise<string[]> {
+  const rows = await db.execute<{ id: string }>(sql`
+    select s.id from company_sources s join companies c on c.id = s.company_id
+    where s.board_token is not null and s.status <> 'paused' and not ('excluded' = any(c.tags))
+      and (s.last_fetched_at is null or s.last_fetched_at < ${before.toISOString()}::timestamptz)
+      and not exists (
+        select 1 from plugin_runs r
+        where r.stage = 'source' and r.target_key = s.ats_type::text || ':' || s.board_token
+          and r.started_at >= ${before.toISOString()}::timestamptz)
+    order by s.last_fetched_at asc nulls first`);
+  return rows.map((r) => r.id);
+}
+
+/** The most recent event of a kind (Phase 18: the last sweep, for the dashboard). */
+export async function lastEvent(db: DB, kind: string): Promise<typeof events.$inferSelect | null> {
+  const [r] = await db.select().from(events).where(eq(events.kind, kind)).orderBy(desc(events.createdAt)).limit(1);
+  return r ?? null;
+}

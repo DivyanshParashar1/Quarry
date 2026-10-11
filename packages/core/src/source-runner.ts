@@ -12,6 +12,7 @@ import {
   type SourceTargetRow,
 } from '@jobforge/db';
 import { normalizePosting } from './normalize.js';
+import { emitStage } from './triggers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 /** Which source plugin serves each ATS type. */
@@ -90,6 +91,7 @@ export async function runSourceTarget(deps: SourceRunDeps, row: SourceTargetRow)
     ...(row.options && Object.keys(row.options).length ? { options: row.options } : {}),
   };
 
+  const newJobIds: string[] = [];
   try {
     for await (const item of loaded.plugin.fetch(ctx, target)) {
       summary.postings++;
@@ -113,8 +115,10 @@ export async function runSourceTarget(deps: SourceRunDeps, row: SourceTargetRow)
         },
         startedAt,
       );
-      if (r.jobCreated) summary.jobsCreated++;
-      else summary.jobsUpdated++;
+      if (r.jobCreated) {
+        summary.jobsCreated++;
+        newJobIds.push(r.jobId);
+      } else summary.jobsUpdated++;
     }
 
     summary.jobsClosed = await closeStaleJobs(deps.db, row.companyId, row.companySourceId, startedAt);
@@ -133,6 +137,7 @@ export async function runSourceTarget(deps: SourceRunDeps, row: SourceTargetRow)
       payload: { runId, pluginId, ...pick(summary) },
     });
     log.info(pick(summary), 'board fetched');
+    emitStage({ kind: 'jobs.new', jobIds: newJobIds });
   } catch (err) {
     summary.error = errorMessage(err);
     summary.permanent = err instanceof HttpError && err.permanent;
