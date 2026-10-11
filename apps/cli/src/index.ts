@@ -58,7 +58,7 @@ import { createRegistry } from '@jobforge/plugins';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
-import { applyCommand, linkedinCommand, pipelineCommand, referralsCommand, sequencerDeps } from './referral-cmds.js';
+import { applyCommand, sweepCommand, linkedinCommand, pipelineCommand, referralsCommand, sequencerDeps } from './referral-cmds.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -158,8 +158,13 @@ Referrals (Phase 8; no global send cap — a person is asked at most once per co
   jf referrals show <jobId>        Batch status: each ask, its channel, send/reply state.
   jf referrals approve <jobId>     Approve every pending ask in the job's batch.
   jf linkedin drafts [--job <id>]  LinkedIn messages/notes to send BY HAND (copy, attach the PDF).
-  jf linkedin sent <id> | replied <id>
-      Record that you sent one (cooldown + batch updated) / that they answered.
+  jf linkedin sent <id> | accepted <id> | replied <id>
+      Record that you sent one (cooldown + batch updated) / that they accepted your connection
+      note (drafts the full message with the resume) / that they answered.
+  jf sweep [--live]
+      One sweeper pass now (the server runs it on start and hourly): alerts, reply tracking,
+      deadline expiry; with autopilot.enabled also match, resume, fan-out, the single 24 h
+      follow-up (email auto-approved by confidence; LinkedIn drafted for you).
   Automated LinkedIn (off by default; LINKEDIN_ENABLED=true + --live; fan-out never uses it):
   jf linkedin login | status | resume
       Save the dedicated account's session (headed browser, encrypted at rest) /
@@ -415,6 +420,7 @@ async function main(argv: string[]): Promise<number> {
     if (cmd === 'referrals') return await referralsCommand(sub, arg, values, cmdCtx);
     if (cmd === 'apply') return await applyCommand(sub, arg, values, cmdCtx);
     if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx, arg);
+    if (cmd === 'sweep') return await sweepCommand(values, cmdCtx);
     if (cmd === 'review') return await reviewCommand(sub, arg, values, cmdCtx);
     if (cmd === 'outreach') return await outreachCommand(sub, values, cmdCtx);
     if (cmd === 'gmail' && sub === 'auth') {

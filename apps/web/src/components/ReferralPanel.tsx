@@ -36,6 +36,14 @@ export function ReferralPanel({ jobId, onOpenReview }: { jobId: string; onOpenRe
     queryKey: ['linkedin-drafts', jobId],
     queryFn: () => getJson<{ drafts: LinkedInDraftEntry[] }>(`/api/linkedin/drafts?jobId=${jobId}`),
   });
+  const accepted = useMutation({
+    mutationFn: (id: string) => send(`/api/linkedin/drafts/${id}/accepted`, 'POST', {}),
+    onSuccess: () => {
+      setMsg('Drafted the full referral message — it is in the LinkedIn list below.');
+      done();
+    },
+    onError: (e: Error) => setMsg(e.message),
+  });
   const replied = useMutation({
     mutationFn: (id: string) => send(`/api/linkedin/drafts/${id}/replied`, 'POST', {}),
     onSuccess: () => done(),
@@ -103,6 +111,11 @@ export function ReferralPanel({ jobId, onOpenReview }: { jobId: string; onOpenRe
               {i.status === 'pending' && !isManual(i) && (
                 <Button size="sm" variant="ghost" onClick={() => approveAll.mutate([i.id])} disabled={approveAll.isPending}>
                   Approve
+                </Button>
+              )}
+              {isManual(i) && i.status === 'executed' && i.threadState === 'sent' && i.linkedinKind === 'note' && !i.acceptedMessage && (
+                <Button size="sm" variant="ghost" onClick={() => accepted.mutate(i.id)} disabled={accepted.isPending} title="They accepted your connection request: draft the full message with your resume">
+                  They accepted
                 </Button>
               )}
               {isManual(i) && i.status === 'executed' && i.threadState === 'sent' && (

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   getActiveProfile,
   getJobDetail,
+  lastEvent,
   listCompanyNames,
   listRankedJobs,
   llmUsageSummary,
@@ -13,7 +14,7 @@ import {
   type DB,
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
-import { OutreachError, type SequencerDeps, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+import { OutreachError, type SweepResult, type SequencerDeps, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
 import { registerContactRoutes } from './routes-contacts.js';
 import { registerLibraryRoutes } from './routes-library.js';
 import { registerOutreachRoutes } from './routes-outreach.js';
@@ -64,6 +65,8 @@ export interface ApiOptions {
   autopilotDeps?: () => Promise<AutopilotRunDeps>;
   /** LLM client built lazily for /api/profile/fix and /api/profile/import. */
   llm?: () => Promise<LLMClient>;
+  /** Phase 18: run one sweep now (the server passes its sweep deps). */
+  sweep?: () => Promise<SweepResult>;
   enqueueFetch?: (companySourceIds: string[]) => Promise<string[]>;
   profileDir?: string;
   /** Directory containing the resume manifest.yaml + blocks/*.tex. */
@@ -225,6 +228,14 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     db,
     policy: opts.policy ?? parseAppConfig({}).outreach,
     ...(opts.llm ? { llm: opts.llm } : {}),
+    ...(opts.outreachDeps ? { outreachDeps: opts.outreachDeps } : {}),
+  });
+
+  // Phase 18: the sweeper — last run and "run now".
+  app.get('/api/sweep', async () => ({ last: (await lastEvent(db, 'sweeper.ran')) ?? null, available: !!opts.sweep }));
+  app.post('/api/sweep', async (_req, reply) => {
+    if (!opts.sweep) return reply.status(503).send({ error: 'unavailable', message: 'the sweeper runs in the server process only' });
+    return opts.sweep();
   });
 
   registerReferralRoutes(app, {

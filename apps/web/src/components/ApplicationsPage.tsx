@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getJson, send, PIPELINE_STATES, type ApplicationRow, type ApplicationsPage as Page, type PipelineState, type TimelineEntry } from '@/lib/api';
+import { getJson, send, PIPELINE_STATES, type ApplicationRow, type ApplicationsPage as Page, type PipelineState, type SweepStatus, type SweepStep, type TimelineEntry } from '@/lib/api';
 import { relativeDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +47,7 @@ export function ApplicationsPage({ onOpenJob }: { onOpenJob: (id: string) => voi
           {run.isPending ? 'Running…' : 'Run sequencer now'}
         </Button>
       </div>
+      <SweepBar />
       {run.data && <p className="text-xs text-muted-foreground">{run.data.admitted} admitted · {run.data.steps.length} steps{run.data.paused ? ` · new fan-outs paused: ${run.data.paused}` : ''}</p>}
       {run.error && <p className="text-xs text-red-600">{run.error.message}</p>}
       {q.error && <p className="text-sm text-red-600">Could not load: {q.error.message}</p>}
@@ -112,5 +113,38 @@ function Row({ r, expanded, onToggle, onOpenJob }: { r: ApplicationRow; expanded
         </ol>
       )}
     </Card>
+  );
+}
+
+/** Phase 18: when the sweeper last ran (server start + hourly) and "run now". */
+function SweepBar() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['sweep'], queryFn: () => getJson<SweepStatus>('/api/sweep'), refetchInterval: 60_000 });
+  const run = useMutation({
+    mutationFn: () => send<{ steps: SweepStep[]; skipped?: string }>('/api/sweep', 'POST', {}),
+    onSuccess: () => {
+      for (const k of ['sweep', 'applications', 'pipeline', 'review']) void qc.invalidateQueries({ queryKey: [k] });
+    },
+  });
+  const last = q.data?.last;
+  const steps = run.data?.steps ?? last?.payload.steps ?? [];
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span>
+        Sweeper: {last ? `last ran ${relativeDate(last.createdAt)} (${last.payload.reason})` : 'not run yet'}
+      </span>
+      {steps.map((s) => (
+        <Badge key={s.name} variant="outline" className={cn(!s.ok && 'border-red-600 text-red-600', s.skipped && 'opacity-50')} title={s.skipped ?? undefined}>
+          {s.name}
+        </Badge>
+      ))}
+      {q.data?.available && (
+        <Button size="sm" variant="ghost" onClick={() => run.mutate()} disabled={run.isPending}>
+          {run.isPending ? 'Sweeping…' : 'Run sweep now'}
+        </Button>
+      )}
+      {run.data?.skipped && <span>{run.data.skipped}</span>}
+      {run.error && <span className="text-red-600">{run.error.message}</span>}
+    </div>
   );
 }

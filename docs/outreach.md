@@ -66,7 +66,7 @@ With `MODE=live` the server's send loop does this every minute. Limits (in
 | real emails per rolling 24h (incl. follow-ups) | 20 |
 | distinct people per company per 7 days | 2 (per-item override when approving) |
 | random gap between sends | 4–11 minutes |
-| follow-ups per thread | 2, after 5 then 7 days |
+| follow-ups per thread | 1, after 24 h (Phase 18; `outreach.followupDays` / `maxFollowups`) |
 
 Each send has a Message-ID derived from its idempotency key; a retry first
 searches Sent for it, so an email is never sent twice.
@@ -76,11 +76,13 @@ searches Sent for it, so an email is never sent twice.
 ```
 pnpm jf outreach track       # replies close the thread and cancel queued follow-ups; bounces mark the contact
 pnpm jf outreach followups   # drafts due follow-ups into the review queue (you approve them like any email)
+pnpm jf sweep                # the server's hourly pass: alerts, tracking, and (autopilot on) the 24 h follow-up,
+                             # auto-approved when the draft is confident; LinkedIn follow-ups are drafted for you to send
 pnpm jf outreach threads
 ```
 
-The server runs both automatically when Gmail is connected (tracking every 10
-minutes, follow-up drafting hourly).
+The server tracks replies every 10 minutes when Gmail is connected; since Phase 18
+follow-up drafting is part of the hourly sweeper and runs only with `autopilot.enabled: true`.
 
 ## Claude Code (MCP)
 

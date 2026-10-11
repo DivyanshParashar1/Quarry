@@ -4,9 +4,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
 import { createDb } from '@jobforge/db';
-import { createPageFetcher, importLinkedInEmployees, runAtsRecheck, runNightlyDiscovery, launchBrowser, runApplyTick, runSequencer, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { createPageFetcher, embedPending, handleStageEvent, runMatch, runSweep, setStageSink, type StageEvent, importLinkedInEmployees, runAtsRecheck, runNightlyDiscovery, launchBrowser, runApplyTick, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
 import { buildApi } from './api.js';
 import { createRegistry } from '@jobforge/plugins';
+import { createLazyEmbedder } from '@jobforge/embeddings';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
 
 export async function bootstrap() {
@@ -119,23 +120,50 @@ export async function bootstrap() {
       applyDeps: await applyDeps(),
     };
   };
-  if (config.autopilot.enabled && env.MODE === 'live') {
-    // Hourly autopilot; pg-boss handles exactly-once scheduling across restarts.
-    await boss.schedule('autopilot.hourly', '0 * * * *');
-    await boss.work('autopilot.hourly', async () => {
-      try {
-        if (config.autopilot.strategy === 'referrals') {
-          const s = await runSequencer(await sequencerDeps());
-          log.info({ sequencer: { admitted: s.admitted, steps: s.steps.length, counts: s.counts } }, 'autopilot.hourly (sequencer) finished');
-        } else {
-          const summary = await runAutopilot(await autopilotDeps());
-          log.info({ summary: { considered: summary.considered, approved: summary.approved, escalated: summary.escalated, skipped: summary.skipped } }, 'autopilot.hourly run finished');
-        }
-      } catch (err) {
-        log.error({ err: err instanceof Error ? err.message : String(err) }, 'autopilot.hourly run failed');
-      }
+  // Phase 18: the sweeper replaces autopilot.hourly. Free steps (board fetch, alerts, reply
+  // tracking, deadline expiry) always run; LLM steps only with autopilot.enabled; sends need MODE=live.
+  const embedder = createLazyEmbedder({ model: config.embeddings.model, ...(config.embeddings.cacheDir ? { cacheDir: config.embeddings.cacheDir } : {}) });
+  const match = async (jobIds?: string[]) => {
+    const e = await embedPending({ db, embedder, log });
+    const m = await runMatch({ db, registry, log, limiter, dryRun: env.MODE !== 'live', llm: await llmLazy(), embed: embedder }, { limit: config.sweeper.matchLimit, ...(jobIds ? { jobIds } : {}) });
+    return { embedded: e.jobs, llm: m.llm, prefilter: m.prefilter, filtered: m.filtered, unscored: m.unscored };
+  };
+  const sweepDeps = {
+    db,
+    log,
+    config,
+    live: env.MODE === 'live',
+    gmailConnected: !!gmail,
+    enqueueFetch: (ids: string[]) => enqueueSourceFetches(boss, ids),
+    ...(gmail ? { alerts: () => runAlertSource({ db, registry, log, limiter, dryRun: env.MODE !== 'live', gmail }) } : {}),
+    outreach: outreachDeps,
+    match,
+    sequencer: sequencerDeps,
+    singleEmail: async () => runAutopilot(await autopilotDeps()),
+    deadlines: deadlineDeps,
+    apply: applyDeps,
+  };
+  if (!(await boss.getQueue('sweeper.hourly').catch(() => null))) await boss.createQueue('sweeper.hourly', { retryLimit: 0, expireInSeconds: 2 * 60 * 60 });
+  await boss.unschedule('autopilot.hourly').catch(() => {});
+  await boss.schedule('sweeper.hourly', '7 * * * *');
+  await boss.work('sweeper.hourly', { localConcurrency: 1, batchSize: 1 }, async () => {
+    const r = await runSweep(sweepDeps);
+    log.info({ sweep: r.skipped ?? r.steps.map((s) => `${s.name}:${s.skipped ? 'skip' : s.ok ? 'ok' : 'FAIL'}`).join(' ') }, 'sweeper ran');
+    return r;
+  });
+
+  // Phase 18 event triggers: a finished stage queues the next one right away (autopilot only:
+  // every handler spends LLM calls). The hourly sweep re-derives anything a lost trigger missed.
+  if (config.autopilot.enabled) {
+    if (!(await boss.getQueue('stage.event').catch(() => null))) await boss.createQueue('stage.event', { retryLimit: 2, retryDelay: 60, expireInSeconds: 30 * 60 });
+    await boss.work<StageEvent>('stage.event', { localConcurrency: 1, batchSize: 1 }, async ([job]) => {
+      await handleStageEvent({ db, log, match: (ids) => match(ids), sequencer: sequencerDeps }, job!.data);
     });
-    log.info({ strategy: config.autopilot.strategy }, 'autopilot scheduled hourly');
+    setStageSink(async (e) => {
+      await boss.send('stage.event', e);
+    });
+  } else {
+    setStageSink(null);
   }
 
   if (config.discovery.nightly) {
@@ -180,11 +208,18 @@ export async function bootstrap() {
     pages: () => createPageFetcher({ limiter }),
     linkedinDeps,
     linkedinEnabled: env.LINKEDIN_ENABLED,
+    sweep: () => runSweep(sweepDeps, { reason: 'dashboard' }),
     ...(facts ? { profileDir: dirname(facts) } : {}),
     ...(resumeManifest ? { resumeDir: dirname(resumeManifest) } : {}),
   });
   // Local, single-user tool: bind to loopback only.
   await api.listen({ port: env.PORT, host: '127.0.0.1' });
+  if (config.sweeper.runOnStart) {
+    // Catch up on whatever came due while the server was off (doesn't block startup).
+    void runSweep(sweepDeps, { reason: 'server start' })
+      .then((r) => log.info({ sweep: r.skipped ?? r.steps.map((s) => `${s.name}:${s.skipped ? 'skip' : s.ok ? 'ok' : 'FAIL'}`).join(' ') }, 'startup sweep finished'))
+      .catch((err: unknown) => log.error({ err: err instanceof Error ? err.message : String(err) }, 'startup sweep failed'));
+  }
   log.info(
     {
       mode: env.MODE,
@@ -199,6 +234,7 @@ export async function bootstrap() {
   const shutdown = async (signal: string) => {
     log.info({ signal }, 'shutting down');
     await api.close();
+    setStageSink(null);
     await linkedinBrowser.close();
     await applyBrowser?.close?.();
     await boss.stop({ graceful: true, timeout: 30_000 });

@@ -64,7 +64,8 @@ export function LinkedInManualCard({ item }: { item: LinkedInManualItem }) {
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge className="capitalize">{item.status === 'executed' ? 'sent by you' : item.status}</Badge>
         <Badge variant="outline">
-          <Network className="mr-1 size-3" /> {d.kind === 'message' ? 'LinkedIn message · connection' : 'LinkedIn connection note'}
+          <Network className="mr-1 size-3" />{' '}
+          {d.purpose === 'followup' ? 'LinkedIn follow-up' : d.purpose === 'after_accept' ? 'LinkedIn message · accepted your request' : d.kind === 'message' ? 'LinkedIn message · connection' : 'LinkedIn connection note'}
         </Badge>
         <a className="font-medium underline" href={d.profileUrl} target="_blank" rel="noreferrer noopener">
           {d.toName}

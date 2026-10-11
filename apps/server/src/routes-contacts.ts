@@ -8,10 +8,12 @@ import {
   getImportPreview,
   listLinkedInDrafts,
   llmColumnClassifier,
+  markLinkedInAccepted,
   markLinkedInReplied,
   markLinkedInSent,
   previewContactImport,
   UnsupportedFileError,
+  type OutreachDeps,
   type OutreachPolicy,
 } from '@jobforge/core';
 import type { LLMClient } from '@jobforge/shared';
@@ -22,6 +24,8 @@ import type { LLMClient } from '@jobforge/shared';
 export interface ContactRouteOptions {
   db: DB;
   policy: OutreachPolicy;
+  /** Drafting the after-accept message needs the LLM (outreach deps). */
+  outreachDeps?: () => Promise<OutreachDeps>;
   /** For classifying columns the heuristics can't place; optional. */
   llm?: () => Promise<LLMClient>;
 }
@@ -104,6 +108,13 @@ export function registerContactRoutes(app: FastifyInstance, o: ContactRouteOptio
     const { id } = idParams.parse(req.params);
     const r = await markLinkedInSent(db, o.policy, id);
     return { item: r.item, threadId: r.thread.id };
+  });
+
+  app.post('/api/linkedin/drafts/:id/accepted', async (req, reply) => {
+    const { id } = idParams.parse(req.params);
+    if (!o.outreachDeps) return reply.status(503).send({ error: 'unavailable', message: 'outreach (LLM) is not configured on this server' });
+    const item = await markLinkedInAccepted(await o.outreachDeps(), id);
+    return reply.status(201).send({ item });
   });
 
   app.post('/api/linkedin/drafts/:id/replied', async (req) => {

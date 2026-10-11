@@ -142,6 +142,7 @@ export interface AttentionDraft {
 export interface LinkedInManualDraft {
   channel: 'linkedin_manual';
   kind: 'message' | 'note';
+  purpose?: 'ask' | 'after_accept' | 'followup';
   profileUrl: string;
   toName: string;
   text: string;
@@ -542,6 +543,10 @@ export interface ReferralItem {
   decidedBy: string | null;
   error: string | null;
   createdAt: string;
+  /** Manual LinkedIn drafts: message | note. */
+  linkedinKind: 'message' | 'note' | null;
+  /** A full message was drafted after this note was accepted. */
+  acceptedMessage: boolean;
 }
 
 export interface ReferralPanelData {
@@ -706,4 +711,22 @@ export interface LinkedInDraftEntry {
   linkedin: LinkedInManualDraft;
   resumePdf: string | null;
   job: { title: string; company: string; resumePdf: string | null } | null;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 18: sweeper
+// ---------------------------------------------------------------------------
+
+export interface SweepStep {
+  name: string;
+  ok: boolean;
+  skipped?: string;
+  ms: number;
+  result?: unknown;
+  error?: string;
+}
+
+export interface SweepStatus {
+  available: boolean;
+  last: { createdAt: string; payload: { reason: string; steps: Array<{ name: string; ok: boolean; skipped: string | null; ms: number }> } } | null;
 }

@@ -83,4 +83,12 @@ describe.skipIf(!adminUrl)('contacts import + manual LinkedIn API (postgres)', (
     const replied = await app.inject({ method: 'POST', url: `/api/linkedin/drafts/${item.id}/replied`, headers: json, payload: JSON.stringify({ note: 'will refer' }) });
     expect(replied.json()).toMatchObject({ state: 'replied' });
   });
+
+  it('reports the sweeper and refuses "accepted" without outreach deps', async () => {
+    const sweep = (await app.inject({ url: '/api/sweep' })).json();
+    expect(sweep).toEqual({ last: null, available: false });
+    expect((await app.inject({ method: 'POST', url: '/api/sweep', headers: { ...H, 'content-type': 'application/json' }, payload: '{}' })).statusCode).toBe(503);
+    const r = await app.inject({ method: 'POST', url: '/api/linkedin/drafts/00000000-0000-4000-8000-000000000000/accepted', headers: { ...H, 'content-type': 'application/json' }, payload: '{}' });
+    expect(r.statusCode).toBe(503);
+  });
 });

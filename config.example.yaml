@@ -14,6 +14,16 @@ embeddings:
   model: Xenova/bge-small-en-v1.5
   # cacheDir: ~/.cache/jobforge-models
 
+# Phase 18 sweeper: runs on server start and hourly. Free steps always (board fetch,
+# alert emails, reply tracking, deadline expiry); LLM steps (match, resume, fan-out,
+# the 24 h follow-up) only with autopilot.enabled: true; sends need MODE=live.
+sweeper:
+  fetchEveryHours: 6
+  runOnStart: true
+  matchLimit: 150
+# autopilot:
+#   enabled: true      # turns on the LLM steps above (and the event triggers)
+
 # Phase 16 resume library: every combo of `projectsPerResume` projects is rendered
 # up front (Resumes tab / `jf resumes generate`); a job then gets the best combo for
 # its JD plus a skills-only rewrite. These are the defaults.

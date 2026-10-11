@@ -1,10 +1,16 @@
+import { createLazyEmbedder } from '@jobforge/embeddings';
 import { dirname } from 'node:path';
 import { findUp } from '@jobforge/shared';
 import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@jobforge/db';
 import {
   advanceJob,
+  embedPending,
   listLinkedInDrafts,
+  markLinkedInAccepted,
   markLinkedInReplied,
+  runAlertSource,
+  runMatch,
+  runSweep,
   markLinkedInSent,
   approveBatch,
   draftApplication,
@@ -150,6 +156,14 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
     if (drafts.length) c.out('After sending one on LinkedIn: `jf linkedin sent <id>`; when they answer: `jf linkedin replied <id>`.');
     return 0;
   }
+  if (sub === 'accepted') {
+    if (!arg) throw new CmdError('usage: jf linkedin accepted <reviewItemId of the sent connection note>');
+    const id = await resolveIdPrefix(c.db, 'review_items', arg);
+    const out = await outreachDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live: false, llm: true });
+    const item = await markLinkedInAccepted(out, id);
+    c.out(`drafted the full referral message (${item.id.slice(0, 8)}): see \`jf linkedin drafts\`, send it with the resume attached, then \`jf linkedin sent ${item.id.slice(0, 8)}\`.`);
+    return 0;
+  }
   if (sub === 'sent' || sub === 'replied') {
     if (!arg) throw new CmdError(`usage: jf linkedin ${sub} <reviewItemId>`);
     const id = await resolveIdPrefix(c.db, 'review_items', arg);
@@ -244,7 +258,7 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
       await li.closeBrowser();
     }
   }
-  throw new CmdError('usage: jf linkedin drafts [--job <id>] | sent <id> | replied <id>  (automation, off by default: login|status|resume|employees|send|track)');
+  throw new CmdError('usage: jf linkedin drafts [--job <id>] | sent <id> | accepted <id> | replied <id>  (automation, off by default: login|status|resume|employees|send|track)');
 }
 
 export async function applyCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues & { 'no-preview'?: boolean | undefined }, c: CmdCtx): Promise<number> {
@@ -306,6 +320,44 @@ export async function sequencerDeps(c: CmdCtx, live: boolean): Promise<Sequencer
       await holder.browser?.close?.();
     },
   };
+}
+
+/** Phase 18: one sweep now (what the server does on start and hourly). Board fetches need the server's queue. */
+export async function sweepCommand(v: ReferralValues, c: CmdCtx): Promise<number> {
+  const live = !!v.live || c.env.MODE === 'live';
+  const seq = await sequencerDeps(c, live);
+  const out = seq.fanOutDeps;
+  try {
+    const embedder = createLazyEmbedder({ model: c.config.embeddings.model, ...(c.config.embeddings.cacheDir ? { cacheDir: c.config.embeddings.cacheDir } : {}) });
+    const r = await runSweep(
+      {
+        db: c.db,
+        log: c.log,
+        config: c.config,
+        live,
+        gmailConnected: !!out.gmail,
+        ...(out.gmail ? { alerts: () => runAlertSource({ db: c.db, registry: out.registry, log: c.log, limiter: out.limiter, dryRun: !live, gmail: out.gmail! }) } : {}),
+        outreach: async () => out,
+        match: async (jobIds?: string[]) => {
+          const e = await embedPending({ db: c.db, embedder, log: c.log });
+          const m = await runMatch({ db: c.db, registry: out.registry, log: c.log, limiter: out.limiter, dryRun: !live, ...(out.llm ? { llm: out.llm } : {}), embed: embedder }, { limit: c.config.sweeper.matchLimit, ...(jobIds ? { jobIds } : {}) });
+          return { embedded: e.jobs, llm: m.llm, prefilter: m.prefilter, filtered: m.filtered, unscored: m.unscored };
+        },
+        sequencer: async () => seq,
+        deadlines: async () => ({ db: c.db, registry: out.registry, log: c.log, limiter: out.limiter, dryRun: !live, ...(out.llm ? { llm: out.llm } : {}), policy: c.config.deadlines }),
+        apply: async () => seq.applyDeps,
+      },
+      { reason: 'cli' },
+    );
+    if (r.skipped) c.out(`skipped: ${r.skipped}`);
+    for (const s of r.steps) {
+      c.out(`  ${s.name.padEnd(10)} ${s.skipped ? `skipped (${s.skipped})` : s.ok ? `ok ${JSON.stringify(s.result ?? {})}` : `FAILED: ${s.error}`}${s.ms ? ` · ${s.ms} ms` : ''}`);
+    }
+    if (r.steps.find((s) => s.name === 'fetch')?.skipped) c.out('Board fetches are queued by the server (`pnpm server`); use `jf fetch` to fetch now.');
+    return r.steps.some((s) => !s.ok) ? 1 : 0;
+  } finally {
+    await seq.close();
+  }
 }
 
 export async function pipelineCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues & { reason?: string | undefined; state?: string | undefined }, c: CmdCtx): Promise<number> {
