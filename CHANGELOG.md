@@ -513,3 +513,14 @@ emails or LinkedIn actions. Those parts wait for the user (listed below).
   tracking / OTP, LinkedIn (dedicated account), deadline inference (paid web-search LLM calls), apply-flow selector
   verification for Workday / SuccessFactors / Taleo / SmartRecruiters step 2, and a full unattended day.
 
+## Test scripts — every API, MCP tool and CLI command
+
+- `apps/server/src/api-coverage.db.test.ts`: every route Fastify registers (89 method+path pairs) must have a smoke entry
+  and is called once against a seeded DB — never a 500, always an expected code. Found and fixed: rejecting an unknown
+  review item and committing / discarding an unknown contact import answered 409 instead of 404.
+- `apps/server/src/mcp-contract.db.test.ts`: every MCP tool runs through the real HTTP API with schema-generated arguments;
+  each request must match a registered route and method. Found and fixed: `profile_update_fact` sent PUT (the server
+  has PATCH, so the tool never worked), `expire_job` on an unknown job crashed with a 500 (now 404).
+- `pnpm smoke:api` (34 checks against a running server, incl. the CSRF guard), `pnpm smoke:cli [--network]` (20 read-only
+  `jf` commands), `pnpm live:sources`; `docs/testing.md` describes the layers. All pass on this machine (dev mode).
+

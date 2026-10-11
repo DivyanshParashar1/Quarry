@@ -27,6 +27,7 @@ import {
   ATS_TYPES,
   type DB,
 } from '@jobforge/db';
+import { getReviewItem } from '@jobforge/db';
 import {
   approveReviewItem,
   draftOutreach,
@@ -123,9 +124,10 @@ export function registerOutreachRoutes(app: FastifyInstance, o: OutreachRouteOpt
     return approveReviewItem(db, o.policy, id, { overrideCompanyCap: b.overrideCompanyCap, ...(b.note ? { note: b.note } : {}) });
   });
 
-  app.post('/api/review/:id/reject', async (req) => {
+  app.post('/api/review/:id/reject', async (req, reply) => {
     const { id } = idParams.parse(req.params);
     const b = z.object({ reason: z.string().max(500).optional() }).strict().parse(req.body ?? {});
+    if (!(await getReviewItem(db, id))) return reply.status(404).send({ error: 'not_found', message: `review item ${id} not found` });
     return rejectReviewItem(db, id, b.reason ?? null);
   });
 

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { getJobDetail, latestRenderedResumeForJob, listContactImports, type DB } from '@jobforge/db';
+import { getContactImport, getJobDetail, latestRenderedResumeForJob, listContactImports, type DB } from '@jobforge/db';
 import {
   commitContactImport,
   ContactImportError,
@@ -60,6 +60,7 @@ export function registerContactRoutes(app: FastifyInstance, o: ContactRouteOptio
 
   app.post('/api/contacts/imports/:id/commit', async (req, reply) => {
     const { id } = idParams.parse(req.params);
+    if (!(await getContactImport(db, id))) return reply.status(404).send({ error: 'not_found', message: `no import ${id}` });
     try {
       return await commitContactImport(db, id);
     } catch (err) {
@@ -70,6 +71,7 @@ export function registerContactRoutes(app: FastifyInstance, o: ContactRouteOptio
 
   app.post('/api/contacts/imports/:id/discard', async (req, reply) => {
     const { id } = idParams.parse(req.params);
+    if (!(await getContactImport(db, id))) return reply.status(404).send({ error: 'not_found', message: `no import ${id}` });
     return (await discardContactImport(db, id)) ? { ok: true } : reply.status(409).send({ error: 'invalid_state', message: 'not a pending preview' });
   });
 

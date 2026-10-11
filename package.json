@@ -20,6 +20,8 @@
     "db:studio": "pnpm --filter @jobforge/db studio",
     "jf": "tsx apps/cli/src/index.ts",
     "live:sources": "tsx apps/cli/src/live-sources.ts",
+    "smoke:api": "tsx apps/cli/src/smoke-api.ts",
+    "smoke:cli": "tsx apps/cli/src/smoke-cli.ts",
     "server": "pnpm --filter @jobforge/server start",
     "web:dev": "pnpm --filter @jobforge/web dev",
     "web:build": "pnpm --filter @jobforge/web build"

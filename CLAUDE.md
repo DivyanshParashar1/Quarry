@@ -54,4 +54,5 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - Discovery: `jf discover_ats <domain|name> [--save] | --missing`, `jf discover_companies --list yc|gcc-journal|…` (Phase 6)
 - Orchestrator (Phase 22): `jf orchestrator run`, `jf incidents [--all]`; dashboard Health tab; config `orchestrator.*` (budget, thresholds); push alerts via `NTFY_URL`. Server runs ops actions only (automatic code fixes not wired into the server).
 - MCP: `.mcp.json` registers `apps/mcp` (needs `pnpm server` running). Never allowlist the `approve` tool.
+- Test scripts: `pnpm smoke:api` (needs `pnpm server`), `pnpm smoke:cli [--network]`, `pnpm live:sources` (read-only, real boards) — see `docs/testing.md`
 - DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)

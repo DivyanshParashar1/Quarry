@@ -68,7 +68,7 @@ describe('jobforge MCP server', () => {
     await client.callTool({ name: 'edit_draft', arguments: { id: ID, subject: 'New' } });
     expect(calls[2]).toMatchObject({ method: 'PATCH', path: `/api/review/${ID}`, body: { subject: 'New' } });
     await client.callTool({ name: 'profile_update_fact', arguments: { id: 'skill-go', content: 'Go, 4 years' } });
-    expect(calls[3]).toMatchObject({ method: 'PUT', path: '/api/profile/facts/skill-go', body: { content: 'Go, 4 years' } });
+    expect(calls[3]).toMatchObject({ method: 'PATCH', path: '/api/profile/facts/skill-go', body: { content: 'Go, 4 years' } });
     await client.callTool({ name: 'discover_ats', arguments: { companyName: 'Walmart', domain: 'walmart.com', save: true } });
     expect(calls[4]).toMatchObject({ method: 'POST', path: '/api/companies/discover-ats', body: { name: 'Walmart', domain: 'walmart.com', save: true } });
     await client.callTool({ name: 'discover_companies', arguments: { list: 'yc', maxNew: 5 } });

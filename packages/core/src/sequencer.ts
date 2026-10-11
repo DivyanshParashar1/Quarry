@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { AppConfig, Logger } from '@jobforge/shared';
 import {
+  getJobDetail,
   appendEvent,
   enterPipeline,
   getActiveProfile,
@@ -352,6 +353,7 @@ export async function expireJob(db: DB, jobId: string, reason: string): Promise<
   if (moved) return moved;
   const cur = await getPipelineState(db, jobId);
   if (!cur) {
+    if (!(await getJobDetail(db, jobId, null))) throw new OutreachError(`job ${jobId} not found`, 'not_found');
     await enterPipeline(db, jobId, { manual: true });
     return (await transitionPipeline(db, jobId, ['candidate'], 'expired', reason || 'expired_manually'))!;
   }

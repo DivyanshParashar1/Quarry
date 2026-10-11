@@ -406,7 +406,7 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    ({ id, ...patch }) => run(() => api.send('PUT', `/api/profile/facts/${encodeURIComponent(id)}`, patch)),
+    ({ id, ...patch }) => run(() => api.send('PATCH', `/api/profile/facts/${encodeURIComponent(id)}`, patch)),
   );
 
   // Phase 22: the orchestrator.
@@ -424,7 +424,7 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
       inputSchema: { status: z.array(z.enum(['open', 'acting', 'verifying', 'resolved', 'escalated'])).optional(), limit: z.number().int().min(1).max(200).default(50) },
       annotations: readOnly,
     },
-    ({ status, limit }) => run(() => api.get(`/api/incidents?${new URLSearchParams({ ...(status?.length ? { status: status.join(',') } : {}), limit: String(limit) })}`)),
+    ({ status, limit }) => run(() => api.get('/api/incidents', { ...(status?.length ? { status: status.join(',') } : {}), limit })),
   );
 
   server.registerTool(

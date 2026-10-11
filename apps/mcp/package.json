@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./api-client": "./src/api-client.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",

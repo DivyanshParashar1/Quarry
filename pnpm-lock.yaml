@@ -263,6 +263,12 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@jobforge/mcp':
+        specifier: workspace:*
+        version: link:../mcp
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(supports-color@7.2.0)(zod@3.25.76)
       pino:
         specifier: ^9.14.0
         version: 9.14.0

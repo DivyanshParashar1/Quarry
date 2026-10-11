@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "jobforge-server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["server"],
+      "port": 3000
+    }
+  ]
+}
