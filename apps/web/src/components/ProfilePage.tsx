@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { AnswerBank } from '@/components/AnswerBank';
 import { FixableField } from '@/components/FixableField';
 import {
   FACT_KINDS,
@@ -20,7 +21,7 @@ import {
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-type Tab = 'facts' | 'preferences' | 'import';
+type Tab = 'facts' | 'preferences' | 'import' | 'answers';
 
 const KIND_ORDER: FactKind[] = ['experience', 'project', 'education', 'achievement', 'skill'];
 
@@ -44,7 +45,7 @@ export function ProfilePage() {
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold">Your profile</h1>
         <nav className="flex gap-1 text-sm">
-          {(['facts', 'preferences', 'import'] as const).map((t) => (
+          {(['facts', 'preferences', 'import', 'answers'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -62,6 +63,7 @@ export function ProfilePage() {
       {tab === 'facts' && <FactsSection facts={q.data.facts} onChanged={refresh} />}
       {tab === 'preferences' && <PreferencesSection preferences={q.data.preferences} onChanged={refresh} />}
       {tab === 'import' && <ImportSection onImported={refresh} />}
+      {tab === 'answers' && <AnswerBank />}
     </div>
   );
 }

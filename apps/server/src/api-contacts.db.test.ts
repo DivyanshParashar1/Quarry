@@ -91,4 +91,15 @@ describe.skipIf(!adminUrl)('contacts import + manual LinkedIn API (postgres)', (
     const r = await app.inject({ method: 'POST', url: '/api/linkedin/drafts/00000000-0000-4000-8000-000000000000/accepted', headers: { ...H, 'content-type': 'application/json' }, payload: '{}' });
     expect(r.statusCode).toBe(503);
   });
+
+  it('lists, edits and deletes saved application answers', async () => {
+    const { upsertBankAnswer } = await import('@jobforge/db');
+    const a = await upsertBankAnswer(t.db, { question: 'Why us?', questionKey: 'why us', answer: 'Because of the payments work.', kind: 'text', origin: 'llm' });
+    const json = { ...H, 'content-type': 'application/json' };
+    expect((await app.inject({ url: '/api/answers' })).json().answers).toEqual([expect.objectContaining({ id: a.id, question: 'Why us?' })]);
+    const p = await app.inject({ method: 'PATCH', url: `/api/answers/${a.id}`, headers: json, payload: JSON.stringify({ answer: 'Payments, and the team.' }) });
+    expect(p.json()).toMatchObject({ answer: 'Payments, and the team.' });
+    expect((await app.inject({ method: 'DELETE', url: `/api/answers/${a.id}`, headers: json, payload: '{}' })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/api/answers' })).json().answers).toEqual([]);
+  });
 });

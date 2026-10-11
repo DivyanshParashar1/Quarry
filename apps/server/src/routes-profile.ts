@@ -12,7 +12,7 @@ import {
   type LLMClient,
 } from '@jobforge/shared';
 import { extractPdfText, loadProfile } from '@jobforge/core';
-import type { DB } from '@jobforge/db';
+import { deleteBankAnswer, listAnswerBank, updateBankAnswer, type DB } from '@jobforge/db';
 
 // Full profile editor (PLAN.md §8 Phase 5-ish): facts.yaml + preferences.yaml are
 // the source of truth; the DB is a derived read model. Every write goes through
@@ -30,6 +30,19 @@ const factBody = factSchema;
 
 export function registerProfileRoutes(app: FastifyInstance, o: ProfileRouteOptions): void {
   const { db } = o;
+
+  // Phase 19: answers you approved on applications, reused for similar questions.
+  app.get('/api/answers', async () => ({ answers: await listAnswerBank(db) }));
+  app.patch('/api/answers/:id', async (req, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const b = z.object({ answer: z.string().trim().min(1).max(4000) }).strict().parse(req.body);
+    return (await updateBankAnswer(db, id, b.answer)) ?? reply.status(404).send({ error: 'not_found' });
+  });
+  app.delete('/api/answers/:id', async (req, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    return (await deleteBankAnswer(db, id)) ? { ok: true } : reply.status(404).send({ error: 'not_found' });
+  });
+
   const dir = () => {
     if (!o.profileDir || !existsSync(join(o.profileDir, 'facts.yaml'))) {
       throw Object.assign(new Error('profile directory not found on this server'), { statusCode: 503 });

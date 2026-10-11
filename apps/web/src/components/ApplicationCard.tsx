@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { send, type ReviewItemAny } from '@/lib/api';
 import { relativeDate } from '@/lib/format';
 
@@ -16,6 +17,10 @@ interface Field {
   options?: string[];
   value: string | null;
   source: string | null;
+  maxLength?: number;
+  /** Phase 19: LLM answers carry a confidence and a note (grounding, or why it was rejected). */
+  confidence?: number;
+  note?: string;
 }
 interface AppDraft {
   ats: string;
@@ -92,14 +97,34 @@ export function ApplicationCard({ item }: { item: ReviewItemAny }) {
                         <option key={o}>{o}</option>
                       ))}
                     </select>
+                  ) : f.kind === 'textarea' ? (
+                    <Textarea
+                      rows={4}
+                      maxLength={f.maxLength}
+                      value={edits[f.key] ?? f.value ?? ''}
+                      onChange={(e) => setEdits({ ...edits, [f.key]: e.target.value })}
+                    />
                   ) : (
                     <Input value={edits[f.key] ?? f.value ?? ''} onChange={(e) => setEdits({ ...edits, [f.key]: e.target.value })} />
                   )
                 ) : (
-                  <span>{f.value ?? '—'}</span>
+                  <span className="whitespace-pre-wrap">{f.value ?? '—'}</span>
+                )}
+                {f.note && (
+                  <div className={f.note.startsWith('LLM answer rejected') ? 'mt-0.5 text-xs text-amber-700' : 'mt-0.5 text-xs text-muted-foreground'}>{f.note}</div>
                 )}
               </td>
-              <td className="w-16 py-1 pl-2 text-right text-xs text-muted-foreground">{f.source ?? ''}</td>
+              <td className="w-20 py-1 pl-2 text-right align-top text-xs text-muted-foreground">
+                {f.source === 'llm' ? (
+                  <Badge variant="outline" className={(f.confidence ?? 0) < 0.85 ? 'border-amber-600 text-amber-700' : ''} title="Written by the LLM from your facts and the job description — read it before approving">
+                    LLM {Math.round((f.confidence ?? 0) * 100)}%
+                  </Badge>
+                ) : f.source === 'bank' ? (
+                  <span title="An answer you approved on an earlier application">saved</span>
+                ) : (
+                  (f.source ?? '')
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

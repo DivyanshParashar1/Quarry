@@ -6,6 +6,8 @@ import { createLogger, findUp, loadAppConfig, loadEnv, type AppConfig, type Env 
 import {
   countJobs,
   createDb,
+  deleteBankAnswer,
+  listAnswerBank,
   listBenchmarkJobs,
   listLibraryResumes,
   listCompaniesForAtsCheck,
@@ -161,6 +163,9 @@ Referrals (Phase 8; no global send cap — a person is asked at most once per co
   jf linkedin sent <id> | accepted <id> | replied <id>
       Record that you sent one (cooldown + batch updated) / that they accepted your connection
       note (drafts the full message with the resume) / that they answered.
+  jf answers [list] | delete <id>
+      Application answers you approved (reused first for similar questions; edit them on the
+      dashboard's Profile → answers tab).
   jf sweep [--live]
       One sweeper pass now (the server runs it on start and hourly): alerts, reply tracking,
       deadline expiry; with autopilot.enabled also match, resume, fan-out, the single 24 h
@@ -421,6 +426,22 @@ async function main(argv: string[]): Promise<number> {
     if (cmd === 'apply') return await applyCommand(sub, arg, values, cmdCtx);
     if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx, arg);
     if (cmd === 'sweep') return await sweepCommand(values, cmdCtx);
+    if (cmd === 'answers') {
+      // Phase 19: application answers you approved, reused for similar questions.
+      if (sub === 'delete') {
+        if (!arg) throw new UsageError('missing <id>');
+        const all = await listAnswerBank(db);
+        const hit = all.find((a) => a.id.startsWith(arg));
+        if (!hit) throw new UsageError(`no saved answer ${arg}`);
+        await deleteBankAnswer(db, hit.id);
+        console.log(`deleted: ${hit.question}`);
+        return 0;
+      }
+      const all = await listAnswerBank(db);
+      if (!all.length) console.log('No saved answers yet; approving an application saves its answers.');
+      for (const a of all) console.log(`${a.id.slice(0, 8)}  ${a.kind.padEnd(6)} used ${String(a.uses).padStart(2)}×  ${a.question}\n          → ${a.answer.replace(/\s+/g, ' ').slice(0, 140)}`);
+      return 0;
+    }
     if (cmd === 'review') return await reviewCommand(sub, arg, values, cmdCtx);
     if (cmd === 'outreach') return await outreachCommand(sub, values, cmdCtx);
     if (cmd === 'gmail' && sub === 'auth') {

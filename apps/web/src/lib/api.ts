@@ -730,3 +730,16 @@ export interface SweepStatus {
   available: boolean;
   last: { createdAt: string; payload: { reason: string; steps: Array<{ name: string; ok: boolean; skipped: string | null; ms: number }> } } | null;
 }
+
+/** Phase 19: an application answer you approved, reused for similar questions. */
+export interface BankAnswer {
+  id: string;
+  question: string;
+  answer: string;
+  kind: 'text' | 'choice';
+  origin: string;
+  uses: number;
+  lastUsedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
