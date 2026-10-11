@@ -12,6 +12,7 @@ import { ContactsPage } from '@/components/ContactsPage';
 import { ReviewQueue } from '@/components/ReviewQueue';
 import { HealthPage } from '@/components/HealthPage';
 import { ChatPage } from '@/components/ChatPage';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatsBar } from '@/components/StatsBar';
 import { getJson, type JobsPage, type Pipeline, type Stats } from '@/lib/api';
 import { apiParams, filtersFromSearch, filtersToSearch, type Filters } from '@/lib/filters';
@@ -28,7 +29,17 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-type Tab = 'jobs' | 'review' | 'applications' | 'companies' | 'contacts' | 'profile' | 'resume' | 'resumes' | 'health' | 'chat';
+type Tab =
+  | 'jobs'
+  | 'review'
+  | 'applications'
+  | 'companies'
+  | 'contacts'
+  | 'profile'
+  | 'resume'
+  | 'resumes'
+  | 'health'
+  | 'chat';
 
 export function App() {
   const [tab, setTab] = useState<Tab>(() => {
@@ -64,7 +75,12 @@ export function App() {
           ? '/profile'
           : tab === 'resume'
             ? '/resume'
-            : tab === 'applications' || tab === 'companies' || tab === 'resumes' || tab === 'contacts' || tab === 'health' || tab === 'chat'
+            : tab === 'applications' ||
+                tab === 'companies' ||
+                tab === 'resumes' ||
+                tab === 'contacts' ||
+                tab === 'health' ||
+                tab === 'chat'
               ? `/${tab}`
               : `/${filtersToSearch(filters, selected)}`;
     window.history.replaceState(null, '', path);
@@ -95,7 +111,20 @@ export function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-base font-semibold tracking-tight">JobForge</h1>
           <nav className="flex gap-1 text-sm">
-            {(['jobs', 'review', 'applications', 'companies', 'contacts', 'profile', 'resume', 'resumes', 'health', 'chat'] as const).map((t) => (
+            {(
+              [
+                'jobs',
+                'review',
+                'applications',
+                'companies',
+                'contacts',
+                'profile',
+                'resume',
+                'resumes',
+                'health',
+                'chat',
+              ] as const
+            ).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -121,104 +150,111 @@ export function App() {
       </header>
       {discovered.data?.alert && (
         <div className="border-b border-border bg-amber-100 px-4 py-2 text-sm text-amber-900">
-          Discovery added {discovered.data.lastDay} companies in the last 24h (alert threshold {discovered.data.alertThreshold}).
-          A list source may have changed shape —{' '}
+          Discovery added {discovered.data.lastDay} companies in the last 24h (alert threshold{' '}
+          {discovered.data.alertThreshold}). A list source may have changed shape —{' '}
           <button className="underline" onClick={() => setTab('companies')}>
             review them
           </button>
           .
         </div>
       )}
-      {tab === 'chat' ? (
-        <main className="min-h-0 flex-1">
-          <ChatPage />
-        </main>
-      ) : tab === 'health' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <HealthPage />
-        </main>
-      ) : tab === 'companies' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <CompaniesPage />
-        </main>
-      ) : tab === 'applications' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <ApplicationsPage
-            onOpenJob={(id) => {
-              setSelected(id);
-              setTab('jobs');
-            }}
-          />
-        </main>
-      ) : tab === 'contacts' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <ContactsPage />
-        </main>
-      ) : tab === 'resumes' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <ResumesPage />
-        </main>
-      ) : tab === 'resume' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <ResumeEditor />
-        </main>
-      ) : tab === 'profile' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <ProfilePage />
-        </main>
-      ) : tab === 'review' ? (
-        <main className="min-h-0 flex-1 overflow-y-auto">
-          <ReviewQueue />
-        </main>
-      ) : (
-        <>
-          <Notices stats={stats.data} view={filters.view} total={total} loading={jobs.isPending} />
-          <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,5fr)_7fr]">
-            <section
-              className={cn(
-                'flex min-h-0 flex-col gap-3 overflow-y-auto p-4',
-                selected && 'hidden lg:flex',
-              )}
-            >
-              <FilterBar value={filters} onChange={setFilters} />
-              {jobs.error ? (
-                <p className="text-sm text-red-600">
-                  Could not load jobs: {jobs.error.message}. Is the server running?
-                </p>
-              ) : (
-                <JobList
-                  rows={rows}
-                  total={total}
-                  selected={selected}
-                  onSelect={setSelected}
-                  hasMore={!!jobs.hasNextPage}
-                  loadingMore={jobs.isFetchingNextPage}
-                  onLoadMore={() => void jobs.fetchNextPage()}
-                />
-              )}
-            </section>
-            <section
-              className={cn(
-                'min-h-0 overflow-y-auto border-border lg:border-l',
-                !selected && 'hidden lg:block',
-              )}
-            >
-              {selected ? (
-                <JobDetail
-                  key={selected}
-                  id={selected}
-                  onClose={() => setSelected(null)}
-                  onOpenReview={() => setTab('review')}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-                  Select a job to see why it scored the way it did.
-                </div>
-              )}
-            </section>
+      <ErrorBoundary resetKey={tab}>
+        {tab === 'chat' ? (
+          <main className="min-h-0 flex-1">
+            <ChatPage />
           </main>
-        </>
-      )}
+        ) : tab === 'health' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <HealthPage />
+          </main>
+        ) : tab === 'companies' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <CompaniesPage />
+          </main>
+        ) : tab === 'applications' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ApplicationsPage
+              onOpenJob={(id) => {
+                setSelected(id);
+                setTab('jobs');
+              }}
+            />
+          </main>
+        ) : tab === 'contacts' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ContactsPage />
+          </main>
+        ) : tab === 'resumes' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ResumesPage />
+          </main>
+        ) : tab === 'resume' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ResumeEditor />
+          </main>
+        ) : tab === 'profile' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ProfilePage />
+          </main>
+        ) : tab === 'review' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ReviewQueue />
+          </main>
+        ) : (
+          <>
+            <Notices
+              stats={stats.data}
+              view={filters.view}
+              total={total}
+              loading={jobs.isPending}
+            />
+            <main className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(380px,5fr)_7fr]">
+              <section
+                className={cn(
+                  'flex min-h-0 flex-col gap-3 overflow-y-auto p-4',
+                  selected && 'hidden lg:flex',
+                )}
+              >
+                <FilterBar value={filters} onChange={setFilters} />
+                {jobs.error ? (
+                  <p className="text-sm text-red-600">
+                    Could not load jobs: {jobs.error.message}. Is the server running?
+                  </p>
+                ) : (
+                  <JobList
+                    rows={rows}
+                    total={total}
+                    selected={selected}
+                    onSelect={setSelected}
+                    hasMore={!!jobs.hasNextPage}
+                    loadingMore={jobs.isFetchingNextPage}
+                    onLoadMore={() => void jobs.fetchNextPage()}
+                  />
+                )}
+              </section>
+              <section
+                className={cn(
+                  'min-h-0 overflow-y-auto border-border lg:border-l',
+                  !selected && 'hidden lg:block',
+                )}
+              >
+                {selected ? (
+                  <JobDetail
+                    key={selected}
+                    id={selected}
+                    onClose={() => setSelected(null)}
+                    onOpenReview={() => setTab('review')}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+                    Select a job to see why it scored the way it did.
+                  </div>
+                )}
+              </section>
+            </main>
+          </>
+        )}
+      </ErrorBoundary>
     </div>
   );
 }

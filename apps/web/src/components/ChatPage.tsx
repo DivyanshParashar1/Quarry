@@ -45,7 +45,10 @@ export function ChatPage() {
   useEffect(() => {
     if (!active && sessions.data?.sessions[0]) setActive(sessions.data.sessions[0].id);
   }, [active, sessions.data]);
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: 'smooth' }), [current.data?.messages.length]);
+  useEffect(() => {
+    // Braces matter: newer browsers return a Promise from scrollIntoView, which React would take for a cleanup function.
+    bottom.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [current.data?.messages.length]);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['chat-sessions'] });
