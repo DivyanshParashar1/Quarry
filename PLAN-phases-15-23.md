@@ -239,6 +239,13 @@ state, so a missed event only costs latency, never a lost job.
 ### Done when
 - Fixture runs reach review for one tenant each; unknown layout raises attention cleanly.
 
+### Implementation notes (2026-10-11)
+- Recorded read-only: Taleo `aa224` jobapply redirect + login page; SuccessFactors RMK job pages (Cargill live, Agfa
+  filled). Registration, flow and application pages are synthetic (opening a real apply flow was not done).
+- The three account-based actors share `plugin-sdk/wizard.ts`. Account terms / privacy agreements need
+  `consent:terms` = Yes on the draft (also for Workday now). Unknown layout → item failed + attention (dry run too).
+- SuccessFactors RMK sites on an employer's own domain are out of reach (manifest domains are fixed).
+
 ---
 
 ## Phase 22 — Orchestrator (multi-expert supervisor)
