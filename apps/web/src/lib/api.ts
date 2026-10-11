@@ -136,6 +136,8 @@ export interface AttentionDraft {
   message: string;
   reason: string;
   url: string | null;
+  /** Phase 21: where an apply actor stopped (unrecognised page). */
+  screenshots?: string[];
 }
 
 /** Phase 17: a LinkedIn message (to a connection) or connection note the user sends by hand. */

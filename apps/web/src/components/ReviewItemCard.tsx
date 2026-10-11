@@ -116,7 +116,14 @@ function AttentionCard({ item }: { item: ReviewItemAny }) {
         <AlertTriangle className="size-4" /> {d.title}
       </div>
       <p className="text-sm">{d.message}</p>
-      {d.url && <span className="text-xs break-all text-muted-foreground">{d.url}</span>}
+      {d.url && (
+        <a className="text-xs break-all text-muted-foreground underline" href={d.url} target="_blank" rel="noreferrer">
+          {d.url}
+        </a>
+      )}
+      {d.screenshots?.map((_, n) => (
+        <img key={n} className="w-full rounded border" src={`/api/review/${item.id}/screenshots/${n}`} alt={`where it stopped ${n + 1}`} />
+      ))}
       {error && <div className="text-sm text-red-600">{error}</div>}
       {item.status === 'pending' && (
         <div>

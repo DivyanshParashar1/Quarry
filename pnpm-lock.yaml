@@ -358,6 +358,12 @@ importers:
       '@jobforge/actor-apply-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-smartrecruiters
+      '@jobforge/actor-apply-successfactors':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-successfactors
+      '@jobforge/actor-apply-taleo':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-taleo
       '@jobforge/actor-apply-workday':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-workday
@@ -485,6 +491,12 @@ importers:
       '@jobforge/actor-apply-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-smartrecruiters
+      '@jobforge/actor-apply-successfactors':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-successfactors
+      '@jobforge/actor-apply-taleo':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-taleo
       '@jobforge/actor-apply-workday':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-workday
@@ -621,6 +633,38 @@ importers:
         version: 5.9.3
 
   plugins/actor-apply-smartrecruiters:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-apply-successfactors:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-apply-taleo:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*

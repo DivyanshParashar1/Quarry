@@ -261,24 +261,26 @@ export async function linkedinThreads(db: DB): Promise<LinkedInThreadRow[]> {
 const APPLY_SOURCES: Record<string, ApplyTarget['ats']> = {
   'source-smartrecruiters': 'smartrecruiters',
   'source-workday': 'workday',
+  'source-successfactors': 'successfactors',
+  'source-taleo': 'taleo',
   'source-greenhouse': 'greenhouse',
   'source-lever': 'lever',
   'source-ashby': 'ashby',
 };
 
 export interface ApplyTarget {
-  ats: 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'workday';
+  ats: 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'workday' | 'successfactors' | 'taleo';
   boardToken: string;
   postingId: string;
   url: string | null;
 }
 
-/** The first Greenhouse/Lever/Ashby/SmartRecruiters/Workday posting behind a canonical job (SF/Taleo apply stays manual). */
+/** The first posting behind a canonical job on an ATS the apply actors support. */
 export async function applyTargetForJob(db: DB, jobId: string): Promise<ApplyTarget | null> {
   const rows = await db.execute<{ source_plugin: string; external_id: string; url: string | null; board_token: string | null }>(sql`
     select r.source_plugin, r.external_id, r.url, s.board_token
     from raw_postings r left join company_sources s on s.id = r.company_source_id
-    where r.canonical_job_id = ${jobId} and r.source_plugin in ('source-greenhouse', 'source-lever', 'source-ashby', 'source-smartrecruiters', 'source-workday')
+    where r.canonical_job_id = ${jobId} and r.source_plugin in ('source-greenhouse', 'source-lever', 'source-ashby', 'source-smartrecruiters', 'source-workday', 'source-successfactors', 'source-taleo')
     order by r.last_seen_at desc`);
   for (const r of rows) {
     const ats = APPLY_SOURCES[r.source_plugin];

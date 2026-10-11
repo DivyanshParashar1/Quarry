@@ -6,6 +6,7 @@ import {
   OtpTimeoutError,
   SessionBlockedError,
   UnansweredQuestionsError,
+  UnknownLayoutError,
   type ApplicationDraft,
   type ApplicationResult,
   type ApplyInput,
@@ -39,7 +40,8 @@ import { coreApprovedDraft, isCoreApproved, loadJobForOutreach, OutreachError, t
 import type { RawBrowser } from './browser.js';
 
 // Phase 11: ATS auto-apply (Greenhouse, Lever, Ashby; SmartRecruiters since Phase 19,
-// Workday since Phase 20). SuccessFactors / Taleo stay manual until Phase 21.
+// Workday since Phase 20, SuccessFactors and Taleo since Phase 21 — best effort:
+// a page the actor doesn't recognise becomes an attention item with screenshots).
 // Phase 19: blank questions are answered from the answer bank, then the LLM
 // (grounded, guardrailed); an emailed verification code is read from Gmail;
 // questions that only appear after "Next" send the item back for review.
@@ -50,6 +52,8 @@ export const APPLY_ACTORS = {
   ashby: 'actor-apply-ashby',
   smartrecruiters: 'actor-apply-smartrecruiters',
   workday: 'actor-apply-workday',
+  successfactors: 'actor-apply-successfactors',
+  taleo: 'actor-apply-taleo',
 } as const;
 const APPLY_PLUGIN_IDS = Object.values(APPLY_ACTORS);
 const MAX_ATTEMPTS = 2;
@@ -73,7 +77,7 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
   const { db } = deps;
   const job = await loadJobForOutreach(db, jobId);
   const target = await applyTargetForJob(db, jobId);
-  if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever, Ashby, SmartRecruiters and Workday postings only; apply to this one by hand', 'invalid_state');
+  if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever, Ashby, SmartRecruiters, Workday, SuccessFactors and Taleo postings only; apply to this one by hand', 'invalid_state');
   const profile = await getActiveProfile(db);
   if (!profile) throw new OutreachError('no profile loaded; run `jf profile load`', 'no_profile');
   const applicant = profile.preferences.application;
@@ -201,6 +205,27 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
     if (err instanceof UnansweredQuestionsError) {
       // Nothing was submitted: add the new questions, answer what we can, and send it back for review.
       await reopenWithQuestions(deps, item, draft, err.questions);
+      return { ...base, ok: false, error };
+    }
+    if (err instanceof UnknownLayoutError) {
+      // A page the actor can't place won't fix itself on a retry (dry run included): hand it over with the screenshots.
+      await transitionReviewItem(db, item.id, ['approved'], 'failed', { error: `needs a manual application: ${error}` });
+      await createReviewItem(db, {
+        kind: 'attention',
+        pluginId: item.pluginId,
+        jobId: item.jobId,
+        contactId: null,
+        companyId: item.companyId,
+        draft: {
+          title: `Apply to ${draft.company} by hand (unrecognised ${draft.ats} page)`,
+          message: `The ${draft.ats} application reached a page JobForge doesn't recognise${err.step ? ` (after "${err.step}")` : ''}, so it stopped instead of guessing. Nothing was submitted. The screenshots show where it stopped; finish at the link, then approve this item. A selector/step override for this employer lets the next application get past it.`,
+          reason: 'unknown_layout',
+          url: err.url || draft.applyUrl,
+          screenshots: err.screenshots,
+        },
+      });
+      await appendEvent(db, { kind: 'application.unknown_layout', subjectType: 'review_item', subjectId: item.id, payload: { ats: draft.ats, step: err.step, url: err.url, screenshots: err.screenshots } });
+      log.warn({ err: error }, 'application stopped on an unrecognised page');
       return { ...base, ok: false, error };
     }
     if (!deps.dryRun) {

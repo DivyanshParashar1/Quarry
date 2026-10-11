@@ -203,6 +203,7 @@ export async function bootstrap() {
     applyDeps,
     sequencerDeps,
     screenshotRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'screenshots'),
+    failureRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'apply-failures'),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     config,
     pages: () => createPageFetcher({ limiter }),

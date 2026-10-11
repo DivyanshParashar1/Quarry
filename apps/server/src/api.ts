@@ -82,6 +82,8 @@ export interface ApiOptions {
   sequencerDeps?: () => Promise<SequencerDeps>;
   /** Where browser screenshots live (served read-only). */
   screenshotRoot?: string;
+  /** Failed apply steps captured by the wizard actors (Phase 21; served read-only on attention items). */
+  failureRoot?: string;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -252,6 +254,7 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     db,
     ...(opts.applyDeps ? { applyDeps: opts.applyDeps } : {}),
     screenshotRoot: opts.screenshotRoot ?? 'data/screenshots',
+    failureRoot: opts.failureRoot ?? 'data/apply-failures',
   });
 
   registerDiscoveryRoutes(app, {

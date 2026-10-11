@@ -17,6 +17,8 @@
     "@jobforge/actor-apply-greenhouse": "workspace:*",
     "@jobforge/actor-apply-lever": "workspace:*",
     "@jobforge/actor-apply-smartrecruiters": "workspace:*",
+    "@jobforge/actor-apply-successfactors": "workspace:*",
+    "@jobforge/actor-apply-taleo": "workspace:*",
     "@jobforge/actor-apply-workday": "workspace:*",
     "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/actor-linkedin-manual": "workspace:*",
