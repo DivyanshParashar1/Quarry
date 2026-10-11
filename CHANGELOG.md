@@ -524,3 +524,21 @@ emails or LinkedIn actions. Those parts wait for the user (listed below).
 - `pnpm smoke:api` (34 checks against a running server, incl. the CSRF guard), `pnpm smoke:cli [--network]` (20 read-only
   `jf` commands), `pnpm live:sources`; `docs/testing.md` describes the layers. All pass on this machine (dev mode).
 
+## Chatbot (Claude Code + MCP + web + scripts + gated code changes)
+
+- **Chat tab** on the dashboard and `/api/chat/*` (sessions, messages, stop, delete); tables `chat_sessions`,
+  `chat_messages` (migration `0018`). Each message runs the Claude Code CLI (stream-json) in the chat's own worktree,
+  resumes the conversation (`--resume`), stores replies and tool calls as they stream, one run per chat, at most
+  `chat.maxConcurrent` at once; interrupted runs are marked on server start.
+- Access: all JobForge MCP tools except `approve` (drafts only — you approve in Review), WebSearch/WebFetch, file
+  edits, and an allowlist of shell commands to run its own scripts; curl/wget and git history commands are blocked.
+- **Code changes it makes** go through the orchestrator's gate (`gateAndMerge`, split out of the code-fix pipeline):
+  protected paths refused → typecheck, lint, full tests → commit naming the request → merge into a clean main; otherwise
+  parked on a branch with the reason (and the failing gate's output) in the chat.
+- **`add_job`** (MCP) / `POST /api/jobs`: add any job from a link (the assistant fetches the JD first); deduped like
+  fetched postings, so tailoring, referrals and application drafts work on it.
+- Tests: scripted Claude stand-in + real git repo — conversation stored in order and resumed, approve never offered,
+  a passing change merged (scratch files never land), a CLAUDE.md change refused and parked, a failing gate kept off
+  main, one run per chat via the API. Not run against the real Claude CLI here (it spends your usage) — try it from
+  the Chat tab. See `docs/chatbot.md`.
+

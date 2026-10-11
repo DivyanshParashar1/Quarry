@@ -121,6 +121,23 @@ export const orchestratorConfigSchema = z
   .strict();
 export type OrchestratorConfig = z.infer<typeof orchestratorConfigSchema>;
 
+/** The chatbot: Claude Code with the product's MCP tools, the web, scripts, and gated code changes. */
+export const chatConfigSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    /** Claude Code model for chat (default: the CLI's default). */
+    model: z.string().optional(),
+    timeoutMin: z.number().int().min(1).max(240).default(30),
+    maxConcurrent: z.number().int().min(1).max(10).default(2),
+    /** Merge code changes that pass the gates (false = keep them on a branch for you). */
+    mergeCodeChanges: z.boolean().default(true),
+    /** Run once in a new chat's working copy. */
+    setup: z.array(z.array(z.string()).min(1)).default([['pnpm', 'install', '--frozen-lockfile', '--prefer-offline']]),
+    gates: z.array(z.array(z.string()).min(1)).default([['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'test']]),
+  })
+  .strict();
+export type ChatConfig = z.infer<typeof chatConfigSchema>;
+
 export const appConfigSchema = z
   .object({
     llm: z
@@ -326,6 +343,7 @@ export const appConfigSchema = z
     resumes: resumesConfigSchema.default({}),
     /** Phase 22: the orchestrator — health checks, expert diagnosis, ops actions, gated code fixes. */
     orchestrator: orchestratorConfigSchema.default({}),
+    chat: chatConfigSchema.default({}),
     /** Keyed by plugin id; validated by each plugin's own configSchema at load time. */
     plugins: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
   })

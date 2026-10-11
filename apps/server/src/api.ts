@@ -25,6 +25,9 @@ import { registerReferralRoutes } from './routes-referrals.js';
 import { registerApplyRoutes } from './routes-apply.js';
 import { registerPipelineRoutes } from './routes-pipeline.js';
 import { registerHealthRoutes } from './routes-health.js';
+import { registerManualJobRoutes } from './routes-jobs-manual.js';
+import { registerChatRoutes } from './chat-routes.js';
+import type { ChatRunner } from './chat-runner.js';
 import type { TickResult } from '@jobforge/orchestrator';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
@@ -88,6 +91,8 @@ export interface ApiOptions {
   failureRoot?: string;
   /** Phase 22: one orchestrator pass. */
   runOrchestrator?: () => Promise<TickResult>;
+  /** The chatbot (absent = chat API answers 503). */
+  chat?: ChatRunner;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -269,6 +274,9 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.llm ? { llm: opts.llm } : {}),
     ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
   });
+
+  registerManualJobRoutes(app, { db });
+  registerChatRoutes(app, { db, ...(opts.chat ? { runner: opts.chat } : {}) });
 
   registerHealthRoutes(app, {
     db,

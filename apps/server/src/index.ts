@@ -10,6 +10,8 @@ import { createRegistry } from '@jobforge/plugins';
 import { createLazyEmbedder } from '@jobforge/embeddings';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
 import { createOrchestrator } from './orchestrator.js';
+import { ChatRunner } from './chat-runner.js';
+import { homedir } from 'node:os';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -213,6 +215,24 @@ export async function bootstrap() {
     sequencerDeps,
   });
 
+  // The chatbot: Claude Code with the product's MCP tools, the web and scripts; code changes gated + merged.
+  let chat: ChatRunner | undefined;
+  if (config.chat.enabled) {
+    chat = new ChatRunner({
+      db,
+      log: log.child({ component: 'chat' }),
+      repoDir: ws ? dirname(ws) : process.cwd(),
+      worktreeRoot: join(homedir(), '.jobforge', 'chat'),
+      apiUrl: `http://127.0.0.1:${env.PORT}`,
+      claude: { command: env.CLAUDE_CLI_PATH, ...(config.chat.model ? { model: config.chat.model } : {}), timeoutMs: config.chat.timeoutMin * 60_000 },
+      setup: config.chat.setup,
+      gates: config.chat.gates,
+      mergeCodeChanges: config.chat.mergeCodeChanges,
+      maxConcurrent: config.chat.maxConcurrent,
+    });
+    await chat.recover();
+  }
+
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
@@ -236,6 +256,7 @@ export async function bootstrap() {
     linkedinEnabled: env.LINKEDIN_ENABLED,
     sweep: () => runSweep(sweepDeps, { reason: 'dashboard' }),
     runOrchestrator: orchestrator.run,
+    ...(chat ? { chat } : {}),
     ...(facts ? { profileDir: dirname(facts) } : {}),
     ...(resumeManifest ? { resumeDir: dirname(resumeManifest) } : {}),
   });

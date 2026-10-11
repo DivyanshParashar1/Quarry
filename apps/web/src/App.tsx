@@ -11,6 +11,7 @@ import { ResumesPage } from '@/components/ResumesPage';
 import { ContactsPage } from '@/components/ContactsPage';
 import { ReviewQueue } from '@/components/ReviewQueue';
 import { HealthPage } from '@/components/HealthPage';
+import { ChatPage } from '@/components/ChatPage';
 import { StatsBar } from '@/components/StatsBar';
 import { getJson, type JobsPage, type Pipeline, type Stats } from '@/lib/api';
 import { apiParams, filtersFromSearch, filtersToSearch, type Filters } from '@/lib/filters';
@@ -27,7 +28,7 @@ function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-type Tab = 'jobs' | 'review' | 'applications' | 'companies' | 'contacts' | 'profile' | 'resume' | 'resumes' | 'health';
+type Tab = 'jobs' | 'review' | 'applications' | 'companies' | 'contacts' | 'profile' | 'resume' | 'resumes' | 'health' | 'chat';
 
 export function App() {
   const [tab, setTab] = useState<Tab>(() => {
@@ -39,6 +40,7 @@ export function App() {
     if (window.location.pathname === '/applications') return 'applications';
     if (window.location.pathname === '/companies') return 'companies';
     if (window.location.pathname === '/health') return 'health';
+    if (window.location.pathname === '/chat') return 'chat';
     return 'jobs';
   });
   const pipeline = useQuery({
@@ -62,7 +64,7 @@ export function App() {
           ? '/profile'
           : tab === 'resume'
             ? '/resume'
-            : tab === 'applications' || tab === 'companies' || tab === 'resumes' || tab === 'contacts' || tab === 'health'
+            : tab === 'applications' || tab === 'companies' || tab === 'resumes' || tab === 'contacts' || tab === 'health' || tab === 'chat'
               ? `/${tab}`
               : `/${filtersToSearch(filters, selected)}`;
     window.history.replaceState(null, '', path);
@@ -93,7 +95,7 @@ export function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-base font-semibold tracking-tight">JobForge</h1>
           <nav className="flex gap-1 text-sm">
-            {(['jobs', 'review', 'applications', 'companies', 'contacts', 'profile', 'resume', 'resumes', 'health'] as const).map((t) => (
+            {(['jobs', 'review', 'applications', 'companies', 'contacts', 'profile', 'resume', 'resumes', 'health', 'chat'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -127,7 +129,11 @@ export function App() {
           .
         </div>
       )}
-      {tab === 'health' ? (
+      {tab === 'chat' ? (
+        <main className="min-h-0 flex-1">
+          <ChatPage />
+        </main>
+      ) : tab === 'health' ? (
         <main className="min-h-0 flex-1 overflow-y-auto">
           <HealthPage />
         </main>

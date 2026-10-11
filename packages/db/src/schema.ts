@@ -766,3 +766,37 @@ export const incidents = pgTable(
     statusIdx: index('incidents_status_idx').on(t.status, t.updatedAt),
   }),
 );
+
+// ---------------------------------------------------------------------------
+// Chatbot: conversations with the Claude Code-powered assistant
+// ---------------------------------------------------------------------------
+
+export const chatSessions = pgTable('chat_sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  /** Claude Code's own session id, for --resume. */
+  claudeSessionId: text('claude_session_id'),
+  /** idle | running */
+  status: text('status').notNull().default('idle'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const chatMessages = pgTable(
+  'chat_messages',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => chatSessions.id, { onDelete: 'cascade' }),
+    /** user | assistant | tool | system */
+    role: text('role').notNull(),
+    content: text('content').notNull(),
+    /** tool name + input, cost, code-change result, … */
+    meta: jsonb('meta').notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sessionIdx: index('chat_messages_session_idx').on(t.sessionId, t.createdAt),
+  }),
+);

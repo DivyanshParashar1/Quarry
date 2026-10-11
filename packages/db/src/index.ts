@@ -16,3 +16,4 @@ export * from './referral-repo.js';
 export * from './deadline-repo.js';
 export * from './pipeline-repo.js';
 export * from './incident-repo.js';
+export * from './chat-repo.js';

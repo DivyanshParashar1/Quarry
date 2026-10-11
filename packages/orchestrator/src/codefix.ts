@@ -143,6 +143,35 @@ export async function runCodeChange(o: CodeChangeOptions, req: CodeChangeRequest
     }
     if (claude.code !== 0) return res('failed', { reason: `Claude Code exited ${claude.code}: ${tail(claude.stderr || claude.stdout, 800)}`, summary });
 
+    return await gateAndMerge(o, { wt, branch, title: req.title, body: req.body ?? [], summary, requireTest: req.requireTest });
+  } finally {
+    await git(['worktree', 'remove', '--force', wt]);
+    await rm(wt, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+
+export interface GateRequest {
+  /** A worktree on `branch` whose uncommitted changes are the change. */
+  wt: string;
+  branch: string;
+  title: string;
+  body: string[];
+  summary: string;
+  requireTest: boolean;
+}
+
+/**
+ * Steps 3–5 for changes already made in a worktree: refuse empty / protected /
+ * untested changes, run the gates, commit, merge into a clean main. Shared by the
+ * orchestrator's fixes and the chatbot.
+ */
+export async function gateAndMerge(o: Pick<CodeChangeOptions, 'repoDir' | 'exec' | 'log' | 'gates' | 'gateTimeoutMs'>, g: GateRequest): Promise<CodeChangeResult> {
+  const exec = o.exec ?? spawnExec;
+  const { wt, branch, summary } = g;
+  const git = (args: string[], cwd = o.repoDir) => exec('git', args, { cwd, timeoutMs: 120_000 });
+  const res = (status: CodeChangeStatus, extra: Partial<CodeChangeResult> = {}): CodeChangeResult => ({ status, branch, files: [], ...extra });
+  const req = { title: g.title, body: g.body, requireTest: g.requireTest };
     await git(['add', '-A'], wt);
     const diff = await git(['diff', '--cached', '--name-only', 'main'], wt);
     const files = diff.stdout.split('\n').map((f) => f.trim()).filter(Boolean);
@@ -158,7 +187,7 @@ export async function runCodeChange(o: CodeChangeOptions, req: CodeChangeRequest
       if (r.code !== 0) return res('rejected', { files, summary, gateLog, reason: `gate "${cmd.join(' ')}" failed` });
     }
 
-    const msg = [req.title, '', ...(req.body ?? []), ...(summary ? ['', summary] : [])].join('\n');
+    const msg = [req.title, '', ...(req.body), ...(summary ? ['', summary] : [])].join('\n');
     const commit = await git(['commit', '-q', '-m', msg], wt);
     if (commit.code !== 0) return res('failed', { files, summary, gateLog, reason: `commit failed: ${tail(commit.stderr, 500)}` });
 
@@ -176,10 +205,6 @@ export async function runCodeChange(o: CodeChangeOptions, req: CodeChangeRequest
     const sha = (await git(['rev-parse', 'HEAD'])).stdout.trim();
     o.log.info({ branch, merge: sha, files }, 'code change merged');
     return res('merged', { files, summary, gateLog, mergeCommit: sha });
-  } finally {
-    await git(['worktree', 'remove', '--force', wt]);
-    await rm(wt, { recursive: true, force: true }).catch(() => {});
-  }
 }
 
 /** Undo a merged change on main (a regression in the verify window). */

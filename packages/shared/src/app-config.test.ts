@@ -67,6 +67,14 @@ describe('config.yaml', () => {
           gates: [['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'test']],
         },
       },
+      chat: {
+        enabled: true,
+        timeoutMin: 30,
+        maxConcurrent: 2,
+        mergeCodeChanges: true,
+        setup: [['pnpm', 'install', '--frozen-lockfile', '--prefer-offline']],
+        gates: [['pnpm', 'typecheck'], ['pnpm', 'lint'], ['pnpm', 'test']],
+      },
       plugins: {},
     });
   });

@@ -459,5 +459,25 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
     ({ pluginId }) => run(() => api.send('POST', `/api/ops/plugins/${encodeURIComponent(pluginId)}/resume`)),
   );
 
+  server.registerTool(
+    'add_job',
+    {
+      title: 'Add a job from a link',
+      description:
+        'Add a job the user found (any site): fetch the posting first (WebFetch), then pass the company, title, the URL and the full job description text. It becomes a normal job (deduped), so tailor_resume, fan_out_referrals and draft_application work on the returned jobId.',
+      inputSchema: {
+        company: z.string().min(1),
+        title: z.string().min(1),
+        url: z.string().url(),
+        description: z.string().min(1).describe('The job description as plain text/markdown, as complete as the page gives it'),
+        locations: z.array(z.string()).optional(),
+        remotePolicy: z.enum(['remote', 'hybrid', 'onsite']).optional(),
+        applyUrl: z.string().url().optional(),
+      },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    (args) => run(() => api.send('POST', '/api/jobs', args)),
+  );
+
   return server;
 }
