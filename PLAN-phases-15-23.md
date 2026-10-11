@@ -222,6 +222,13 @@ state, so a missed event only costs latency, never a lost job.
 ### Done when
 - Fixture runs of two differently-configured tenants reach the review step; dry run never clicks final submit.
 
+### Implementation notes (2026-10-11)
+- The wizard pages are synthetic fixtures (Workday `data-automation-id` conventions); only the public postings were
+  recorded — opening the real apply flow was not done (it needs an account). Phase 23 verifies the selectors.
+- A dry run of an *approved* draft does sign in / create the tenant account and walks to Review (Workday saves the
+  in-progress application as a draft); it never presses Submit. No preview at draft time (no account before approval).
+- The account email is the connected Gmail address (verification emails must be readable).
+
 ---
 
 ## Phase 21 — SuccessFactors + Taleo apply
