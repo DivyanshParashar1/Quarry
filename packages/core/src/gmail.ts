@@ -1,5 +1,5 @@
 import { auth, gmail as gmailApi } from '@googleapis/gmail';
-import type { GmailHandle } from '@jobforge/plugin-sdk';
+import type { GmailHandle } from '@quarry/plugin-sdk';
 import type { DomainRateLimiter } from './rate-limiter.js';
 
 // The user's own Gmail via OAuth (PLAN.md §2). Only the core holds the

@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { preferencesSchema } from '@jobforge/shared';
-import { recordPosting, saveMatchResults, upsertCompany } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { loadProfileData, normalizePosting } from '@jobforge/core';
+import { preferencesSchema } from '@quarry/shared';
+import { recordPosting, saveMatchResults, upsertCompany } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { loadProfileData, normalizePosting } from '@quarry/core';
 import { buildApi } from './api.js';
 
 const adminUrl = testDbAdminUrl();
@@ -102,7 +102,7 @@ describe.skipIf(!adminUrl)('dashboard API (postgres)', () => {
   it('stats, profile, companies', async () => {
     const stats = (await app.inject('/api/stats')).json();
     expect(stats.profile).toMatchObject({ facts: 0, roles: ['Backend Engineer'] });
-    expect(stats.match).toEqual({ openJobs: 4, embedded: 0, scored: { llm: 2, prefilter: 0, filtered: 1 }, unscored: 1 });
+    expect(stats.match).toEqual({ openJobs: 4, embedded: 0, scored: { llm: 2, keyword: 0, prefilter: 0, filtered: 1 }, unscored: 1 });
     expect(stats.llm24h.calls).toBe(0);
     const profile = (await app.inject('/api/profile')).json();
     expect(profile.embedding).toBeUndefined();

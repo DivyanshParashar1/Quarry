@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { sql } from '@jobforge/db';
-import { preferencesSchema, type MatcherPlugin } from '@jobforge/plugin-sdk';
+import { sql } from '@quarry/db';
+import { preferencesSchema, type MatcherPlugin } from '@quarry/plugin-sdk';
 import {
   getActiveProfile,
   getJobDetail,
@@ -11,10 +11,10 @@ import {
   recordPosting,
   upsertCompany,
   type DB,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createHashEmbedder } from '@jobforge/embeddings';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createHashEmbedder } from '@quarry/embeddings';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
 import { embedPending } from './embed-runner.js';
 import { runMatch, NoProfileError, type MatchRunDeps } from './match-runner.js';
 import { loadProfileData } from './profile-loader.js';
@@ -148,7 +148,7 @@ describe.skipIf(!adminUrl)('profile -> embed -> match (postgres)', () => {
     const detail = await getJobDetail(t.db, ranked.rows[0]!.id, version);
     expect(detail!.match).toMatchObject({ score: 77, rubric: { stack_fit: 9 }, provider: 'fake' });
     expect(detail!.sources).toHaveLength(1);
-    expect(await matchStats(t.db, version)).toEqual({ openJobs: 2, embedded: 2, scored: { llm: 1, prefilter: 0, filtered: 1 }, unscored: 0 });
+    expect(await matchStats(t.db, version)).toEqual({ openJobs: 2, embedded: 2, scored: { llm: 1, keyword: 0, prefilter: 0, filtered: 1 }, unscored: 0 });
   });
 
   it('rescoring replaces results; a changed description clears the embedding', async () => {

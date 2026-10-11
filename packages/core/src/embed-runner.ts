@@ -1,5 +1,5 @@
-import type { Embedder, Logger } from '@jobforge/shared';
-import { BGE_QUERY_PREFIX, jobEmbeddingText } from '@jobforge/embeddings';
+import type { Embedder, Logger } from '@quarry/shared';
+import { BGE_QUERY_PREFIX, jobEmbeddingText } from '@quarry/embeddings';
 import {
   factsNeedingEmbedding,
   getActiveProfile,
@@ -8,7 +8,7 @@ import {
   setJobEmbeddings,
   setSnapshotEmbedding,
   type DB,
-} from '@jobforge/db';
+} from '@quarry/db';
 
 export interface EmbedSummary {
   jobs: number;

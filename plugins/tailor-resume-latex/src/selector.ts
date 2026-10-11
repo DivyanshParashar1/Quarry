@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { Job, LLMClient } from '@jobforge/plugin-sdk';
-import type { BlockMeta, Budget, TailorSelection } from '@jobforge/plugin-sdk';
+import type { Job, LLMClient } from '@quarry/plugin-sdk';
+import type { BlockMeta, Budget, TailorSelection } from '@quarry/plugin-sdk';
 import type { LoadedResume } from './manifest-loader.js';
 
 // LLM-driven block selection. The LLM returns ordered block ids per section

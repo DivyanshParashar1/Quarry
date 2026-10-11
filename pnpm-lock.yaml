@@ -11,7 +11,7 @@ importers:
       '@eslint/js':
         specifier: ^9.39.5
         version: 9.39.5
-      '@jobforge/db':
+      '@quarry/db':
         specifier: workspace:*
         version: link:packages/db
       '@types/node':
@@ -47,92 +47,92 @@ importers:
 
   apps/cli:
     dependencies:
-      '@jobforge/actor-apply-ashby':
+      '@quarry/actor-apply-ashby':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-ashby
-      '@jobforge/actor-apply-greenhouse':
+      '@quarry/actor-apply-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-greenhouse
-      '@jobforge/actor-apply-lever':
+      '@quarry/actor-apply-lever':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-lever
-      '@jobforge/actor-gmail-outreach':
+      '@quarry/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
-      '@jobforge/actor-linkedin-referral':
+      '@quarry/actor-linkedin-referral':
         specifier: workspace:*
         version: link:../../plugins/actor-linkedin-referral
-      '@jobforge/core':
+      '@quarry/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@jobforge/db':
+      '@quarry/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@jobforge/embeddings':
+      '@quarry/embeddings':
         specifier: workspace:*
         version: link:../../packages/embeddings
-      '@jobforge/enricher-contacts-pattern':
+      '@quarry/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
-      '@jobforge/enricher-deadline':
+      '@quarry/enricher-deadline':
         specifier: workspace:*
         version: link:../../plugins/enricher-deadline
-      '@jobforge/enricher-linkedin-employees':
+      '@quarry/enricher-linkedin-employees':
         specifier: workspace:*
         version: link:../../plugins/enricher-linkedin-employees
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
-      '@jobforge/matcher-default':
+      '@quarry/matcher-default':
         specifier: workspace:*
         version: link:../../plugins/matcher-default
-      '@jobforge/orchestrator':
+      '@quarry/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
-      '@jobforge/plugins':
+      '@quarry/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@jobforge/source-ashby':
+      '@quarry/source-ashby':
         specifier: workspace:*
         version: link:../../plugins/source-ashby
-      '@jobforge/source-gmail-alerts':
+      '@quarry/source-gmail-alerts':
         specifier: workspace:*
         version: link:../../plugins/source-gmail-alerts
-      '@jobforge/source-greenhouse':
+      '@quarry/source-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/source-greenhouse
-      '@jobforge/source-lever':
+      '@quarry/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
-      '@jobforge/source-smartrecruiters':
+      '@quarry/source-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/source-smartrecruiters
-      '@jobforge/source-successfactors':
+      '@quarry/source-successfactors':
         specifier: workspace:*
         version: link:../../plugins/source-successfactors
-      '@jobforge/source-taleo':
+      '@quarry/source-taleo':
         specifier: workspace:*
         version: link:../../plugins/source-taleo
-      '@jobforge/source-workday':
+      '@quarry/source-workday':
         specifier: workspace:*
         version: link:../../plugins/source-workday
-      '@jobforge/tailor-resume-latex':
+      '@quarry/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
-      '@jobforge/tracker-gmail':
+      '@quarry/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
-      '@jobforge/tracker-linkedin':
+      '@quarry/tracker-linkedin':
         specifier: workspace:*
         version: link:../../plugins/tracker-linkedin
       zod:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
       pino:
@@ -147,12 +147,12 @@ importers:
 
   apps/mcp:
     dependencies:
-      '@jobforge/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.1
         version: 1.32.1(supports-color@7.2.0)(zod@3.25.76)
+      '@quarry/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -172,85 +172,85 @@ importers:
       '@fastify/static':
         specifier: ^10.1.5
         version: 10.1.5
-      '@jobforge/actor-apply-ashby':
+      '@quarry/actor-apply-ashby':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-ashby
-      '@jobforge/actor-apply-greenhouse':
+      '@quarry/actor-apply-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-greenhouse
-      '@jobforge/actor-apply-lever':
+      '@quarry/actor-apply-lever':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-lever
-      '@jobforge/actor-gmail-outreach':
+      '@quarry/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
-      '@jobforge/actor-linkedin-referral':
+      '@quarry/actor-linkedin-referral':
         specifier: workspace:*
         version: link:../../plugins/actor-linkedin-referral
-      '@jobforge/core':
+      '@quarry/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@jobforge/db':
+      '@quarry/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@jobforge/embeddings':
+      '@quarry/embeddings':
         specifier: workspace:*
         version: link:../../packages/embeddings
-      '@jobforge/enricher-contacts-pattern':
+      '@quarry/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
-      '@jobforge/enricher-deadline':
+      '@quarry/enricher-deadline':
         specifier: workspace:*
         version: link:../../plugins/enricher-deadline
-      '@jobforge/enricher-linkedin-employees':
+      '@quarry/enricher-linkedin-employees':
         specifier: workspace:*
         version: link:../../plugins/enricher-linkedin-employees
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
-      '@jobforge/orchestrator':
+      '@quarry/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/plugins':
+      '@quarry/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@jobforge/source-ashby':
+      '@quarry/source-ashby':
         specifier: workspace:*
         version: link:../../plugins/source-ashby
-      '@jobforge/source-gmail-alerts':
+      '@quarry/source-gmail-alerts':
         specifier: workspace:*
         version: link:../../plugins/source-gmail-alerts
-      '@jobforge/source-greenhouse':
+      '@quarry/source-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/source-greenhouse
-      '@jobforge/source-lever':
+      '@quarry/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
-      '@jobforge/source-smartrecruiters':
+      '@quarry/source-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/source-smartrecruiters
-      '@jobforge/source-successfactors':
+      '@quarry/source-successfactors':
         specifier: workspace:*
         version: link:../../plugins/source-successfactors
-      '@jobforge/source-taleo':
+      '@quarry/source-taleo':
         specifier: workspace:*
         version: link:../../plugins/source-taleo
-      '@jobforge/source-workday':
+      '@quarry/source-workday':
         specifier: workspace:*
         version: link:../../plugins/source-workday
-      '@jobforge/tailor-resume-latex':
+      '@quarry/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
-      '@jobforge/tracker-gmail':
+      '@quarry/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
-      '@jobforge/tracker-linkedin':
+      '@quarry/tracker-linkedin':
         specifier: workspace:*
         version: link:../../plugins/tracker-linkedin
       fastify:
@@ -263,12 +263,12 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
-      '@jobforge/mcp':
-        specifier: workspace:*
-        version: link:../mcp
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.1
         version: 1.32.1(supports-color@7.2.0)(zod@3.25.76)
+      '@quarry/mcp':
+        specifier: workspace:*
+        version: link:../mcp
       pino:
         specifier: ^9.14.0
         version: 9.14.0
@@ -333,16 +333,16 @@ importers:
       '@googleapis/gmail':
         specifier: ^22.0.1
         version: 22.0.1(supports-color@7.2.0)
-      '@jobforge/db':
+      '@quarry/db':
         specifier: workspace:*
         version: link:../db
-      '@jobforge/embeddings':
+      '@quarry/embeddings':
         specifier: workspace:*
         version: link:../embeddings
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
       exceljs:
@@ -364,49 +364,49 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
-      '@jobforge/actor-apply-greenhouse':
+      '@quarry/actor-apply-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-greenhouse
-      '@jobforge/actor-apply-smartrecruiters':
+      '@quarry/actor-apply-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-smartrecruiters
-      '@jobforge/actor-apply-successfactors':
+      '@quarry/actor-apply-successfactors':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-successfactors
-      '@jobforge/actor-apply-taleo':
+      '@quarry/actor-apply-taleo':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-taleo
-      '@jobforge/actor-apply-workday':
+      '@quarry/actor-apply-workday':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-workday
-      '@jobforge/actor-gmail-outreach':
+      '@quarry/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
-      '@jobforge/actor-linkedin-manual':
+      '@quarry/actor-linkedin-manual':
         specifier: workspace:*
         version: link:../../plugins/actor-linkedin-manual
-      '@jobforge/actor-linkedin-referral':
+      '@quarry/actor-linkedin-referral':
         specifier: workspace:*
         version: link:../../plugins/actor-linkedin-referral
-      '@jobforge/enricher-contacts-pattern':
+      '@quarry/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
-      '@jobforge/enricher-deadline':
+      '@quarry/enricher-deadline':
         specifier: workspace:*
         version: link:../../plugins/enricher-deadline
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../llm
-      '@jobforge/source-gmail-alerts':
+      '@quarry/source-gmail-alerts':
         specifier: workspace:*
         version: link:../../plugins/source-gmail-alerts
-      '@jobforge/tailor-resume-latex':
+      '@quarry/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
-      '@jobforge/tracker-gmail':
+      '@quarry/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
-      '@jobforge/tracker-linkedin':
+      '@quarry/tracker-linkedin':
         specifier: workspace:*
         version: link:../../plugins/tracker-linkedin
       '@types/pdf-parse':
@@ -418,7 +418,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
       drizzle-orm:
@@ -443,7 +443,7 @@ importers:
       '@huggingface/transformers':
         specifier: ^4.3.0
         version: 4.3.0(@types/node@22.20.5)
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -453,7 +453,7 @@ importers:
 
   packages/llm:
     dependencies:
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -475,20 +475,20 @@ importers:
 
   packages/orchestrator:
     dependencies:
-      '@jobforge/core':
+      '@quarry/core':
         specifier: workspace:*
         version: link:../core
-      '@jobforge/db':
+      '@quarry/db':
         specifier: workspace:*
         version: link:../db
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../llm
       typescript:
@@ -497,7 +497,7 @@ importers:
 
   packages/plugin-sdk:
     dependencies:
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
       pino:
@@ -513,85 +513,85 @@ importers:
 
   packages/plugins:
     dependencies:
-      '@jobforge/actor-apply-ashby':
+      '@quarry/actor-apply-ashby':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-ashby
-      '@jobforge/actor-apply-greenhouse':
+      '@quarry/actor-apply-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-greenhouse
-      '@jobforge/actor-apply-lever':
+      '@quarry/actor-apply-lever':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-lever
-      '@jobforge/actor-apply-smartrecruiters':
+      '@quarry/actor-apply-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-smartrecruiters
-      '@jobforge/actor-apply-successfactors':
+      '@quarry/actor-apply-successfactors':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-successfactors
-      '@jobforge/actor-apply-taleo':
+      '@quarry/actor-apply-taleo':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-taleo
-      '@jobforge/actor-apply-workday':
+      '@quarry/actor-apply-workday':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-workday
-      '@jobforge/actor-gmail-outreach':
+      '@quarry/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
-      '@jobforge/actor-linkedin-manual':
+      '@quarry/actor-linkedin-manual':
         specifier: workspace:*
         version: link:../../plugins/actor-linkedin-manual
-      '@jobforge/actor-linkedin-referral':
+      '@quarry/actor-linkedin-referral':
         specifier: workspace:*
         version: link:../../plugins/actor-linkedin-referral
-      '@jobforge/core':
+      '@quarry/core':
         specifier: workspace:*
         version: link:../core
-      '@jobforge/enricher-contacts-pattern':
+      '@quarry/enricher-contacts-pattern':
         specifier: workspace:*
         version: link:../../plugins/enricher-contacts-pattern
-      '@jobforge/enricher-deadline':
+      '@quarry/enricher-deadline':
         specifier: workspace:*
         version: link:../../plugins/enricher-deadline
-      '@jobforge/enricher-linkedin-employees':
+      '@quarry/enricher-linkedin-employees':
         specifier: workspace:*
         version: link:../../plugins/enricher-linkedin-employees
-      '@jobforge/matcher-default':
+      '@quarry/matcher-default':
         specifier: workspace:*
         version: link:../../plugins/matcher-default
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../shared
-      '@jobforge/source-ashby':
+      '@quarry/source-ashby':
         specifier: workspace:*
         version: link:../../plugins/source-ashby
-      '@jobforge/source-gmail-alerts':
+      '@quarry/source-gmail-alerts':
         specifier: workspace:*
         version: link:../../plugins/source-gmail-alerts
-      '@jobforge/source-greenhouse':
+      '@quarry/source-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/source-greenhouse
-      '@jobforge/source-lever':
+      '@quarry/source-lever':
         specifier: workspace:*
         version: link:../../plugins/source-lever
-      '@jobforge/source-smartrecruiters':
+      '@quarry/source-smartrecruiters':
         specifier: workspace:*
         version: link:../../plugins/source-smartrecruiters
-      '@jobforge/source-successfactors':
+      '@quarry/source-successfactors':
         specifier: workspace:*
         version: link:../../plugins/source-successfactors
-      '@jobforge/source-taleo':
+      '@quarry/source-taleo':
         specifier: workspace:*
         version: link:../../plugins/source-taleo
-      '@jobforge/source-workday':
+      '@quarry/source-workday':
         specifier: workspace:*
         version: link:../../plugins/source-workday
-      '@jobforge/tailor-resume-latex':
+      '@quarry/tailor-resume-latex':
         specifier: workspace:*
         version: link:../../plugins/tailor-resume-latex
-      '@jobforge/tracker-gmail':
+      '@quarry/tracker-gmail':
         specifier: workspace:*
         version: link:../../plugins/tracker-gmail
-      '@jobforge/tracker-linkedin':
+      '@quarry/tracker-linkedin':
         specifier: workspace:*
         version: link:../../plugins/tracker-linkedin
     devDependencies:
@@ -620,10 +620,10 @@ importers:
 
   plugins/actor-apply-ashby:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -636,10 +636,10 @@ importers:
 
   plugins/actor-apply-greenhouse:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -652,10 +652,10 @@ importers:
 
   plugins/actor-apply-lever:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -668,10 +668,10 @@ importers:
 
   plugins/actor-apply-smartrecruiters:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -684,10 +684,10 @@ importers:
 
   plugins/actor-apply-successfactors:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -700,10 +700,10 @@ importers:
 
   plugins/actor-apply-taleo:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -716,10 +716,10 @@ importers:
 
   plugins/actor-apply-workday:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -732,17 +732,17 @@ importers:
 
   plugins/actor-gmail-outreach:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       typescript:
@@ -751,17 +751,17 @@ importers:
 
   plugins/actor-linkedin-manual:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       typescript:
@@ -770,17 +770,17 @@ importers:
 
   plugins/actor-linkedin-referral:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       typescript:
@@ -789,10 +789,10 @@ importers:
 
   plugins/enricher-contacts-pattern:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -805,17 +805,17 @@ importers:
 
   plugins/enricher-deadline:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       typescript:
@@ -824,10 +824,10 @@ importers:
 
   plugins/enricher-linkedin-employees:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -840,20 +840,20 @@ importers:
 
   plugins/matcher-default:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/embeddings':
+      '@quarry/embeddings':
         specifier: workspace:*
         version: link:../../packages/embeddings
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       typescript:
@@ -862,10 +862,10 @@ importers:
 
   plugins/source-ashby:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -878,10 +878,10 @@ importers:
 
   plugins/source-gmail-alerts:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -894,10 +894,10 @@ importers:
 
   plugins/source-greenhouse:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -910,10 +910,10 @@ importers:
 
   plugins/source-lever:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -926,10 +926,10 @@ importers:
 
   plugins/source-smartrecruiters:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -942,10 +942,10 @@ importers:
 
   plugins/source-successfactors:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -958,10 +958,10 @@ importers:
 
   plugins/source-taleo:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -974,10 +974,10 @@ importers:
 
   plugins/source-workday:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -990,10 +990,10 @@ importers:
 
   plugins/tailor-resume-latex:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       yaml:
@@ -1003,7 +1003,7 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@jobforge/llm':
+      '@quarry/llm':
         specifier: workspace:*
         version: link:../../packages/llm
       tsx:
@@ -1015,10 +1015,10 @@ importers:
 
   plugins/tracker-gmail:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -1031,10 +1031,10 @@ importers:
 
   plugins/tracker-linkedin:
     dependencies:
-      '@jobforge/plugin-sdk':
+      '@quarry/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
-      '@jobforge/shared':
+      '@quarry/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:

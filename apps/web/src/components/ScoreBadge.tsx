@@ -10,9 +10,15 @@ const TONE = {
 } as const;
 
 export function ScoreBadge({ score, method, className }: { score: number | null; method: MatchMethod | null; className?: string }) {
-  const label = method === 'llm' ? String(score) : method === 'filtered' ? '✕' : method === 'prefilter' ? '·' : '–';
-  const title =
-    method === 'llm' ? `Match score ${score}/100` : method === 'filtered' ? 'Failed a hard filter' : method === 'prefilter' ? 'Below the similarity prefilter' : 'Not scored yet';
+  const scored = method === 'llm' || method === 'keyword';
+  const label = scored ? String(score) : method === 'filtered' ? '✕' : method === 'prefilter' ? '·' : '–';
+  const title = scored
+    ? `${method === 'keyword' ? 'Keyword' : 'Match'} score ${score}/100`
+    : method === 'filtered'
+      ? 'Failed a hard filter'
+      : method === 'prefilter'
+        ? 'Below the similarity prefilter'
+        : 'Not scored yet';
   return (
     <span
       title={title}

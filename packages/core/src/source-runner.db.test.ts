@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { sql } from '@jobforge/db';
-import { HttpError, type RawPosting, type SourcePlugin } from '@jobforge/plugin-sdk';
+import { sql } from '@quarry/db';
+import { HttpError, type RawPosting, type SourcePlugin } from '@quarry/plugin-sdk';
 import {
   countJobs,
   listJobs,
@@ -10,8 +10,8 @@ import {
   upsertCompanySource,
   type AtsType,
   type SourceTargetRow,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
 import { runSourceTarget, type SourceRunDeps } from './source-runner.js';

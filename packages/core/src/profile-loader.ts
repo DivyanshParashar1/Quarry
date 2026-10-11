@@ -5,8 +5,8 @@ import {
   readProfileDir,
   type Preferences,
   type ProfileFact,
-} from '@jobforge/shared';
-import { appendEvent, syncProfile, type DB, type ProfileSyncResult } from '@jobforge/db';
+} from '@quarry/shared';
+import { appendEvent, syncProfile, type DB, type ProfileSyncResult } from '@quarry/db';
 
 /** Validate profile/*.yaml and make it the active profile. Idempotent for unchanged files. */
 export async function loadProfile(db: DB, dir: string): Promise<ProfileSyncResult> {

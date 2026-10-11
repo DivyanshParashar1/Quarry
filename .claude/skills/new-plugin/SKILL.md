@@ -1,6 +1,6 @@
 ---
 name: new-plugin
-description: Scaffold a new JobForge plugin (source, enricher, matcher, tailor, actor, or tracker) that conforms to the plugin contract in PLAN.md §4. Use when the user asks to add a plugin, e.g. "add a Workday source", "new matcher plugin", "scaffold actor-X".
+description: Scaffold a new Quarry plugin (source, enricher, matcher, tailor, actor, or tracker) that conforms to the plugin contract in PLAN.md §4. Use when the user asks to add a plugin, e.g. "add a Workday source", "new matcher plugin", "scaffold actor-X".
 ---
 
 # new-plugin
@@ -20,7 +20,7 @@ Ask only what you can't infer from the user's request:
 
 ```
 plugins/<id>/
-  package.json          # @jobforge/<id>, workspace:* deps on plugin-sdk + shared
+  package.json          # @quarry/<id>, workspace:* deps on plugin-sdk + shared
   tsconfig.json         # extends ../../tsconfig.base.json
   src/
     index.ts            # exports { manifest, <stage method> }
@@ -30,7 +30,7 @@ plugins/<id>/
 
 ## Rules the scaffold must respect (from PLAN.md §4)
 
-- Depend **only** on `@jobforge/plugin-sdk` and `@jobforge/shared`. Never on `@jobforge/core` or `@jobforge/db`.
+- Depend **only** on `@quarry/plugin-sdk` and `@quarry/shared`. Never on `@quarry/core` or `@quarry/db`.
 - `manifest.permissions.domains` must be a non-wildcard list of exact hosts. Anything not listed is rejected by `ctx.http`.
 - Actors must implement **both** `prepare()` (no side effects) and `execute(draft, idempotencyKey)` (only callable with an `ApprovedDraft` the core constructs).
 - `dryRun` is true by default; actors must branch on `ctx.dryRun` and log the no-op case.
@@ -39,6 +39,6 @@ plugins/<id>/
 ## After scaffolding
 
 1. `pnpm install` so the workspace picks the new package up.
-2. `pnpm --filter @jobforge/<id> typecheck && pnpm --filter @jobforge/<id> test`
+2. `pnpm --filter @quarry/<id> typecheck && pnpm --filter @quarry/<id> test`
 3. If a real external API is involved: fetch one sample response, save it under `plugins/<id>/fixtures/`, and point the test at it. Do not hit the live endpoint in CI.
 4. Mention the new plugin in `CHANGELOG.md` under the current phase section.

@@ -66,14 +66,14 @@ describe('listBaseResumes', () => {
   });
 
   it('rejects unknown block ids and tolerates a missing base dir', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'jf-resume-'));
+    const dir = await mkdtemp(join(tmpdir(), 'quarry-resume-'));
     await cp(RESUME_DIR, dir, { recursive: true });
     await mkdir(join(dir, 'base'), { recursive: true });
     await writeFile(join(dir, 'base', 'bad.yaml'), 'blocks: [proj.nope]\n');
     const resume = await loadResume(join(dir, 'manifest.yaml'));
     await expect(listBaseResumes(resume)).rejects.toThrow(/unknown block id\(s\) proj.nope/);
 
-    const empty = await mkdtemp(join(tmpdir(), 'jf-resume-'));
+    const empty = await mkdtemp(join(tmpdir(), 'quarry-resume-'));
     await cp(RESUME_DIR, empty, { recursive: true, filter: (src) => !src.includes(`${RESUME_DIR}/base`) });
     expect(await listBaseResumes(await loadResume(join(empty, 'manifest.yaml')))).toEqual([]);
   });

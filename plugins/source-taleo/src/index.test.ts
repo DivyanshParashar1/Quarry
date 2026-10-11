@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pluginManifestSchema, rawPostingSchema, parseTaleoToken, type HttpRequestInit } from '@jobforge/plugin-sdk';
-import { collect, fixtureHttp, testContext, testTarget } from '@jobforge/plugin-sdk/testing';
+import { pluginManifestSchema, rawPostingSchema, parseTaleoToken, type HttpRequestInit } from '@quarry/plugin-sdk';
+import { collect, fixtureHttp, testContext, testTarget } from '@quarry/plugin-sdk/testing';
 import plugin, { classicListUrl, configSchema, findPortalId, parseClassicList, searchApiUrl, searchPageUrl } from './index.js';
 
 const fx = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));

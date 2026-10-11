@@ -1,4 +1,4 @@
-import type { AppConfig, Env, LLMProviderName, Logger } from '@jobforge/shared';
+import type { AppConfig, Env, LLMProviderName, Logger } from '@quarry/shared';
 import { createClaudeCodeProvider } from './claude-code.js';
 import { createLLMClient, type LLMCallRecord } from './client.js';
 import { createOpenRouterProvider } from './openrouter.js';

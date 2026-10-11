@@ -12,8 +12,8 @@ import {
   type ApplyInput,
   type FormQuestion,
   type Job,
-} from '@jobforge/plugin-sdk';
-import type { Profile } from '@jobforge/shared';
+} from '@quarry/plugin-sdk';
+import type { Profile } from '@quarry/shared';
 import { answerOpenFields, draftConfidenceWithLlm } from './answers.js';
 import {
   appendEvent,
@@ -34,7 +34,7 @@ import {
   tryLease,
   updatePendingDraft,
   type ReviewItemRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { buildContext, type LoadedPlugin } from './plugins.js';
 import { isPluginPaused, tenantOverrides, withTenantOverrides } from './ops-state.js';
 import { coreApprovedDraft, isCoreApproved, loadJobForOutreach, OutreachError, type OutreachDeps } from './outreach.js';
@@ -80,11 +80,11 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
   const target = await applyTargetForJob(db, jobId);
   if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever, Ashby, SmartRecruiters, Workday, SuccessFactors and Taleo postings only; apply to this one by hand', 'invalid_state');
   const profile = await getActiveProfile(db);
-  if (!profile) throw new OutreachError('no profile loaded; run `jf profile load`', 'no_profile');
+  if (!profile) throw new OutreachError('no profile loaded; run `quarry profile load`', 'no_profile');
   const applicant = profile.preferences.application;
-  if (!applicant) throw new OutreachError('fill in the `application` section of profile/preferences.yaml and run `jf profile load`', 'no_profile');
+  if (!applicant) throw new OutreachError('fill in the `application` section of profile/preferences.yaml and run `quarry profile load`', 'no_profile');
   const resume = await latestRenderedResumeForJob(db, jobId);
-  if (!resume?.pdfPath) throw new OutreachError('no rendered resume for this job yet; tailor one first (`jf tailor <jobId>`)', 'invalid_state');
+  if (!resume?.pdfPath) throw new OutreachError('no rendered resume for this job yet; tailor one first (`quarry tailor <jobId>`)', 'invalid_state');
   const open = (await listReviewItems(db, { kind: ['application'], status: ['pending', 'approved', 'executed'], limit: 500 })).find((i) => i.jobId === jobId);
   if (open) throw new OutreachError(`an application for this job is already ${open.status}`, 'duplicate');
 
@@ -224,7 +224,7 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
         companyId: item.companyId,
         draft: {
           title: `Apply to ${draft.company} by hand (unrecognised ${draft.ats} page)`,
-          message: `The ${draft.ats} application reached a page JobForge doesn't recognise${err.step ? ` (after "${err.step}")` : ''}, so it stopped instead of guessing. Nothing was submitted. The screenshots show where it stopped; finish at the link, then approve this item. A selector/step override for this employer lets the next application get past it.`,
+          message: `The ${draft.ats} application reached a page Quarry doesn't recognise${err.step ? ` (after "${err.step}")` : ''}, so it stopped instead of guessing. Nothing was submitted. The screenshots show where it stopped; finish at the link, then approve this item. A selector/step override for this employer lets the next application get past it.`,
           reason: 'unknown_layout',
           url: err.url || draft.applyUrl,
           screenshots: err.screenshots,

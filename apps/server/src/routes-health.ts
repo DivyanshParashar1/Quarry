@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { appendEvent, getIncident, listIncidents, sql, updateIncident, type DB, type IncidentStatus } from '@jobforge/db';
-import { llmPausedUntil, pausedPlugins, setLlmPausedUntil, setPluginPause, setTenantOverride, tenantOverrides } from '@jobforge/core';
-import type { TickResult } from '@jobforge/orchestrator';
+import { appendEvent, getIncident, listIncidents, sql, updateIncident, type DB, type IncidentStatus } from '@quarry/db';
+import { llmPausedUntil, pausedPlugins, setLlmPausedUntil, setPluginPause, setTenantOverride, tenantOverrides } from '@quarry/core';
+import type { TickResult } from '@quarry/orchestrator';
 
 // Phase 22: the Health tab — incidents, the orchestrator's switches, LLM spend.
 // Resuming / clearing here is you overriding the orchestrator; nothing sends.

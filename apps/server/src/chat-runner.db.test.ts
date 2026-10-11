@@ -4,9 +4,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
-import { createChatSession, getChatSession, listChatMessages } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createLogger } from '@jobforge/shared';
+import { createChatSession, getChatSession, listChatMessages } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createLogger } from '@quarry/shared';
 import { ChatRunner, type ChatRunnerOptions } from './chat-runner.js';
 import { buildApi } from './api.js';
 
@@ -40,7 +40,7 @@ function scripted(edit = '', text = 'Done: added the job and drafted 3 referral 
     calls.push({ args, ...o });
     const events = [
       { type: 'system', subtype: 'init', session_id: 'claude-sess-1' },
-      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'mcp__jobforge__add_job', input: { url: 'https://x.example/j/1' } }] } },
+      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'mcp__quarry__add_job', input: { url: 'https://x.example/j/1' } }] } },
       { type: 'user', message: { content: [{ type: 'tool_result', is_error: false, content: 'ok' }] } },
       { type: 'assistant', message: { content: [{ type: 'text', text }] } },
       { type: 'result', subtype: 'success', session_id: 'claude-sess-1', total_cost_usd: 0.12, num_turns: 3, is_error: false, result: text },
@@ -82,7 +82,7 @@ describe.skipIf(!adminUrl)('chatbot runner (postgres + git)', () => {
     const msgs = await listChatMessages(t.db, s.id);
     expect(msgs.map((m) => [m.role, m.content])).toEqual([
       ['user', 'Tailor my resume for https://x.example/j/1 and draft referrals'],
-      ['tool', 'mcp__jobforge__add_job'],
+      ['tool', 'mcp__quarry__add_job'],
       ['assistant', 'Done: added the job and drafted 3 referral asks.'],
       ['system', 'done'],
     ]);
@@ -91,12 +91,12 @@ describe.skipIf(!adminUrl)('chatbot runner (postgres + git)', () => {
 
     const args = fake.calls[0]!.args;
     const flag = (f: string) => args[args.indexOf(f) + 1]!;
-    expect(flag('--disallowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__jobforge__approve', 'Bash(curl:*)', 'Bash(git commit:*)', 'Bash(sudo:*)', 'Bash(rm -rf:*)']));
-    expect(flag('--allowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__jobforge', 'WebFetch', 'WebSearch', 'Edit', 'Bash']));
+    expect(flag('--disallowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__quarry__approve', 'Bash(curl:*)', 'Bash(git commit:*)', 'Bash(sudo:*)', 'Bash(rm -rf:*)']));
+    expect(flag('--allowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__quarry', 'WebFetch', 'WebSearch', 'Edit', 'Bash']));
     expect(flag('--append-system-prompt')).toMatch(/never approve, send, submit or publish/);
     expect(args).not.toContain('--resume');
     const mcp = JSON.parse(readFileSync(flag('--mcp-config'), 'utf8'));
-    expect(mcp.mcpServers.jobforge.env).toEqual({ JOBFORGE_API_URL: 'http://127.0.0.1:3999' });
+    expect(mcp.mcpServers.quarry.env).toEqual({ QUARRY_API_URL: 'http://127.0.0.1:3999' });
     expect(fake.calls[0]!.input).toMatch(/^Tailor my resume/);
     expect(fake.calls[0]!.cwd).not.toBe(repo); // its own working copy
 
@@ -155,7 +155,7 @@ describe.skipIf(!adminUrl)('chatbot runner (postgres + git)', () => {
     const slow: ChatRunnerOptions['spawnClaude'] = (_args, o) => spawn(process.execPath, ['-e', 'setTimeout(() => {}, 400)'], { cwd: o.cwd });
     const r = runner(repo, { spawnClaude: slow });
     const app: FastifyInstance = await buildApi({ db: t.db, chat: r });
-    const H = { 'x-jobforge': '1', 'content-type': 'application/json' };
+    const H = { 'x-quarry': '1', 'content-type': 'application/json' };
     const created = (await app.inject({ method: 'POST', url: '/api/chat/sessions', headers: H, payload: '{}' })).json();
     let res = await app.inject({ method: 'POST', url: `/api/chat/sessions/${created.id}/messages`, headers: H, payload: JSON.stringify({ text: 'Find me backend jobs in Bengaluru' }) });
     expect(res.statusCode).toBe(202);

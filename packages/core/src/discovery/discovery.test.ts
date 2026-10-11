@@ -112,7 +112,7 @@ Allow: /private/ok
 Disallow: /*.pdf$
 
 User-agent: BadBot
-User-agent: JobForge
+User-agent: Quarry
 Disallow: /careers/internal
 `;
   it('picks the most specific group and applies longest match', () => {
@@ -121,9 +121,9 @@ Disallow: /careers/internal
     expect(isPathAllowed(star, '/private/ok/1')).toBe(true);
     expect(isPathAllowed(star, '/files/a.pdf')).toBe(false);
     expect(isPathAllowed(star, '/files/a.pdf?x')).toBe(true);
-    const jf = parseRobots(txt, 'JobForge/0.1');
-    expect(isPathAllowed(jf, '/private/x')).toBe(true); // its own group replaces '*'
-    expect(isPathAllowed(jf, '/careers/internal/1')).toBe(false);
+    const quarry = parseRobots(txt, 'Quarry/0.1');
+    expect(isPathAllowed(quarry, '/private/x')).toBe(true); // its own group replaces '*'
+    expect(isPathAllowed(quarry, '/careers/internal/1')).toBe(false);
   });
 
   it('treats 4xx as allow-all, 5xx as disallow-all, errors as unreachable', async () => {

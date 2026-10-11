@@ -15,9 +15,9 @@ import {
   type ApplyInput,
   type ApprovedDraft,
   type BrowserHandle,
-} from '@jobforge/plugin-sdk';
-import { fakeBrowser, fakeCredentials, fakeGmail, fixtureHttp, testContext } from '@jobforge/plugin-sdk/testing';
-import { CONSENT_KEY, UnknownLayoutError } from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
+import { fakeBrowser, fakeCredentials, fakeGmail, fixtureHttp, testContext } from '@quarry/plugin-sdk/testing';
+import { CONSENT_KEY, UnknownLayoutError } from '@quarry/plugin-sdk';
 import plugin, { activeStep, applyUrlFor, configSchema, externalPath, listboxFields, questionKey, type WorkdayApplyConfig } from './index.js';
 
 const fx = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));

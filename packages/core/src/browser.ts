@@ -1,5 +1,5 @@
-import { DomainNotAllowedError, hostAllowed, type BrowserHandle, type BrowserPage, type DiscoveredField, type PluginManifest } from '@jobforge/plugin-sdk';
-import type { Logger } from '@jobforge/shared';
+import { DomainNotAllowedError, hostAllowed, type BrowserHandle, type BrowserPage, type DiscoveredField, type PluginManifest } from '@quarry/plugin-sdk';
+import type { Logger } from '@quarry/shared';
 import type { BrowserContextOptions } from 'playwright';
 import type { DomainRateLimiter } from './rate-limiter.js';
 

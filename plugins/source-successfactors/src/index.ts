@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
+import { PluginError } from '@quarry/shared';
 import {
   decodeEntities,
   defineSourcePlugin,
@@ -13,7 +13,7 @@ import {
   type PluginContext,
   type RawPosting,
   type SuccessFactorsBoard,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 const options = z.object({
   /** Case-insensitive substrings matched against locations (e.g. ["India", "IN"]). */

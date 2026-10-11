@@ -1,5 +1,5 @@
 import { PgBoss } from 'pg-boss';
-import { listSourceTargets } from '@jobforge/db';
+import { listSourceTargets } from '@quarry/db';
 import { runSourceTarget, type SourceRunDeps, type SourceRunSummary } from './source-runner.js';
 import { draftDueFollowups, pollTracker, runSendTick, type OutreachDeps } from './outreach.js';
 
@@ -15,7 +15,7 @@ export interface SourceFetchJob {
 }
 
 export async function startBoss(databaseUrl: string): Promise<PgBoss> {
-  const boss = new PgBoss({ connectionString: databaseUrl, schema: 'pgboss', application_name: 'jobforge' });
+  const boss = new PgBoss({ connectionString: databaseUrl, schema: 'pgboss', application_name: 'quarry' });
   boss.on('error', () => {
     /* surfaced via job failures; avoid unhandled 'error' events crashing the process */
   });

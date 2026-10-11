@@ -338,7 +338,7 @@ async function signIn(s: State): Promise<void> {
   if (!(await firstVisible(page, sels(s, 'password')))) return; // no login wall
   if (!ctx.credentials) throw new Error(`signing in to ${spec.name} needs the credentials permission`);
   const email = ctx.gmail?.address;
-  if (!email) throw new Error(`${spec.name} accounts use your Gmail address; connect Gmail (\`jf gmail auth\`)`);
+  if (!email) throw new Error(`${spec.name} accounts use your Gmail address; connect Gmail (\`quarry gmail auth\`)`);
   const account = `${run.host}/${run.tenant}:${email}`;
   let password = await ctx.credentials.get(account);
   const where = `${run.host}/${run.tenant}`;
@@ -385,7 +385,7 @@ async function signIn(s: State): Promise<void> {
     if (!(await firstVisible(page, sels(s, 'password')))) return; // signed in
     await snap(s, 'sign-in-failed');
     const reason = ACCOUNT_EXISTS.test(html)
-      ? `an account for ${email} already exists on ${where} with a password JobForge doesn't have; sign in (or reset the password) by hand`
+      ? `an account for ${email} already exists on ${where} with a password Quarry doesn't have; sign in (or reset the password) by hand`
       : `could not sign in to ${spec.name} at ${where}; check the sign-in screenshot`;
     throw new SessionBlockedError(reason, 'login', page.url());
   }

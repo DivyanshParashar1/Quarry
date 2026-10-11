@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { jobTimeline, listApplications, PIPELINE_STATES, pipelineStateCounts, type DB, type PipelineState } from '@jobforge/db';
-import { advanceJob, expireJob, runSequencer, type SequencerDeps } from '@jobforge/core';
+import { jobTimeline, listApplications, PIPELINE_STATES, pipelineStateCounts, type DB, type PipelineState } from '@quarry/db';
+import { advanceJob, expireJob, runSequencer, type SequencerDeps } from '@quarry/core';
 
 export interface PipelineRouteOptions {
   db: DB;

@@ -1,13 +1,24 @@
 import { z } from 'zod';
-import { defineMatcherPlugin, type Job, type MatchResult, type PluginContext, type Profile } from '@jobforge/plugin-sdk';
+import { defineMatcherPlugin, type Job, type MatchResult, type PluginContext, type Profile } from '@quarry/plugin-sdk';
 import { applyHardFilters } from './filters.js';
+import { keywordScore } from './keywords.js';
 import { batchPrompt, rubricResponseSchema, SYSTEM_PROMPT, type RubricItem } from './prompt.js';
 
 export * from './filters.js';
+export * from './keywords.js';
 export * from './prompt.js';
 
 export const configSchema = z
   .object({
+    /**
+     * `llm`: hard filters → embedding prefilter → LLM rubric.
+     * `keywords`: hard filters → keyword score; no embeddings or LLM calls.
+     */
+    mode: z.enum(['llm', 'keywords']).default('llm'),
+    /** Keyword mode: score of a job that passes every hard filter (the default autopilot floor is 70). */
+    keywordBase: z.number().int().min(0).max(100).default(70),
+    /** Keyword mode: points per distinct `stack` keyword found in the posting. */
+    keywordPerHit: z.number().int().min(0).max(100).default(6),
     /** Jobs whose cosine similarity to the profile is below this are not sent to the LLM. */
     minSimilarity: z.number().min(-1).max(1).default(0.55),
     /** At most this many jobs per run go to the LLM, highest similarity first. */
@@ -28,7 +39,7 @@ export default defineMatcherPlugin<MatcherConfig>({
     id: ID,
     version: '0.1.0',
     stage: 'matcher',
-    description: 'Hard filters, then embedding-similarity prefilter, then a batched LLM rubric with reasons.',
+    description: 'Hard filters, then either a keyword score or an embedding prefilter plus a batched LLM rubric.',
     configSchema,
     permissions: { domains: [], llm: true },
     sideEffects: 'none',
@@ -50,6 +61,27 @@ export async function scoreJobs(ctx: PluginContext<MatcherConfig>, jobs: Job[], 
     const reason = applyHardFilters(job, profile.preferences, cfg);
     if (reason) out.push({ ...base, jobId: job.id, method: 'filtered', score: 0, similarity: null, rubric: { stage: 'hard_filter' }, reasons: reason });
     else passed.push(job);
+  }
+
+  if (cfg.mode === 'keywords') {
+    for (const job of passed) {
+      const k = keywordScore(job, profile.preferences, cfg);
+      const parts = [
+        k.titleHits.length ? `Title matches ${k.titleHits.map((h) => `"${h}"`).join(', ')}` : 'Passes every filter',
+        k.stackHits.length ? `stack: ${k.stackHits.join(', ')}` : 'no stack keywords found',
+      ];
+      out.push({
+        ...base,
+        jobId: job.id,
+        method: 'keyword',
+        score: k.score,
+        similarity: null,
+        rubric: { stage: 'keywords', title_hits: k.titleHits, stack_hits: k.stackHits },
+        reasons: parts.join('; '),
+      });
+    }
+    ctx.log.info({ jobs: jobs.length, filtered: jobs.length - passed.length, keyword: passed.length }, 'matcher stages');
+    return out;
   }
 
   // 2. Embedding prefilter

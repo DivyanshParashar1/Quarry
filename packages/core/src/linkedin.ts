@@ -1,5 +1,5 @@
-import { SessionBlockedError, type EmployeeEnrichment } from '@jobforge/plugin-sdk';
-import type { AppConfig, Logger } from '@jobforge/shared';
+import { SessionBlockedError, type EmployeeEnrichment } from '@quarry/plugin-sdk';
+import type { AppConfig, Logger } from '@quarry/shared';
 import {
   appendEvent,
   createReviewItem,
@@ -13,7 +13,7 @@ import {
   transitionReviewItem,
   upsertContact,
   type DB,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { loadCompanyRef, enrichContacts } from './contacts-runner.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 import { join } from 'node:path';
@@ -80,7 +80,7 @@ export async function pauseLinkedIn(db: DB, policy: LinkedInPolicy, err: Session
         title: `LinkedIn needs you: ${err.reason}`,
         message:
           err.reason === 'login'
-            ? 'The saved LinkedIn session is no longer logged in. Run `jf linkedin login` (opens a browser), then approve this item to resume.'
+            ? 'The saved LinkedIn session is no longer logged in. Run `quarry linkedin login` (opens a browser), then approve this item to resume.'
             : `LinkedIn showed a ${err.reason} page. Open LinkedIn in the dedicated account, clear it by hand, wait, then approve this item to resume.`,
         reason: err.reason,
         url: err.url,
@@ -214,13 +214,14 @@ export async function pendingLinkedInAttention(db: DB): Promise<number> {
 export interface LinkedInEnv {
   LINKEDIN_ENABLED: boolean;
   LINKEDIN_STATE_PATH?: string | undefined;
+  QUARRY_SESSION_KEY?: string | undefined;
   JOBFORGE_SESSION_KEY?: string | undefined;
   BROWSER_HEADLESS: boolean;
 }
 
 export async function linkedinSessionStore(env: LinkedInEnv, repoRoot: string): Promise<SessionStore> {
   const path = env.LINKEDIN_STATE_PATH ?? join(repoRoot, 'data', 'linkedin', 'state.enc');
-  return new SessionStore(path, await resolveSessionKey('linkedin-session', { envKey: env.JOBFORGE_SESSION_KEY }));
+  return new SessionStore(path, await resolveSessionKey('linkedin-session', { envKey: env.QUARRY_SESSION_KEY ?? env.JOBFORGE_SESSION_KEY }));
 }
 
 /**
@@ -243,7 +244,7 @@ export function linkedinBrowserFactory(
       (browser ??= (async () => {
         const store = await linkedinSessionStore(env, repoRoot);
         const state = await store.load();
-        if (!state) throw new SessionBlockedError('no saved LinkedIn session; run `jf linkedin login`', 'login', 'https://www.linkedin.com/login');
+        if (!state) throw new SessionBlockedError('no saved LinkedIn session; run `quarry linkedin login`', 'login', 'https://www.linkedin.com/login');
         return launchBrowser({ headless: env.BROWSER_HEADLESS, storageState: state });
       })()),
     async close() {

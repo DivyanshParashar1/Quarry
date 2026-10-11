@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { pluginManifestSchema, preferencesSchema, type Job, type Profile } from '@jobforge/plugin-sdk';
-import { testContext } from '@jobforge/plugin-sdk/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
-import { createHashEmbedder } from '@jobforge/embeddings';
+import { pluginManifestSchema, preferencesSchema, type Job, type Profile } from '@quarry/plugin-sdk';
+import { testContext } from '@quarry/plugin-sdk/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
+import { createHashEmbedder } from '@quarry/embeddings';
 import plugin, { configSchema, type MatcherConfig } from './index.js';
 
 const embedder = createHashEmbedder();
@@ -127,6 +127,32 @@ describe('matcher-default', () => {
 
     const down = createLLMClient({ providers: { 'claude-code': rubricProvider({ fail: true }) }, defaultProvider: 'claude-code' });
     await expect(plugin.score(testContext(cfg(), undefined, { llm: down }), jobs, profile)).rejects.toThrow(/all 1 LLM batches failed/);
+  });
+
+  it('keyword mode: hard filters then a keyword score, with no LLM or embeddings', async () => {
+    const profile = { ...(await makeProfile()), embedding: null };
+    profile.preferences = preferencesSchema.parse({
+      seniority: ['intern'],
+      stack: ['TypeScript', 'Node.js', 'PostgreSQL'],
+      keywords: { title_any: ['software', 'backend'] },
+    });
+    const jobs = [
+      await makeJob('a', 'Backend Engineer Intern', 'TypeScript, Node.js and PostgreSQL', { seniority: 'intern', embedding: null }),
+      await makeJob('b', 'Software Engineer Intern', 'Java', { seniority: 'intern' }),
+      await makeJob('c', 'Design Intern', 'Figma', { seniority: 'intern' }),
+      await makeJob('d', 'Senior Backend Engineer', 'TypeScript', { seniority: 'senior' }),
+    ];
+    const provider = rubricProvider();
+    const llm = createLLMClient({ providers: { 'claude-code': provider }, defaultProvider: 'claude-code' });
+    const results = await plugin.score(testContext(cfg({ mode: 'keywords' }), undefined, { llm }), jobs, profile);
+    const by = Object.fromEntries(results.map((r) => [r.jobId, r]));
+
+    expect(by.a).toMatchObject({ method: 'keyword', score: 88, similarity: null, confidence: null, provider: null });
+    expect(by.a!.reasons).toMatch(/Title matches "backend"; stack: TypeScript, Node.js, PostgreSQL/);
+    expect(by.b).toMatchObject({ method: 'keyword', score: 70, reasons: expect.stringMatching(/no stack keywords/) });
+    expect(by.c).toMatchObject({ method: 'filtered', reasons: expect.stringMatching(/Title has none/) });
+    expect(by.d).toMatchObject({ method: 'filtered' });
+    expect(provider.calls).toHaveLength(0);
   });
 
   it('refuses to run without a profile embedding', async () => {

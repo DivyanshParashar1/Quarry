@@ -36,7 +36,7 @@ describe('resume-files writers', () => {
   let dir: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'jf-resume-'));
+    dir = mkdtempSync(join(tmpdir(), 'quarry-resume-'));
     mkdirSync(join(dir, 'blocks'));
     writeFileSync(join(dir, 'manifest.yaml'), MANIFEST);
     writeFileSync(join(dir, 'blocks/header.tex'), '% header\n');

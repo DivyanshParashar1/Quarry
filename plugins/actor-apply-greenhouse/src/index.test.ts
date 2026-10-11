@@ -3,7 +3,7 @@ import { readFileSync, mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationSchema, preferencesSchema } from '@jobforge/shared';
+import { applicationSchema, preferencesSchema } from '@quarry/shared';
 import {
   applicationDraftSchema,
   chooseOption,
@@ -13,8 +13,8 @@ import {
   type ApprovedDraft,
   type ApplyInput,
   type BrowserHandle,
-} from '@jobforge/plugin-sdk';
-import { fakeBrowser, fixtureHttp, testContext } from '@jobforge/plugin-sdk/testing';
+} from '@quarry/plugin-sdk';
+import { fakeBrowser, fixtureHttp, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { configSchema, formUrl, questionsUrl } from './index.js';
 
 const fx = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');

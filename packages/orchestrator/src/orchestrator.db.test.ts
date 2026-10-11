@@ -3,11 +3,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { appendEvent, getCompanySource, getIncident, listIncidents, listReviewItems, sql, upsertCompany, upsertCompanySource } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { budgetGuardedLlm, llmPausedUntil, LlmPausedError, pausedPlugins, setLlmPausedUntil } from '@jobforge/core';
-import { createLLMClient, createFakeProvider } from '@jobforge/llm';
-import { orchestratorConfigSchema, createLogger, type LLMClient } from '@jobforge/shared';
+import { appendEvent, getCompanySource, getIncident, listIncidents, listReviewItems, sql, upsertCompany, upsertCompanySource } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { budgetGuardedLlm, llmPausedUntil, LlmPausedError, pausedPlugins, setLlmPausedUntil } from '@quarry/core';
+import { createLLMClient, createFakeProvider } from '@quarry/llm';
+import { orchestratorConfigSchema, createLogger, type LLMClient } from '@quarry/shared';
 import { runOrchestratorTick, spawnExec, type Exec, type OrchestratorDeps, type Plan } from './index.js';
 
 // Phase 22 "done when": injected faults are detected, routed to the right

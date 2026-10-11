@@ -3,8 +3,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Logger, ResumesConfig } from '@jobforge/shared';
-import type { Job, RewriteValidation, TailorSelection, TailoredResume } from '@jobforge/plugin-sdk';
+import type { Logger, ResumesConfig } from '@quarry/shared';
+import type { Job, RewriteValidation, TailorSelection, TailoredResume } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   createReviewItem,
@@ -16,7 +16,7 @@ import {
   type DB,
   type NewResumeVariant,
   type ResumeVariantRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 // Tailoring runner (block-based rewrite — CLAUDE.md pivot):
@@ -30,7 +30,7 @@ export const DEFAULT_TAILOR = 'tailor-resume-latex';
 
 export class NoTailorProfileError extends Error {
   constructor() {
-    super('No profile loaded. Fill in profile/*.yaml and run `jf profile load`.');
+    super('No profile loaded. Fill in profile/*.yaml and run `quarry profile load`.');
   }
 }
 

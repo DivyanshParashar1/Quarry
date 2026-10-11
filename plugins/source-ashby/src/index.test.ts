@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { HttpError, pluginManifestSchema, rawPostingSchema } from '@jobforge/plugin-sdk';
-import { collect, fixtureHttp, testContext, testTarget } from '@jobforge/plugin-sdk/testing';
+import { HttpError, pluginManifestSchema, rawPostingSchema } from '@quarry/plugin-sdk';
+import { collect, fixtureHttp, testContext, testTarget } from '@quarry/plugin-sdk/testing';
 import plugin, { boardUrl, configSchema } from './index.js';
 
 const fixture = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));

@@ -62,7 +62,7 @@ export function createOpenRouterProvider(opts: OpenRouterOptions): LLMProvider {
       headers: {
         authorization: `Bearer ${opts.apiKey}`,
         'content-type': 'application/json',
-        'x-title': 'JobForge',
+        'x-title': 'Quarry',
       },
       body: JSON.stringify(body),
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,

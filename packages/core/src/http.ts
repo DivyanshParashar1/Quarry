@@ -1,8 +1,8 @@
-import type { Logger } from '@jobforge/shared';
-import { DomainNotAllowedError, HttpError, hostAllowed, type HttpRequestInit, type ScopedHttp } from '@jobforge/plugin-sdk';
+import type { Logger } from '@quarry/shared';
+import { DomainNotAllowedError, HttpError, hostAllowed, type HttpRequestInit, type ScopedHttp } from '@quarry/plugin-sdk';
 import { systemClock, type Clock, type DomainRateLimiter, type RateLimit } from './rate-limiter.js';
 
-export const USER_AGENT = 'JobForge/0.1 (self-hosted personal job search)';
+export const USER_AGENT = 'Quarry/0.1 (self-hosted personal job search)';
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const MAX_REDIRECTS = 5;

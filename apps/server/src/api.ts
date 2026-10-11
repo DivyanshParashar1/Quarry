@@ -12,9 +12,9 @@ import {
   llmUsageSummary,
   matchStats,
   type DB,
-} from '@jobforge/db';
-import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
-import { OutreachError, type SweepResult, type SequencerDeps, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+} from '@quarry/db';
+import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@quarry/shared';
+import { OutreachError, type SweepResult, type SequencerDeps, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@quarry/core';
 import { registerContactRoutes } from './routes-contacts.js';
 import { registerLibraryRoutes } from './routes-library.js';
 import { registerOutreachRoutes } from './routes-outreach.js';
@@ -28,7 +28,7 @@ import { registerHealthRoutes } from './routes-health.js';
 import { registerManualJobRoutes } from './routes-jobs-manual.js';
 import { registerChatRoutes } from './chat-routes.js';
 import type { ChatRunner } from './chat-runner.js';
-import type { TickResult } from '@jobforge/orchestrator';
+import type { TickResult } from '@quarry/orchestrator';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -46,7 +46,7 @@ export const jobsQuerySchema = z
     location: z.string().trim().max(200).optional(),
     remote: csv(z.enum(['remote', 'hybrid', 'onsite'])),
     seniority: csv(z.string().max(20)),
-    method: csv(z.enum(['llm', 'prefilter', 'filtered', 'unscored'])),
+    method: csv(z.enum(['llm', 'keyword', 'prefilter', 'filtered', 'unscored'])),
     minScore: z.coerce.number().int().min(0).max(100).optional(),
     sort: z.enum(['score', 'posted']).default('score'),
     closed: z
@@ -113,14 +113,14 @@ const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 /**
  * The API is for the local dashboard and MCP server only. Requests must name a
  * loopback host (defeats DNS rebinding), and anything that changes state must
- * carry `x-jobforge: 1` from the same origin (defeats cross-site requests: a
+ * carry `x-quarry: 1` from the same origin (defeats cross-site requests: a
  * foreign page can't set that header without a CORS preflight we never allow).
  */
 export function requestGuard(host: string | undefined, method: string, origin: string | undefined, marker: unknown): string | null {
   const hostname = (host ?? '').replace(/:\d+$/, '');
   if (!LOOPBACK.has(hostname)) return 'host_not_allowed';
   if (method === 'GET' || method === 'HEAD') return null;
-  if (marker !== '1') return 'missing_x_jobforge_header';
+  if (marker !== '1') return 'missing_x_quarry_header';
   if (origin) {
     let o: URL;
     try {
@@ -142,7 +142,7 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
   const { db } = opts;
 
   app.addHook('onRequest', async (req, reply) => {
-    const why = requestGuard(req.headers.host, req.method, req.headers.origin, req.headers['x-jobforge']);
+    const why = requestGuard(req.headers.host, req.method, req.headers.origin, req.headers['x-quarry']);
     if (why) return reply.status(403).send({ error: 'forbidden', reason: why });
   });
 

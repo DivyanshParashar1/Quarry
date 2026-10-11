@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pluginManifestSchema, rawPostingSchema } from '@jobforge/plugin-sdk';
-import { collect, fixtureHttp, testContext, testTarget, type FixtureRouteSpec } from '@jobforge/plugin-sdk/testing';
+import { pluginManifestSchema, rawPostingSchema } from '@quarry/plugin-sdk';
+import { collect, fixtureHttp, testContext, testTarget, type FixtureRouteSpec } from '@quarry/plugin-sdk/testing';
 import plugin, { configSchema, detailUrl, listUrl } from './index.js';
 
 const fixture = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));

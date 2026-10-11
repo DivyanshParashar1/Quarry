@@ -286,7 +286,7 @@ export async function sampleJobDescriptions(db: DB, limit = 1500): Promise<strin
   return rows.map((r) => r.d);
 }
 
-/** The job's stored embedding (null until `jf embed` has run on it). */
+/** The job's stored embedding (null until `quarry embed` has run on it). */
 export async function getJobEmbedding(db: DB, jobId: string): Promise<number[] | null> {
   const [r] = await db.select({ e: jobs.embedding }).from(jobs).where(eq(jobs.id, jobId));
   return r?.e ?? null;

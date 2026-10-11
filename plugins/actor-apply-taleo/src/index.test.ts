@@ -15,8 +15,8 @@ import {
   type ApplyInput,
   type ApprovedDraft,
   type BrowserHandle,
-} from '@jobforge/plugin-sdk';
-import { fakeBrowser, fakeCredentials, fakeGmail, testContext } from '@jobforge/plugin-sdk/testing';
+} from '@quarry/plugin-sdk';
+import { fakeBrowser, fakeCredentials, fakeGmail, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { applyUrlFor, configSchema, taleoStep, type TaleoApplyConfig } from './index.js';
 
 const fx = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');

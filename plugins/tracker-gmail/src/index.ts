@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineTrackerPlugin, type GmailMessageMeta, type GmailTrackEvent } from '@jobforge/plugin-sdk';
+import { defineTrackerPlugin, type GmailMessageMeta, type GmailTrackEvent } from '@quarry/plugin-sdk';
 
 export const configSchema = z
   .object({

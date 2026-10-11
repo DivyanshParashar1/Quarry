@@ -1,4 +1,4 @@
-# JobForge: Phase Plan 6–13 (Vision Alignment)
+# Quarry: Phase Plan 6–13 (Vision Alignment)
 
 > Extends `PLAN.md`. Current state: Phase 5.5 sub-phase 2 shipped (block-based resume tailor with LLM selector + skills rewrite).
 > Takes the system from "ranked jobs + grounded resume + email outreach" to the full vision: maximum company coverage, per-job referral fan-out across email + LinkedIn, deadline-aware auto-apply.
@@ -28,11 +28,11 @@ Workday is the single biggest unlock for Indian GCCs (JPMC, Goldman, HSBC, Barcl
   - Normalizer handles Workday's `jobPostingInfo` / `externalPath` fields; description HTML → markdown through the existing pipeline.
 - `plugins/source-smartrecruiters`
   - `GET https://api.smartrecruiters.com/v1/companies/{companyId}/postings`. 2 req/s. Shape close to Greenhouse.
-- `jf discover_ats <domain|company_name>` — detects which ATS a company's careers page uses by:
+- `quarry discover_ats <domain|company_name>` — detects which ATS a company's careers page uses by:
   1. Fetch `https://{domain}/careers`, `.../jobs`, `.../join-us` (robots.txt respected).
   2. Follow redirects; classify by host (`*.myworkdayjobs.com` → workday, `jobs.smartrecruiters.com` → sr, `boards.greenhouse.io` → gh, `jobs.lever.co` → lever, `jobs.ashbyhq.com` → ashby, `*.sapsf.com` or `career4.successfactors.com` → sf).
   3. Write a `company_sources` row with the detected `ats_type` and extracted `board_token` / `tenant`.
-- `jf discover_companies --list gcc-journal|wellfound|yc` (web-crawl + LLM extraction):
+- `quarry discover_companies --list gcc-journal|wellfound|yc` (web-crawl + LLM extraction):
   - Crawls public GCC lists / Wellfound company directories / YC WaaS company list.
   - For each candidate, runs `discover_ats`.
   - Writes `companies` + `company_sources` rows atomically; dedupes by domain.
@@ -43,8 +43,8 @@ Workday is the single biggest unlock for Indian GCCs (JPMC, Goldman, HSBC, Barcl
 - None expected. Workday and SmartRecruiters use plain `fetch`.
 
 ### Done when
-- `jf fetch` runs across Greenhouse + Lever + Ashby + Workday + SmartRecruiters sources with 200+ seeded companies, dedupes to canonical jobs, idempotent on rerun.
-- `jf discover_companies --list gcc-journal` ingests 50+ new companies in one run, each with a detected `ats_type`.
+- `quarry fetch` runs across Greenhouse + Lever + Ashby + Workday + SmartRecruiters sources with 200+ seeded companies, dedupes to canonical jobs, idempotent on rerun.
+- `quarry discover_companies --list gcc-journal` ingests 50+ new companies in one run, each with a detected `ats_type`.
 - A failing tenant doesn't block any other.
 
 ---
@@ -58,7 +58,7 @@ Covers (a) portals we won't scrape (LinkedIn, Naukri, Instahyre) via their own a
   - Reuses `GmailHandle` with a new `read` scope.
   - Per-sender parsers (one file each) for: LinkedIn Job Alerts, Naukri Alerts, Wellfound Weekly, YC Work-at-a-Startup digest, Instahyre, Internshala, Unstop.
   - Each parser extracts posting URL, title, company, location; dedupes via the existing fingerprint.
-  - User-side setup: a one-shot `jf gmail subscribe-template` command prints the exact search/alert queries to configure in each portal, so the inbox gets steady flow.
+  - User-side setup: a one-shot `quarry gmail subscribe-template` command prints the exact search/alert queries to configure in each portal, so the inbox gets steady flow.
 - `plugins/source-successfactors`
   - Public endpoints at `career4.successfactors.com/career` and `jobs.{tenant}.sapsf.com`. 1 req/s per tenant.
   - Description is HTML, often with inline styles — stricter sanitization.
@@ -67,7 +67,7 @@ Covers (a) portals we won't scrape (LinkedIn, Naukri, Instahyre) via their own a
 - `discover_ats` learns SuccessFactors and Taleo signatures.
 
 ### Done when
-- Running `jf fetch` on an inbox populated with real alert emails produces canonical jobs for every supported sender.
+- Running `quarry fetch` on an inbox populated with real alert emails produces canonical jobs for every supported sender.
 - At least 5 SuccessFactors tenants and 3 Taleo tenants return postings.
 - A sender-parser failure logs an `event` and is skipped; no crash.
 

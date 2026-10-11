@@ -24,7 +24,7 @@ const EnvSchema = z.object({
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
   GMAIL_REDIRECT_URI: z.string().url().default('http://127.0.0.1:53682/oauth2callback'),
-  /** Written by `jf gmail auth`. Never logged. */
+  /** Written by `quarry gmail auth`. Never logged. */
   GMAIL_REFRESH_TOKEN: z.string().optional(),
 
   /**
@@ -38,6 +38,8 @@ const EnvSchema = z.object({
   /** Where the encrypted LinkedIn session lives (default data/linkedin/state.enc). */
   LINKEDIN_STATE_PATH: z.string().optional(),
   /** Key for the session file when no OS keychain is available (32+ chars). Never logged. */
+  QUARRY_SESSION_KEY: z.string().min(32).optional(),
+  /** Pre-rename name of QUARRY_SESSION_KEY, still honoured. */
   JOBFORGE_SESSION_KEY: z.string().min(32).optional(),
   /** Phase 22: ntfy topic URL (e.g. https://ntfy.sh/<secret-topic>) for problems only a human can fix. Never logged. */
   NTFY_URL: z.string().url().optional(),

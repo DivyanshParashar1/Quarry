@@ -10,7 +10,7 @@ import {
   peopleSearchUrl,
   type BrowserPage,
   type EmployeeEnrichment,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 export const configSchema = z
   .object({

@@ -97,7 +97,7 @@ export const preferencesSchema = z
     seniority: list(z.enum(SENIORITY_LEVELS)),
     /** Acceptable locations (case-insensitive substring match against job locations); empty = any. */
     locations: list(z.string()),
-    /** Acceptable work arrangements; empty = any. A remote job passes the location filter when `remote` is allowed. */
+    /** Acceptable work arrangements; empty = any. With `remote` allowed, a remote job passes the location filter unless every location names a place outside `locations`. */
     remote_policy: list(z.enum(['remote', 'hybrid', 'onsite'])),
     stack: list(z.string()),
     salary_floor: z
@@ -121,6 +121,19 @@ export const preferencesSchema = z
       .nullable()
       .default({})
       .transform((e) => e ?? { companies: [], title_keywords: [], description_keywords: [] }),
+    /**
+     * Keyword gates, checked as hard filters: a job's title must contain one of
+     * `title_any` and its description one of `description_any` (word match,
+     * case-insensitive). Empty = no requirement.
+     */
+    keywords: z
+      .object({
+        title_any: list(z.string()),
+        description_any: list(z.string()),
+      })
+      .nullable()
+      .default({})
+      .transform((k) => k ?? { title_any: [], description_any: [] }),
     /** Anything else the matcher should weigh, in plain words. */
     notes: z.string().nullable().default(null),
     /** Phase 11: what application forms are filled with. Never auto-invented; blanks stay blank. */

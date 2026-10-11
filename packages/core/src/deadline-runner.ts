@@ -1,5 +1,5 @@
-import type { AppConfig, Logger } from '@jobforge/shared';
-import type { DeadlineEstimate } from '@jobforge/plugin-sdk';
+import type { AppConfig, Logger } from '@quarry/shared';
+import type { DeadlineEstimate } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   closeExpiredDeadlines,
@@ -10,7 +10,7 @@ import {
   saveDeadline,
   startPluginRun,
   type DB,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { loadCompanyRef } from './contacts-runner.js';
 import { emitStage } from './triggers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';

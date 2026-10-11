@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { appendEvent, getPipelineState, getState, releaseLease, setState, sourcesDueForFetch, tryLease, type DB } from '@jobforge/db';
-import type { AppConfig, Logger } from '@jobforge/shared';
+import { appendEvent, getPipelineState, getState, releaseLease, setState, sourcesDueForFetch, tryLease, type DB } from '@quarry/db';
+import type { AppConfig, Logger } from '@quarry/shared';
 import { runApplyTick, type ApplyDeps } from './apply.js';
 import { expireDeadlines, runDeadlines, type DeadlineDeps } from './deadline-runner.js';
 import { draftDueFollowups, pollTracker, type OutreachDeps } from './outreach.js';
@@ -100,7 +100,9 @@ export async function runSweep(deps: SweepDeps, opts: { reason?: string } = {}):
       }
       return { expired: (await expireDeadlines(deps.db, deps.config.deadlines, now())).length };
     });
-    await run('match', noAuto ?? (deps.match ? null : 'no matcher'), () => deps.match!());
+    // Keyword matching makes no LLM calls, so it runs without the autopilot.
+    const keywordMatch = deps.config.plugins['matcher-default']?.mode === 'keywords';
+    await run('match', (keywordMatch ? null : noAuto) ?? (deps.match ? null : 'no matcher'), () => deps.match!());
     if (deps.config.autopilot.strategy === 'single_email') {
       await run('autopilot', noAuto ?? (deps.singleEmail ? null : 'not configured'), () => deps.singleEmail!());
     } else {

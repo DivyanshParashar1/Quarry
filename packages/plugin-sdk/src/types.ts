@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import type { Embedder, LLMClient, Logger, Profile } from '@jobforge/shared';
+import type { Embedder, LLMClient, Logger, Profile } from '@quarry/shared';
 
-export type { Embedder, LLMClient, LLMRequest, LLMResponse, LLMTask, Profile, ProfileFact, Preferences } from '@jobforge/shared';
-export { factSchema, preferencesSchema } from '@jobforge/shared';
+export type { Embedder, LLMClient, LLMRequest, LLMResponse, LLMTask, Profile, ProfileFact, Preferences } from '@quarry/shared';
+export { factSchema, preferencesSchema } from '@quarry/shared';
 import type { PluginManifest } from './manifest.js';
 import type { CredentialStore, DnsResolver, GmailHandle } from './capabilities.js';
 import type { Company, Enrichment } from './outreach.js';
@@ -122,8 +122,8 @@ export interface MatchResult {
   jobId: string;
   /** 0..100 */
   score: number;
-  /** filtered = failed a hard filter; prefilter = cut by similarity; llm = scored by the rubric. */
-  method: 'filtered' | 'prefilter' | 'llm';
+  /** filtered = failed a hard filter; prefilter = cut by similarity; llm = scored by the rubric; keyword = scored by keyword hits. */
+  method: 'filtered' | 'prefilter' | 'llm' | 'keyword';
   similarity: number | null;
   rubric: Record<string, unknown>;
   reasons: string;

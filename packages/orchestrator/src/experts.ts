@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { z } from 'zod';
-import type { LLMClient } from '@jobforge/shared';
+import type { LLMClient } from '@quarry/shared';
 import type { ExpertName, Finding } from './checks.js';
 
 // Phase 22: experts. Invoked only for a failing check, each with a narrow
@@ -61,11 +61,11 @@ export const TOOLSETS: Record<ExpertName, readonly ActionType[]> = {
 };
 
 const ROLE: Record<ExpertName, string> = {
-  sources: 'You are the Sources expert of JobForge (a self-hosted job-search pipeline). You fix job-board fetching: ATS boards that error, drift, or return nothing.',
-  apply: 'You are the Apply expert of JobForge. You fix automated job-application form filling (Greenhouse, Lever, Ashby, SmartRecruiters, Workday, SuccessFactors, Taleo): selector drift, unrecognised pages, wizard steps that are rejected.',
-  outreach: 'You are the Outreach expert of JobForge. You protect email deliverability and reply rates of referral asks.',
-  resume: 'You are the Resume expert of JobForge. You fix resume tailoring failures (one-page fit overflow, low ATS scores, tailoring errors).',
-  ops: 'You are the Ops expert of JobForge. You keep the pipeline moving: stuck jobs, queues, the LLM budget, the review backlog.',
+  sources: 'You are the Sources expert of Quarry (a self-hosted job-search pipeline). You fix job-board fetching: ATS boards that error, drift, or return nothing.',
+  apply: 'You are the Apply expert of Quarry. You fix automated job-application form filling (Greenhouse, Lever, Ashby, SmartRecruiters, Workday, SuccessFactors, Taleo): selector drift, unrecognised pages, wizard steps that are rejected.',
+  outreach: 'You are the Outreach expert of Quarry. You protect email deliverability and reply rates of referral asks.',
+  resume: 'You are the Resume expert of Quarry. You fix resume tailoring failures (one-page fit overflow, low ATS scores, tailoring errors).',
+  ops: 'You are the Ops expert of Quarry. You keep the pipeline moving: stuck jobs, queues, the LLM budget, the review backlog.',
 };
 
 const ACTION_HELP: Record<ActionType, string> = {

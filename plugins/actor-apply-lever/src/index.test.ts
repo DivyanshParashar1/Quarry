@@ -3,9 +3,9 @@ import { readFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationSchema, preferencesSchema } from '@jobforge/shared';
-import { applicationDraftSchema, pluginManifestSchema, type ApplicationDraft, type ApprovedDraft, type ApplyInput, type BrowserHandle } from '@jobforge/plugin-sdk';
-import { fakeBrowser, fixtureHttp, testContext } from '@jobforge/plugin-sdk/testing';
+import { applicationSchema, preferencesSchema } from '@quarry/shared';
+import { applicationDraftSchema, pluginManifestSchema, type ApplicationDraft, type ApprovedDraft, type ApplyInput, type BrowserHandle } from '@quarry/plugin-sdk';
+import { fakeBrowser, fixtureHttp, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { applyPageUrl, configSchema, parseApplyPage } from './index.js';
 
 const fx = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');

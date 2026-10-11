@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { sql } from '@jobforge/db';
-import type { PageFetcher } from '@jobforge/core';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { sql } from '@quarry/db';
+import type { PageFetcher } from '@quarry/core';
 import { buildApi } from './api.js';
 
 const adminUrl = testDbAdminUrl();
-const H = { 'x-jobforge': '1', 'content-type': 'application/json' };
+const H = { 'x-quarry': '1', 'content-type': 'application/json' };
 
 const pages: PageFetcher = {
   async get(url) {

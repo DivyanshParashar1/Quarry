@@ -1,6 +1,6 @@
 import { Resolver } from 'node:dns/promises';
-import type { DnsResolver, GmailHandle, MxRecord, PluginManifest } from '@jobforge/plugin-sdk';
-import { PluginError } from '@jobforge/shared';
+import type { DnsResolver, GmailHandle, MxRecord, PluginManifest } from '@quarry/plugin-sdk';
+import { PluginError } from '@quarry/shared';
 
 /** MX resolver with a timeout and an in-process cache. No SMTP, ever. */
 export function createDnsResolver(opts: { timeoutMs?: number; ttlMs?: number; resolver?: Pick<Resolver, 'resolveMx'> } = {}): DnsResolver {
@@ -49,6 +49,6 @@ export function scopeGmail(full: GmailHandle | undefined, manifest: PluginManife
 }
 
 export function requireGmail<T extends GmailHandle>(gmail: T | undefined): T {
-  if (!gmail) throw new PluginError('Gmail is not connected; run `jf gmail auth`');
+  if (!gmail) throw new PluginError('Gmail is not connected; run `quarry gmail auth`');
   return gmail;
 }

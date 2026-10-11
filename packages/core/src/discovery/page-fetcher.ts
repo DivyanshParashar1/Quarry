@@ -1,4 +1,4 @@
-import { HttpError } from '@jobforge/plugin-sdk';
+import { HttpError } from '@quarry/plugin-sdk';
 import { USER_AGENT } from '../http.js';
 import type { DomainRateLimiter, RateLimit } from '../rate-limiter.js';
 import { RobotsCache } from './robots.js';

@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { fakeBrowser, fakeGmail } from '@jobforge/plugin-sdk/testing';
-import type { SourcePlugin } from '@jobforge/plugin-sdk';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { fakeBrowser, fakeGmail } from '@quarry/plugin-sdk/testing';
+import type { SourcePlugin } from '@quarry/plugin-sdk';
 import {
   getBatchForJob,
   getPipelineState,
@@ -21,12 +21,12 @@ import {
   upsertCompany,
   upsertCompanySource,
   upsertContact,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import outreachActor from '@jobforge/actor-gmail-outreach';
-import tracker from '@jobforge/tracker-gmail';
-import greenhouseApply, { formUrl, questionsUrl } from '@jobforge/actor-apply-greenhouse';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
+import outreachActor from '@quarry/actor-gmail-outreach';
+import tracker from '@quarry/tracker-gmail';
+import greenhouseApply, { formUrl, questionsUrl } from '@quarry/actor-apply-greenhouse';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
 import { approveReviewItem, pollTracker, runSendTick } from './outreach.js';

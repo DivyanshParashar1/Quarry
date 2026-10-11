@@ -17,7 +17,7 @@ import {
   type DiscoveredField,
   type FormQuestion,
   type PluginContext,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 // Phase 19: SmartRecruiters one-click apply. Recorded from a real public posting
 // (fixtures/README.md): the form is a web-components app at

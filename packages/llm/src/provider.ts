@@ -1,4 +1,4 @@
-import type { Usage } from '@jobforge/shared';
+import type { Usage } from '@quarry/shared';
 
 /** What an adapter receives: already-routed, schema already converted. */
 export interface ProviderRequest {

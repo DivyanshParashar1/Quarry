@@ -1,5 +1,6 @@
-import { and, asc, eq, gte, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import type { DB } from './client.js';
+import { RANKED_METHODS } from './match-repo.js';
 import { jobs, matchResults } from './schema.js';
 
 export interface DeadlineRecord {
@@ -42,7 +43,7 @@ export async function jobsNeedingDeadline(
     .where(
       and(
         isNull(jobs.closedAt),
-        eq(matchResults.method, 'llm'),
+        inArray(matchResults.method, [...RANKED_METHODS]),
         gte(matchResults.score, f.minScore),
         or(isNull(jobs.deadlineInferredAt), lt(jobs.deadlineInferredAt, f.staleBefore)),
       ),

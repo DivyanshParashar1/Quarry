@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createJobForgeMcp } from '@jobforge/mcp/server';
-import { ApiError, type ApiClient } from '@jobforge/mcp/api-client';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createQuarryMcp } from '@quarry/mcp/server';
+import { ApiError, type ApiClient } from '@quarry/mcp/api-client';
 import { buildApi } from './api.js';
 import { routesFromTree } from './route-tree.js';
 
@@ -45,14 +45,14 @@ describe.skipIf(!adminUrl)('MCP ↔ HTTP API contract (postgres)', () => {
     app = await buildApi({ db: t.db });
     const send = async (method: string, path: string, body?: unknown, query?: Record<string, string | number | undefined>) => {
       const qs = new URLSearchParams(Object.entries(query ?? {}).filter(([, v]) => v !== undefined && v !== '') as [string, string][]);
-      const r = await app.inject({ method: method as 'GET', url: `${path}${qs.size ? `?${qs}` : ''}`, headers: { 'x-jobforge': '1', 'content-type': 'application/json' }, ...(method === 'GET' ? {} : { payload: JSON.stringify(body ?? {}) }) });
+      const r = await app.inject({ method: method as 'GET', url: `${path}${qs.size ? `?${qs}` : ''}`, headers: { 'x-quarry': '1', 'content-type': 'application/json' }, ...(method === 'GET' ? {} : { payload: JSON.stringify(body ?? {}) }) });
       calls.push({ method, path, status: r.statusCode });
       const parsed = r.body ? (JSON.parse(r.body) as unknown) : null;
       if (r.statusCode >= 400) throw new ApiError(r.statusCode, parsed);
       return parsed as never;
     };
     const api: ApiClient = { get: (path, query) => send('GET', path, undefined, query), send: (method, path, body) => send(method, path, body) };
-    const server = createJobForgeMcp(api);
+    const server = createQuarryMcp(api);
     client = new Client({ name: 'contract', version: '0' });
     const [a, b] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(a), client.connect(b)]);

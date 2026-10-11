@@ -21,7 +21,7 @@ export function ReviewQueue() {
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold">Needs your decision ({pending.length})</h2>
         {pending.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nothing to review. Draft an email from a job's Outreach section, or run `pnpm jf outreach draft`.</p>
+          <p className="text-sm text-muted-foreground">Nothing to review. Draft an email from a job's Outreach section, or run `pnpm quarry outreach draft`.</p>
         )}
         {pending.map((i) => (
           <ReviewItemCard key={`${i.id}:${i.editedAt ?? ''}`} item={i} />

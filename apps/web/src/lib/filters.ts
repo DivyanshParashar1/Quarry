@@ -57,7 +57,7 @@ export function filtersToSearch(f: Filters, job: string | null): string {
 }
 
 const VIEW_METHODS: Record<View, string | null> = {
-  ranked: 'llm',
+  ranked: 'llm,keyword',
   all: null,
   unscored: 'unscored',
   excluded: 'filtered,prefilter',
@@ -76,7 +76,7 @@ export function apiParams(f: Filters, limit: number, offset: number): URLSearchP
 }
 
 export function scoreTone(score: number | null, method: string | null): 'good' | 'ok' | 'weak' | 'none' {
-  if (method !== 'llm' || score === null) return 'none';
+  if ((method !== 'llm' && method !== 'keyword') || score === null) return 'none';
   if (score >= 75) return 'good';
   if (score >= 50) return 'ok';
   return 'weak';

@@ -1,5 +1,5 @@
-import { sql, type DB } from '@jobforge/db';
-import type { OrchestratorConfig } from '@jobforge/shared';
+import { sql, type DB } from '@quarry/db';
+import type { OrchestratorConfig } from '@quarry/shared';
 
 // Phase 22: the monitor. Deterministic SQL health checks; each failing one is a
 // Finding routed to one expert. No LLM here.

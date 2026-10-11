@@ -7,9 +7,10 @@ import { keychainGet, keychainSet } from './keychain.js';
 
 // Encrypted-at-rest browser session (LinkedIn storageState). The file is
 // AES-256-GCM encrypted, mode 600; the key comes from (in order):
-//   1. JOBFORGE_SESSION_KEY (env, 32+ chars)
+//   1. QUARRY_SESSION_KEY (env, 32+ chars)
 //   2. the OS keychain (macOS `security`, Linux `secret-tool`), created on first use
-//   3. a key file in ~/.config/jobforge/session.key (mode 600) — weakest, warned about.
+//   3. a key file in ~/.config/quarry/session.key (mode 600) — weakest, warned about
+//      (an existing pre-rename ~/.config/jobforge/ key file is used if present).
 // Cookies never touch the disk in plaintext.
 
 const MAGIC = 'JFSESS1';
@@ -34,7 +35,9 @@ export async function resolveSessionKey(
     }
     if (secret) return { key: createHash('sha256').update(secret).digest(), source: 'keychain' };
   }
-  const file = o.keyFile ?? join(homedir(), '.config', 'jobforge', `${account}.key`);
+  const current = join(homedir(), '.config', 'quarry', `${account}.key`);
+  const legacy = join(homedir(), '.config', 'jobforge', `${account}.key`);
+  const file = o.keyFile ?? (!existsSync(current) && existsSync(legacy) ? legacy : current);
   if (!existsSync(file)) {
     await mkdir(dirname(file), { recursive: true, mode: 0o700 });
     await writeFile(file, randomBytes(32).toString('base64'), { mode: 0o600 });
@@ -51,7 +54,7 @@ export function encryptJson(value: unknown, key: Buffer): Buffer {
 }
 
 export function decryptJson<T = unknown>(data: Buffer, key: Buffer): T {
-  if (data.subarray(0, MAGIC.length).toString() !== MAGIC) throw new Error('not a JobForge session file');
+  if (data.subarray(0, MAGIC.length).toString() !== MAGIC) throw new Error('not a Quarry session file');
   const iv = data.subarray(MAGIC.length, MAGIC.length + 12);
   const tag = data.subarray(MAGIC.length + 12, MAGIC.length + 28);
   const decipher = createDecipheriv('aes-256-gcm', key, iv);

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DomainNotAllowedError, HttpError } from '@jobforge/plugin-sdk';
+import { DomainNotAllowedError, HttpError } from '@quarry/plugin-sdk';
 import { createScopedHttp, retryAfterMs } from './http.js';
 import { DomainRateLimiter, TokenBucket } from './rate-limiter.js';
 import { fakeClock, jsonResponse, silentLogger } from './test-utils.js';
@@ -62,7 +62,7 @@ describe('ScopedHttp', () => {
 
   it('returns parsed JSON and sends a user agent', async () => {
     const f = vi.fn(async (_u: URL, init: RequestInit) => {
-      expect((init.headers as Record<string, string>)['user-agent']).toMatch(/JobForge/);
+      expect((init.headers as Record<string, string>)['user-agent']).toMatch(/Quarry/);
       return jsonResponse({ ok: 1 });
     });
     const { http } = setup(f as unknown as typeof fetch);

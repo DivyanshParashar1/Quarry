@@ -1,6 +1,6 @@
-import { createReviewItem, getCompanySource, setCompanySourceStatus, type DB } from '@jobforge/db';
-import { setLlmPausedUntil, setPluginPause, setTenantOverride, withTenantOverrides, type PluginRegistry } from '@jobforge/core';
-import type { Logger } from '@jobforge/shared';
+import { createReviewItem, getCompanySource, setCompanySourceStatus, type DB } from '@quarry/db';
+import { setLlmPausedUntil, setPluginPause, setTenantOverride, withTenantOverrides, type PluginRegistry } from '@quarry/core';
+import type { Logger } from '@quarry/shared';
 import type { PlannedAction } from './experts.js';
 
 // Phase 22: ops actions (no code). Each is checked against its own bounds here,
@@ -121,7 +121,7 @@ export async function executeAction(deps: OpsDeps, a: PlannedAction, incidentId?
         return done(`LLM steps paused until ${until.toISOString()}`);
       }
       case 'raise_attention': {
-        const id = await raiseAttention(deps.db, { title: a.title ?? 'JobForge needs you', message: a.message ?? a.reason ?? '', ...(incidentId ? { incidentId } : {}) });
+        const id = await raiseAttention(deps.db, { title: a.title ?? 'Quarry needs you', message: a.message ?? a.reason ?? '', ...(incidentId ? { incidentId } : {}) });
         return done('attention item raised', { attentionId: id });
       }
       case 'code_fix':

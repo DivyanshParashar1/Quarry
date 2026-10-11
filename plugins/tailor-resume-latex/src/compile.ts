@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Logger } from '@jobforge/shared';
+import type { Logger } from '@quarry/shared';
 
 export interface CompileResult {
   pdf: Uint8Array;
@@ -24,7 +24,7 @@ export interface CompileOptions {
  */
 export async function compileLatex(opts: CompileOptions): Promise<CompileResult> {
   const latexBin = opts.latexBin ?? process.env.LATEX_BIN ?? 'latexmk';
-  const dir = await mkdtemp(join(tmpdir(), 'jf-resume-'));
+  const dir = await mkdtemp(join(tmpdir(), 'quarry-resume-'));
   const texPath = join(dir, 'resume.tex');
   const pdfPath = join(dir, 'resume.pdf');
   const logPath = join(dir, 'resume.log');

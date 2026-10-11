@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Logger } from '@jobforge/shared';
+import type { Logger } from '@quarry/shared';
 import { protectedHits } from './protected.js';
 
 // Phase 22: gated code changes (orchestrator fixes and chatbot changes).
@@ -45,7 +45,7 @@ export const spawnExec: Exec = (cmd, args, o) =>
 
 export interface CodeChangeOptions {
   repoDir: string;
-  /** Where worktrees are created (default <tmp>/jobforge-worktrees, outside the repo so its test run never sees them). */
+  /** Where worktrees are created (default <tmp>/quarry-worktrees, outside the repo so its test run never sees them). */
   worktreeRoot?: string;
   exec?: Exec;
   log: Logger;
@@ -112,7 +112,7 @@ export function guardrailPrompt(requireTest: boolean): string {
 export async function runCodeChange(o: CodeChangeOptions, req: CodeChangeRequest): Promise<CodeChangeResult> {
   const exec = o.exec ?? spawnExec;
   const branch = `${req.branchPrefix}-${req.id}`.replace(/[^A-Za-z0-9/_.-]+/g, '-');
-  const root = o.worktreeRoot ?? join(tmpdir(), 'jobforge-worktrees');
+  const root = o.worktreeRoot ?? join(tmpdir(), 'quarry-worktrees');
   const wt = join(root, branch.replace(/\//g, '_'));
   const git = (args: string[], cwd = o.repoDir) => exec('git', args, { cwd, timeoutMs: 120_000 });
   const res = (status: CodeChangeStatus, extra: Partial<CodeChangeResult> = {}): CodeChangeResult => ({ status, branch, files: [], ...extra });

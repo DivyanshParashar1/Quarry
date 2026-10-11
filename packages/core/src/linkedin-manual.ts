@@ -1,4 +1,4 @@
-import { linkedinManualDraftSchema, type LinkedInManualDraft } from '@jobforge/plugin-sdk';
+import { linkedinManualDraftSchema, type LinkedInManualDraft } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   createReviewItem,
@@ -18,7 +18,7 @@ import {
   type ReviewItemRow,
   type ReviewListRow,
   type ThreadRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { loadCompanyRef } from './contacts-runner.js';
 import {
   LINKEDIN_MANUAL_ACTOR,

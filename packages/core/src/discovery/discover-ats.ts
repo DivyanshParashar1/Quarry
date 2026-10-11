@@ -1,5 +1,5 @@
-import type { Logger } from '@jobforge/shared';
-import { saveDiscoveredCompany, type DB, type SaveDiscoveredResult } from '@jobforge/db';
+import type { Logger } from '@quarry/shared';
+import { saveDiscoveredCompany, type DB, type SaveDiscoveredResult } from '@quarry/db';
 import { careerLinks, classifyUrl, normalizeDomain, scanHtml, slugCandidates, type AtsDetection } from './detect.js';
 import { RobotsDisallowedError, type PageFetcher } from './page-fetcher.js';
 

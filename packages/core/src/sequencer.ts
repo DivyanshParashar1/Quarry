@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { AppConfig, Logger } from '@jobforge/shared';
+import type { AppConfig, Logger } from '@quarry/shared';
 import {
   getJobDetail,
   appendEvent,
@@ -24,8 +24,9 @@ import {
   type PipelineRow,
   type PipelineState,
   type ResumeVariantRow,
-} from '@jobforge/db';
-import { applicationDraftSchema } from '@jobforge/plugin-sdk';
+  RANKED_METHODS,
+} from '@quarry/db';
+import { applicationDraftSchema } from '@quarry/plugin-sdk';
 import { loadMatchConfidence } from './autopilot.js';
 import { draftApplication, type ApplyDeps } from './apply.js';
 import { llmAnswersConfident } from './answers.js';
@@ -229,8 +230,8 @@ async function admitCandidates(deps: SequencerDeps, limit: number | undefined, s
   const profile = await getActiveProfile(db);
   if (!profile) return 0;
   const ranked = only
-    ? { rows: (await listRankedJobs(db, { profileVersion: profile.version, methods: ['llm'], minScore: policy.minMatchScore, sort: 'score', limit: 1, jobIds: [only] })).rows }
-    : await listRankedJobs(db, { profileVersion: profile.version, methods: ['llm'], minScore: policy.minMatchScore, sort: 'score', limit: Math.min(limit ?? policy.candidateBatch, 100) + 50 });
+    ? { rows: (await listRankedJobs(db, { profileVersion: profile.version, methods: [...RANKED_METHODS], minScore: policy.minMatchScore, sort: 'score', limit: 1, jobIds: [only] })).rows }
+    : await listRankedJobs(db, { profileVersion: profile.version, methods: [...RANKED_METHODS], minScore: policy.minMatchScore, sort: 'score', limit: Math.min(limit ?? policy.candidateBatch, 100) + 50 });
   let admitted = 0;
   for (const job of ranked.rows) {
     if (admitted >= Math.min(room, limit ?? policy.candidateBatch)) break;

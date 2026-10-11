@@ -2,13 +2,13 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { addChatMessage, getChatSession, listChatSessions, updateChatSession, type DB } from '@jobforge/db';
-import { gateAndMerge, spawnExec, type CodeChangeResult, type Exec } from '@jobforge/orchestrator';
-import type { Logger } from '@jobforge/shared';
+import { addChatMessage, getChatSession, listChatSessions, updateChatSession, type DB } from '@quarry/db';
+import { gateAndMerge, spawnExec, type CodeChangeResult, type Exec } from '@quarry/orchestrator';
+import type { Logger } from '@quarry/shared';
 
 // The chatbot. Each message runs Claude Code (print mode, streaming JSON) in the
 // chat session's own git worktree of main, with:
-//   - the JobForge MCP tools (the whole product through the HTTP API) — except
+//   - the Quarry MCP tools (the whole product through the HTTP API) — except
 //     `approve`: the chatbot drafts, you approve in the Review tab;
 //   - web search / fetch (e.g. reading a job description from a link);
 //   - Read/Edit/Write and any shell command, to run its own scripts (scratch
@@ -38,12 +38,12 @@ export interface ChatRunnerOptions {
   spawnClaude?: (args: string[], o: { cwd: string; input: string }) => ChildProcess;
 }
 
-export const CHAT_RULES = `You are the JobForge assistant, running inside the user's JobForge checkout (a self-hosted job-search pipeline; read CLAUDE.md for the rules — they bind you too).
+export const CHAT_RULES = `You are the Quarry assistant, running inside the user's Quarry checkout (a self-hosted job-search pipeline; read CLAUDE.md for the rules — they bind you too).
 
 You can:
-- operate the product through the jobforge MCP tools: search jobs, add a job from a link (fetch the page with WebFetch first, then add_job with the full description), tailor resumes, draft referral asks / outreach / applications, check the pipeline, health and incidents, run the orchestrator, import contacts, discover companies;
+- operate the product through the quarry MCP tools: search jobs, add a job from a link (fetch the page with WebFetch first, then add_job with the full description), tailor resumes, draft referral asks / outreach / applications, check the pipeline, health and incidents, run the orchestrator, import contacts, discover companies;
 - read the web (WebSearch, WebFetch);
-- read and change the codebase in this working copy, and run shell commands and your own scripts (pnpm, pnpm jf …, node, npx tsx, python3, …). Put throwaway scripts and notes in .chat-scratch/ (ignored by git). You are in your own working copy; the user's main checkout is the repository root you came from. No curl/wget (use WebFetch), no git commands that change history, no sudo.
+- read and change the codebase in this working copy, and run shell commands and your own scripts (pnpm, pnpm quarry …, node, npx tsx, python3, …). Put throwaway scripts and notes in .chat-scratch/ (ignored by git). You are in your own working copy; the user's main checkout is the repository root you came from. No curl/wget (use WebFetch), no git commands that change history, no sudo.
 
 Hard rules:
 - You never approve, send, submit or publish anything. Drafts go to the review queue; tell the user what is waiting for them in the Review tab. Never try to reach the approve endpoints another way.
@@ -53,7 +53,7 @@ Hard rules:
 Be brief: say what you did, what is waiting for the user, and anything that failed.`;
 
 const ALLOWED = [
-  'mcp__jobforge',
+  'mcp__quarry',
   'WebFetch',
   'WebSearch',
   'Read',
@@ -67,7 +67,7 @@ const ALLOWED = [
   'Bash',
 ];
 const DISALLOWED = [
-  'mcp__jobforge__approve',
+  'mcp__quarry__approve',
   // Network clients outside the MCP tools (the approve endpoints must stay out of reach).
   'Bash(curl:*)',
   'Bash(wget:*)',
@@ -226,7 +226,7 @@ export class ChatRunner {
     const mcpConfig = join(wt, '.chat-scratch', 'mcp.json');
     await writeFile(
       mcpConfig,
-      JSON.stringify({ mcpServers: { jobforge: { command: 'npx', args: ['tsx', join(this.o.repoDir, 'apps/mcp/src/index.ts')], env: { JOBFORGE_API_URL: this.o.apiUrl } } } }, null, 2),
+      JSON.stringify({ mcpServers: { quarry: { command: 'npx', args: ['tsx', join(this.o.repoDir, 'apps/mcp/src/index.ts')], env: { QUARRY_API_URL: this.o.apiUrl } } } }, null, 2),
     );
     const args = chatClaudeArgs({ mcpConfig, resume, model: this.o.claude.model });
     const child = (this.o.spawnClaude ?? ((a, so) => spawn(this.o.claude.command, a, { cwd: so.cwd, stdio: ['pipe', 'pipe', 'pipe'] })))(args, { cwd: wt, input: text });

@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
-import type { Embedder } from '@jobforge/shared';
+import type { Embedder } from '@quarry/shared';
 
-export type { Embedder } from '@jobforge/shared';
+export type { Embedder } from '@quarry/shared';
 
 // Local embeddings via @huggingface/transformers (PLAN.md §2): bge-small-en-v1.5,
 // 384 dims, CLS pooling, L2-normalized. Runs offline after the first model download.

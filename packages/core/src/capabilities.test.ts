@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
-import type { PluginManifest, TrackerPlugin } from '@jobforge/plugin-sdk';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
+import type { PluginManifest, TrackerPlugin } from '@quarry/plugin-sdk';
 import { createDnsResolver, requireGmail, scopeGmail } from './capabilities.js';
 import { buildContext, loadPlugin } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
@@ -31,7 +31,7 @@ describe('scopeGmail', () => {
 
   it('is absent when Gmail is not connected; requireGmail says how to fix it', () => {
     expect(scopeGmail(undefined, manifest({ domains: [], gmail: ['read'] }))).toBeUndefined();
-    expect(() => requireGmail(undefined)).toThrow(/jf gmail auth/);
+    expect(() => requireGmail(undefined)).toThrow(/quarry gmail auth/);
   });
 
   it('buildContext only injects dns/gmail for declared permissions', () => {

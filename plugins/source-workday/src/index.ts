@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
+import { PluginError } from '@quarry/shared';
 import {
   decodeEntities,
   defineSourcePlugin,
@@ -14,9 +14,9 @@ import {
   type PluginContext,
   type RawPosting,
   type WorkdayBoard,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
-export { detailApiUrl, formatWorkdayToken, jobsApiUrl, parseWorkdayToken, parseWorkdayUrl, publicJobUrl, type WorkdayBoard } from '@jobforge/plugin-sdk';
+export { detailApiUrl, formatWorkdayToken, jobsApiUrl, parseWorkdayToken, parseWorkdayUrl, publicJobUrl, type WorkdayBoard } from '@quarry/plugin-sdk';
 
 /** Workday's CXS API caps a page at 20 postings. */
 export const PAGE_SIZE = 20;
@@ -157,7 +157,7 @@ async function* fetchBoard(ctx: PluginContext<WorkdayConfig>, b: WorkdayBoard, o
         if (err instanceof HttpError && err.status === 422 && offset === 0) {
           throw new HttpError(
             `Workday site ${b.host}/${b.site} not found (422). The tenant may have moved data centre or site; ` +
-              'find the current URL on the company careers page (or run `jf discover_ats --recheck`) and update the board token',
+              'find the current URL on the company careers page (or run `quarry discover_ats --recheck`) and update the board token',
             err.url,
             422,
           );

@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import type { ResumeBullet } from '@jobforge/plugin-sdk';
+import type { ResumeBullet } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   contactsAskedSince,
@@ -18,7 +18,7 @@ import {
   type DB,
   type ReferralBatchRow,
   type ReviewItemRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { loadCompanyRef } from './contacts-runner.js';
 import { approveReviewItem, LINKEDIN_MANUAL_ACTOR, OutreachError, OUTREACH_ACTOR, prepareDraft, resolveResumeAttachment, loadJobForOutreach, type OutreachDeps } from './outreach.js';
 
@@ -167,7 +167,7 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
   const now = deps.now?.() ?? new Date();
   const job = await loadJobForOutreach(db, jobId);
   const profile = await getActiveProfile(db);
-  if (!profile) throw new OutreachError('no profile loaded; run `jf profile load`', 'no_profile');
+  if (!profile) throw new OutreachError('no profile loaded; run `quarry profile load`', 'no_profile');
   const requested = opts.count ?? policy.perJobReferralCap;
   const { batch } = await ensureBatch(db, jobId, requested);
   if (opts.count && opts.count !== batch.requestedCount) await updateBatch(db, batch.id, { requestedCount: opts.count });

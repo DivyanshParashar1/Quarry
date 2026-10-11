@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "jobforge-server",
+      "name": "quarry-server",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["server"],
       "port": 3000

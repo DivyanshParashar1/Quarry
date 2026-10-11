@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { listContacts, upsertCompany, upsertContact } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
+import { listContacts, upsertCompany, upsertContact } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
 import { commitContactImport, ContactImportError, discardContactImport, getImportPreview, previewContactImport } from './index.js';
 
 const adminUrl = testDbAdminUrl();

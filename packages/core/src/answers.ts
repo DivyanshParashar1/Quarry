@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { listAnswerBank, noteBankAnswerUsed, upsertBankAnswer, type AnswerBankRow, type DB } from '@jobforge/db';
-import { chooseOption, type ApplicationDraft, type ApplicationField, type Job } from '@jobforge/plugin-sdk';
-import type { LLMClient, Logger, Profile } from '@jobforge/shared';
+import { listAnswerBank, noteBankAnswerUsed, upsertBankAnswer, type AnswerBankRow, type DB } from '@quarry/db';
+import { chooseOption, type ApplicationDraft, type ApplicationField, type Job } from '@quarry/plugin-sdk';
+import type { LLMClient, Logger, Profile } from '@quarry/shared';
 
 // Phase 19: answers for application questions the deterministic mapper left
 // blank. Order: preferences.yaml answers (already applied by mapAnswers) →

@@ -12,7 +12,7 @@ import {
   type LinkedInNoteDraft,
   type LinkedInSendResult,
   type OutreachActionInput,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 export const PLUGIN_ID = 'actor-linkedin-referral';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ApplicationField } from '@jobforge/plugin-sdk';
+import type { ApplicationField } from '@quarry/plugin-sdk';
 import { claims, inventedClaim, isOpenForLlm, llmAnswersConfident, questionKey, similarQuestion } from './answers.js';
 
 const field = (label: string, extra: Partial<ApplicationField> = {}): ApplicationField => ({

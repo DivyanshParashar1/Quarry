@@ -1,4 +1,4 @@
-import type { AppConfig, LLMClient, Logger } from '@jobforge/shared';
+import type { AppConfig, LLMClient, Logger } from '@quarry/shared';
 import {
   addCompanySource,
   appendEvent,
@@ -10,7 +10,7 @@ import {
   newSourceIdsSince,
   startPluginRun,
   type DB,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { discoverAts } from './discover-ats.js';
 import { COMPANY_LISTS } from './lists.js';
 import type { PageFetcher } from './page-fetcher.js';

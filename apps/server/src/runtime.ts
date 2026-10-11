@@ -1,9 +1,9 @@
-import type { AppConfig, Env, LLMClient, Logger } from '@jobforge/shared';
-import { recordLlmCall, type DB } from '@jobforge/db';
-import { createLazyEmbedder } from '@jobforge/embeddings';
-import { createLLMFromConfig } from '@jobforge/llm';
-import { budgetGuardedLlm, createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
-import type { GmailHandle } from '@jobforge/plugin-sdk';
+import type { AppConfig, Env, LLMClient, Logger } from '@quarry/shared';
+import { recordLlmCall, type DB } from '@quarry/db';
+import { createLazyEmbedder } from '@quarry/embeddings';
+import { createLLMFromConfig } from '@quarry/llm';
+import { budgetGuardedLlm, createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@quarry/core';
+import type { GmailHandle } from '@quarry/plugin-sdk';
 
 export async function createGmail(env: Env, limiter: DomainRateLimiter): Promise<GmailHandle | undefined> {
   if (!env.GMAIL_CLIENT_ID || !env.GMAIL_CLIENT_SECRET || !env.GMAIL_REFRESH_TOKEN) return undefined;

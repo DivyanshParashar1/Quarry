@@ -24,7 +24,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `apps/server` — Fastify API + pg-boss workers
 - `apps/web` — React dashboard (Vite; built into `apps/web/dist`, served by the server)
 - `apps/mcp` — MCP server (stdio; thin wrapper over the HTTP API)
-- `apps/cli` — `jf` CLI
+- `apps/cli` — `quarry` CLI
 - `packages/core` — pipeline engine, plugin host, rate limiter, idempotency
 - `packages/db` — Drizzle schema, migrations, repositories
 - `packages/plugin-sdk` — types + helpers for plugin authors
@@ -41,19 +41,19 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - `pnpm test`
 - `pnpm typecheck`
 - `pnpm lint`
-- `pnpm jf companies import data/companies.seed.csv` / `pnpm jf fetch` / `pnpm jf jobs list`
-- `pnpm jf profile load` / `pnpm jf embed` / `pnpm jf match [--rescore]` / `pnpm jf llm check`
+- `pnpm quarry companies import data/companies.seed.csv` / `pnpm quarry fetch` / `pnpm quarry jobs list`
+- `pnpm quarry profile load` / `pnpm quarry embed` / `pnpm quarry match [--rescore]` / `pnpm quarry llm check`
 - `pnpm web:build && pnpm server` → dashboard at http://localhost:3000 (`pnpm web:dev` for Vite on :5173)
-- `pnpm --filter @jobforge/llm smoke -- --provider claude-code|openrouter` — real-provider smoke test (costs money; manual only)
-- Outreach: `pnpm jf gmail auth`, `jf contacts add|enrich`, `jf outreach draft`, `jf review list|approve`, `jf outreach send [--live]`, `jf outreach track` — see `docs/outreach.md`
-- Referrals: `jf referrals fanout|show|approve <jobId>`, `jf linkedin login|status|resume|employees` (Phase 8, dormant)
-- Contacts (Phase 17): `jf contacts import <file.xlsx|.csv> [--yes]` (LinkedIn Connections.csv too), `jf linkedin drafts [--job] | sent <id> | replied <id>`; dashboard Contacts tab
-- Resumes (Phase 16): `jf resumes generate [--retire] | list | bench [--pick]`, `jf tailor <jobId> [--force]` (selector: best library combo + skills-only rewrite); dashboard Resumes tab
-- Sweeper (Phase 18): `jf sweep [--live]` runs the server's hourly pass (also on server start); LLM steps only with `autopilot.enabled`; stage events trigger the next stage when autopilot is on
-- Applications (Phases 19–21): Greenhouse/Lever/Ashby/SmartRecruiters/Workday/SuccessFactors/Taleo auto-apply. Workday/SF/Taleo share `plugin-sdk/wizard.ts`: per-tenant account (password in the OS keychain), consent (`consent:terms`) must be Yes on the draft, dry run stops at Review, overrides in `plugins.<actor>.tenants`, failed steps captured in `data/apply-failures/`, unrecognised pages → attention item with screenshots; emailed verification codes read from Gmail; blank questions answered from the answer bank then the LLM (never salary/notice/visa/authorization/EEO); `jf answers [list] | delete <id>`
-- Discovery: `jf discover_ats <domain|name> [--save] | --missing`, `jf discover_companies --list yc|gcc-journal|…` (Phase 6)
-- Orchestrator (Phase 22): `jf orchestrator run`, `jf incidents [--all]`; dashboard Health tab; config `orchestrator.*` (budget, thresholds); push alerts via `NTFY_URL`. Server runs ops actions only (automatic code fixes not wired into the server).
+- `pnpm --filter @quarry/llm smoke -- --provider claude-code|openrouter` — real-provider smoke test (costs money; manual only)
+- Outreach: `pnpm quarry gmail auth`, `quarry contacts add|enrich`, `quarry outreach draft`, `quarry review list|approve`, `quarry outreach send [--live]`, `quarry outreach track` — see `docs/outreach.md`
+- Referrals: `quarry referrals fanout|show|approve <jobId>`, `quarry linkedin login|status|resume|employees` (Phase 8, dormant)
+- Contacts (Phase 17): `quarry contacts import <file.xlsx|.csv> [--yes]` (LinkedIn Connections.csv too), `quarry linkedin drafts [--job] | sent <id> | replied <id>`; dashboard Contacts tab
+- Resumes (Phase 16): `quarry resumes generate [--retire] | list | bench [--pick]`, `quarry tailor <jobId> [--force]` (selector: best library combo + skills-only rewrite); dashboard Resumes tab
+- Sweeper (Phase 18): `quarry sweep [--live]` runs the server's hourly pass (also on server start); LLM steps only with `autopilot.enabled`; stage events trigger the next stage when autopilot is on
+- Applications (Phases 19–21): Greenhouse/Lever/Ashby/SmartRecruiters/Workday/SuccessFactors/Taleo auto-apply. Workday/SF/Taleo share `plugin-sdk/wizard.ts`: per-tenant account (password in the OS keychain), consent (`consent:terms`) must be Yes on the draft, dry run stops at Review, overrides in `plugins.<actor>.tenants`, failed steps captured in `data/apply-failures/`, unrecognised pages → attention item with screenshots; emailed verification codes read from Gmail; blank questions answered from the answer bank then the LLM (never salary/notice/visa/authorization/EEO); `quarry answers [list] | delete <id>`
+- Discovery: `quarry discover_ats <domain|name> [--save] | --missing`, `quarry discover_companies --list yc|gcc-journal|…` (Phase 6)
+- Orchestrator (Phase 22): `quarry orchestrator run`, `quarry incidents [--all]`; dashboard Health tab; config `orchestrator.*` (budget, thresholds); push alerts via `NTFY_URL`. Server runs ops actions only (automatic code fixes not wired into the server).
 - MCP: `.mcp.json` registers `apps/mcp` (needs `pnpm server` running). Never allowlist the `approve` tool.
 - Chatbot: dashboard Chat tab (`docs/chatbot.md`) — Claude Code with the MCP tools (no approve), web, scripts; its code changes are gated (protected paths, typecheck/lint/tests) before merging. Config `chat.*`.
 - Test scripts: `pnpm smoke:api` (needs `pnpm server`), `pnpm smoke:cli [--network]`, `pnpm live:sources` (read-only, real boards) — see `docs/testing.md`
-- DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)
+- DB tests need Postgres up; they skip with a warning otherwise (`QUARRY_REQUIRE_DB=1` makes that a failure)

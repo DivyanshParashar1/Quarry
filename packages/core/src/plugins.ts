@@ -1,4 +1,4 @@
-import { PluginError, type Embedder, type LLMClient, type Logger } from '@jobforge/shared';
+import { PluginError, type Embedder, type LLMClient, type Logger } from '@quarry/shared';
 import {
   pluginManifestSchema,
   stageMethods,
@@ -15,7 +15,7 @@ import {
   type SourcePlugin,
   type Stage,
   type TailorPlugin,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import { createScopedHttp } from './http.js';
 import { scopeGmail } from './capabilities.js';
 import { scopeBrowser, type RawBrowser } from './browser.js';

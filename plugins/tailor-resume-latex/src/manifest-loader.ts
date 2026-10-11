@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { resumeManifestSchema, type BlockMeta, type ResumeManifest } from '@jobforge/plugin-sdk';
+import { resumeManifestSchema, type BlockMeta, type ResumeManifest } from '@quarry/plugin-sdk';
 
 export interface LoadedResume {
   manifestPath: string;

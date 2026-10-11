@@ -4,10 +4,10 @@
 //   pnpm live:sources [--save <dir>]   (--save keeps the first postings as JSON for fixture refreshes)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { rawPostingSchema, type SourcePlugin, type SourceTarget } from '@jobforge/plugin-sdk';
-import { buildContext, createScopedHttp, DomainRateLimiter } from '@jobforge/core';
-import { createRegistry } from '@jobforge/plugins';
-import { createLogger, loadAppConfig } from '@jobforge/shared';
+import { rawPostingSchema, type SourcePlugin, type SourceTarget } from '@quarry/plugin-sdk';
+import { buildContext, createScopedHttp, DomainRateLimiter } from '@quarry/core';
+import { createRegistry } from '@quarry/plugins';
+import { createLogger, loadAppConfig } from '@quarry/shared';
 
 const TARGETS: Array<{ plugin: string; company: string; token: string; options?: Record<string, unknown> }> = [
   { plugin: 'source-greenhouse', company: 'Airbnb', token: 'airbnb' },
@@ -64,7 +64,7 @@ for (const t of TARGETS) {
 // SuccessFactors RMK sites mostly live on the employer's own domain, which the
 // source plugin can't reach; check the parser against one directly.
 {
-  const { parseRmkSearch, rmkSearchUrl } = await import('@jobforge/source-successfactors');
+  const { parseRmkSearch, rmkSearchUrl } = await import('@quarry/source-successfactors');
   const host = 'jobs.cargill.com';
   const http = createScopedHttp({ pluginId: 'live-check', domains: [host], limiter, log, signal: AbortSignal.timeout(60_000), rateLimit: { tokens: 1, intervalMs: 1000 } });
   try {

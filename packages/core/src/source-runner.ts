@@ -1,5 +1,5 @@
-import type { Logger } from '@jobforge/shared';
-import { HttpError, rawPostingSchema, type SourceTarget } from '@jobforge/plugin-sdk';
+import type { Logger } from '@quarry/shared';
+import { HttpError, rawPostingSchema, type SourceTarget } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   closeStaleJobs,
@@ -10,7 +10,7 @@ import {
   type AtsType,
   type DB,
   type SourceTargetRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { normalizePosting } from './normalize.js';
 import { emitStage } from './triggers.js';
 import { isPluginPaused } from './ops-state.js';

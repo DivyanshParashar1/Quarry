@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseAppConfig } from '@jobforge/shared';
+import { parseAppConfig } from '@quarry/shared';
 import { createRegistry } from './index.js';
 
 const pluginsDir = join(import.meta.dirname, '..', '..', '..', 'plugins');
@@ -11,7 +11,7 @@ describe('createRegistry', () => {
     const onDisk = readdirSync(pluginsDir, { withFileTypes: true })
       .filter((d) => d.isDirectory())
       .map((d) => JSON.parse(readFileSync(join(pluginsDir, d.name, 'package.json'), 'utf8')).name as string)
-      .map((name) => name.replace('@jobforge/', ''))
+      .map((name) => name.replace('@quarry/', ''))
       .sort();
     const registered = createRegistry()
       .list()

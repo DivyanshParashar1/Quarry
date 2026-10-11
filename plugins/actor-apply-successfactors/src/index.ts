@@ -17,7 +17,7 @@ import {
   type FormQuestion,
   type WizardSpec,
   type WizardTenant,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 // Phase 21: SAP SuccessFactors apply, best effort.
 //   prepare: GET the job page (no side effects). A filled posting is refused;

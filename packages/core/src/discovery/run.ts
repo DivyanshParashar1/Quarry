@@ -1,5 +1,5 @@
-import type { LLMClient, Logger } from '@jobforge/shared';
-import { appendEvent, findCompanyByDomain, findCompanyByName, finishPluginRun, startPluginRun, type DB } from '@jobforge/db';
+import type { LLMClient, Logger } from '@quarry/shared';
+import { appendEvent, findCompanyByDomain, findCompanyByName, finishPluginRun, startPluginRun, type DB } from '@quarry/db';
 import { discoverAndSave } from './discover-ats.js';
 import { COMPANY_LISTS, dedupeCandidates, type CompanyCandidate, type ListSettings } from './lists.js';
 import type { PageFetcher } from './page-fetcher.js';

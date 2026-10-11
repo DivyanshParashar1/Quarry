@@ -5,9 +5,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { parseAppConfig, preferencesSchema, type AppConfig } from '@jobforge/shared';
-import { defineTailorPlugin, type MatcherPlugin, type RawPosting, type SourcePlugin, type TailoredResume } from '@jobforge/plugin-sdk';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
+import { parseAppConfig, preferencesSchema, type AppConfig } from '@quarry/shared';
+import { defineTailorPlugin, type MatcherPlugin, type RawPosting, type SourcePlugin, type TailoredResume } from '@quarry/plugin-sdk';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
 import {
   enterPipeline,
   getBatchForJob,
@@ -26,13 +26,13 @@ import {
   upsertCompany,
   upsertCompanySource,
   upsertContact,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createHashEmbedder } from '@jobforge/embeddings';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import gmailActor from '@jobforge/actor-gmail-outreach';
-import gmailTracker from '@jobforge/tracker-gmail';
-import linkedinManual from '@jobforge/actor-linkedin-manual';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createHashEmbedder } from '@quarry/embeddings';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
+import gmailActor from '@quarry/actor-gmail-outreach';
+import gmailTracker from '@quarry/tracker-gmail';
+import linkedinManual from '@quarry/actor-linkedin-manual';
 import { embedPending } from './embed-runner.js';
 import { markLinkedInAccepted, markLinkedInSent } from './linkedin-manual.js';
 import { runMatch } from './match-runner.js';
@@ -161,7 +161,7 @@ describe.skipIf(!adminUrl)('sweeper + triggers (postgres)', () => {
       now: () => clock,
       random: () => 0.5,
     };
-    const tailorDeps = { ...deps, resumeDir: mkdtempSync(join(tmpdir(), 'jf-sweep-')), embed: embedder };
+    const tailorDeps = { ...deps, resumeDir: mkdtempSync(join(tmpdir(), 'quarry-sweep-')), embed: embedder };
     seq = {
       db: t.db,
       log: silentLogger,

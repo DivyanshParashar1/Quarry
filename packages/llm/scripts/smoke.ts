@@ -1,9 +1,9 @@
 // Manual smoke test against a REAL provider. Never run in CI; costs a little.
-//   pnpm --filter @jobforge/llm smoke -- --provider claude-code [--model haiku]
-//   pnpm --filter @jobforge/llm smoke -- --provider openrouter [--model openai/gpt-4o-mini]
+//   pnpm --filter @quarry/llm smoke -- --provider claude-code [--model haiku]
+//   pnpm --filter @quarry/llm smoke -- --provider openrouter [--model openai/gpt-4o-mini]
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
-import { createLogger, loadEnv, LLM_PROVIDERS, parseAppConfig, type LLMProviderName } from '@jobforge/shared';
+import { createLogger, loadEnv, LLM_PROVIDERS, parseAppConfig, type LLMProviderName } from '@quarry/shared';
 import { checkClaudeCli, createLLMFromConfig } from '../src/index.js';
 
 const { values } = parseArgs({

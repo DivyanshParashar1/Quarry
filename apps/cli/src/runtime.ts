@@ -1,10 +1,10 @@
-import type { AppConfig, Env, Logger } from '@jobforge/shared';
-import { recordLlmCall, type DB } from '@jobforge/db';
-import { createLLMFromConfig } from '@jobforge/llm';
-import { createLazyEmbedder, createLocalEmbedder } from '@jobforge/embeddings';
-import { createDnsResolver, createGmailClient, DomainRateLimiter, type OutreachDeps, type TailorRunDeps } from '@jobforge/core';
-import type { GmailHandle } from '@jobforge/plugin-sdk';
-import { createRegistry } from '@jobforge/plugins';
+import type { AppConfig, Env, Logger } from '@quarry/shared';
+import { recordLlmCall, type DB } from '@quarry/db';
+import { createLLMFromConfig } from '@quarry/llm';
+import { createLazyEmbedder, createLocalEmbedder } from '@quarry/embeddings';
+import { createDnsResolver, createGmailClient, DomainRateLimiter, type OutreachDeps, type TailorRunDeps } from '@quarry/core';
+import type { GmailHandle } from '@quarry/plugin-sdk';
+import { createRegistry } from '@quarry/plugins';
 
 /** The configured LLM client; every call is logged to llm_calls. */
 export function createLLM(env: Env, config: AppConfig, db: DB, log: Logger) {
@@ -18,7 +18,7 @@ export function createEmbedder(config: AppConfig) {
   });
 }
 
-/** The user's Gmail, or undefined when `jf gmail auth` hasn't been run. */
+/** The user's Gmail, or undefined when `quarry gmail auth` hasn't been run. */
 export async function createGmail(env: Env, limiter: DomainRateLimiter): Promise<GmailHandle | undefined> {
   if (!env.GMAIL_CLIENT_ID || !env.GMAIL_CLIENT_SECRET || !env.GMAIL_REFRESH_TOKEN) return undefined;
   return createGmailClient(

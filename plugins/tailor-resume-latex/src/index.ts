@@ -9,7 +9,7 @@ import {
   type Profile,
   type TailoredResume,
   type TailorSelection,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import { loadResume, type LoadedResume } from './manifest-loader.js';
 import { assembleTex } from './assembler.js';
 import { compileLatex } from './compile.js';

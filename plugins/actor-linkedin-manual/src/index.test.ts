@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { pluginManifestSchema, preferencesSchema, type ApprovedDraft, type LinkedInManualDraft, type OutreachActionInput } from '@jobforge/plugin-sdk';
-import { testContext } from '@jobforge/plugin-sdk/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
+import { pluginManifestSchema, preferencesSchema, type ApprovedDraft, type LinkedInManualDraft, type OutreachActionInput } from '@quarry/plugin-sdk';
+import { testContext } from '@quarry/plugin-sdk/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
 import plugin, { configSchema, draftKind } from './index.js';
 
 const PROFILE = 'https://www.linkedin.com/in/ananya-sharma-1a2b3c/';

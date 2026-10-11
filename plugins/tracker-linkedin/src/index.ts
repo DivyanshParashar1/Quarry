@@ -8,7 +8,7 @@ import {
   parseRelativePosted,
   type BrowserPage,
   type TrackEvent,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 export const configSchema = z
   .object({

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { RawPosting } from '@jobforge/plugin-sdk';
+import type { RawPosting } from '@quarry/plugin-sdk';
 import {
   fingerprint,
   htmlToMarkdown,

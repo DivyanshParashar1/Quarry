@@ -21,7 +21,7 @@ async function call(name: string, path: string, o: { method?: 'GET' | 'POST'; ex
   try {
     const res = await fetch(`${base}${path}`, {
       method: o.method ?? 'GET',
-      headers: o.headers ?? { accept: 'application/json', ...(o.method === 'POST' ? { 'content-type': 'application/json', 'x-jobforge': '1' } : {}) },
+      headers: o.headers ?? { accept: 'application/json', ...(o.method === 'POST' ? { 'content-type': 'application/json', 'x-quarry': '1' } : {}) },
       ...(o.method === 'POST' ? { body: '{}' } : {}),
       signal: AbortSignal.timeout(120_000),
     });
@@ -86,8 +86,8 @@ await call('orchestrator status', '/api/orchestrator', { check: has(['llm', 'inc
 await call('incidents', '/api/incidents', { check: has(['incidents']) });
 await call('dashboard (built SPA)', '/', { expect: [200, 404], check: (b) => (typeof b === 'string' && b.includes('<div id="root"') ? null : typeof b === 'string' ? null : 'not HTML') });
 await call('unknown API route → 404', '/api/does-not-exist', { expect: [404] });
-await call('POST without x-jobforge is refused', '/api/orchestrator/run', { method: 'POST', expect: [403], headers: { 'content-type': 'application/json' } });
-await call('cross-origin POST is refused', '/api/orchestrator/run', { method: 'POST', expect: [403], headers: { 'content-type': 'application/json', 'x-jobforge': '1', origin: 'https://evil.example' } });
+await call('POST without x-quarry is refused', '/api/orchestrator/run', { method: 'POST', expect: [403], headers: { 'content-type': 'application/json' } });
+await call('cross-origin POST is refused', '/api/orchestrator/run', { method: 'POST', expect: [403], headers: { 'content-type': 'application/json', 'x-quarry': '1', origin: 'https://evil.example' } });
 if (ops) await call('orchestrator pass (ops actions only)', '/api/orchestrator/run', { method: 'POST', expect: [200, 503], check: has(['findings']) });
 
 const w = Math.max(...rows.map((r) => r.name.length));

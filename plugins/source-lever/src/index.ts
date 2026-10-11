@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
-import { defineSourcePlugin, type RawPosting, type RemotePolicy } from '@jobforge/plugin-sdk';
+import { PluginError } from '@quarry/shared';
+import { defineSourcePlugin, type RawPosting, type RemotePolicy } from '@quarry/plugin-sdk';
 
 export const configSchema = z.object({});
 export type LeverConfig = z.infer<typeof configSchema>;

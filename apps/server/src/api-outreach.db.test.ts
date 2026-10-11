@@ -3,17 +3,17 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { getActiveProfile, recordPosting, upsertCompany } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createDnsResolver, DomainRateLimiter, loadProfileData, normalizePosting, type OutreachDeps } from '@jobforge/core';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { getActiveProfile, recordPosting, upsertCompany } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createDnsResolver, DomainRateLimiter, loadProfileData, normalizePosting, type OutreachDeps } from '@quarry/core';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
 import { buildApi, requestGuard } from './api.js';
-import { createRegistry } from '@jobforge/plugins';
+import { createRegistry } from '@quarry/plugins';
 import pino from 'pino';
 
 const adminUrl = testDbAdminUrl();
-const H = { 'x-jobforge': '1', 'content-type': 'application/json' };
+const H = { 'x-quarry': '1', 'content-type': 'application/json' };
 
 describe('requestGuard', () => {
   it('allows loopback GETs and same-origin writes with the marker header', () => {
@@ -24,7 +24,7 @@ describe('requestGuard', () => {
   });
   it('blocks DNS-rebinding hosts, missing markers, and cross-site origins', () => {
     expect(requestGuard('evil.example:3000', 'GET', undefined, undefined)).toBe('host_not_allowed');
-    expect(requestGuard('localhost:3000', 'POST', undefined, undefined)).toBe('missing_x_jobforge_header');
+    expect(requestGuard('localhost:3000', 'POST', undefined, undefined)).toBe('missing_x_quarry_header');
     expect(requestGuard('localhost:3000', 'POST', 'https://evil.example', '1')).toBe('cross_origin');
   });
 });
@@ -38,7 +38,7 @@ describe.skipIf(!adminUrl)('outreach API (postgres)', () => {
 
   beforeAll(async () => {
     t = await createTestDb(adminUrl!);
-    profileDir = mkdtempSync(join(tmpdir(), 'jf-api-profile-'));
+    profileDir = mkdtempSync(join(tmpdir(), 'quarry-api-profile-'));
     writeFileSync(join(profileDir, 'facts.yaml'), '# facts\nfacts:\n  - {id: skill-go, kind: skill, content: Go}\n');
     writeFileSync(join(profileDir, 'preferences.yaml'), 'roles: [Backend Engineer]\n');
     const config = parseAppConfig({ outreach: { perCompanyPerWeek: 1 } });

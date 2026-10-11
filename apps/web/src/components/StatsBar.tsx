@@ -5,6 +5,7 @@ export function StatsBar({ stats }: { stats: Stats | undefined }) {
   const m = stats.match;
   const items: [string, string][] = [
     ['open jobs', m.openJobs.toLocaleString()],
+    ...(m.scored.keyword ? ([['keyword-scored', m.scored.keyword.toLocaleString()]] as [string, string][]) : []),
     ['LLM-scored', m.scored.llm.toLocaleString()],
     ['excluded', (m.scored.filtered + m.scored.prefilter).toLocaleString()],
     ['unscored', m.unscored.toLocaleString()],

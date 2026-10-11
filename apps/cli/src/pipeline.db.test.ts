@@ -2,13 +2,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import pino from 'pino';
-import { countJobs, listJobs, listSourceTargets } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { DomainRateLimiter, runSourceTarget, type SourceRunDeps } from '@jobforge/core';
-import { boardUrl } from '@jobforge/source-greenhouse';
-import { postingsUrl } from '@jobforge/source-lever';
+import { countJobs, listJobs, listSourceTargets } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { DomainRateLimiter, runSourceTarget, type SourceRunDeps } from '@quarry/core';
+import { boardUrl } from '@quarry/source-greenhouse';
+import { postingsUrl } from '@quarry/source-lever';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
-import { createRegistry } from '@jobforge/plugins';
+import { createRegistry } from '@quarry/plugins';
 
 const adminUrl = testDbAdminUrl();
 const fixture = (plugin: string, f: string) =>
@@ -32,7 +32,7 @@ Gone Inc,greenhouse,gone,
 Lever Demo,lever,leverdemo,demo
 `;
 
-describe.skipIf(!adminUrl)('jf pipeline with real plugins over fixtures (postgres)', () => {
+describe.skipIf(!adminUrl)('quarry pipeline with real plugins over fixtures (postgres)', () => {
   let t: TestDb;
   let deps: SourceRunDeps;
 

@@ -63,7 +63,7 @@ export function CompaniesPage() {
       {q.error && <p className="text-sm text-red-600">Could not load: {q.error.message}</p>}
       {q.data && q.data.companies.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          Nothing discovered in this window. Enable <code>discovery.nightly</code> in config, or run `pnpm jf discover_companies --all`.
+          Nothing discovered in this window. Enable <code>discovery.nightly</code> in config, or run `pnpm quarry discover_companies --all`.
         </p>
       )}
       <div className="flex flex-col gap-2">

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { isMap, isSeq, parse as parseYaml, parseDocument, type YAMLMap, type YAMLSeq } from 'yaml';
-import { resumeManifestSchema, type BlockMeta, type ResumeManifest } from '@jobforge/plugin-sdk';
+import { resumeManifestSchema, type BlockMeta, type ResumeManifest } from '@quarry/plugin-sdk';
 
 // Server-side read/write for profile/resume/manifest.yaml + blocks/*.tex.
 // The schema is enforced on every write; path writes are confined to

@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 // The LLM contract (PLAN.md §5.1). Lives here so plugins (via plugin-sdk) and
-// @jobforge/llm share one definition without depending on each other.
+// @quarry/llm share one definition without depending on each other.
 
 /** research (Phase 10): web-search-backed estimates such as application deadlines. orchestrator (Phase 22): incident diagnosis. */
 export const LLM_TASKS = ['match', 'tailor', 'outreach', 'extract', 'research', 'orchestrator'] as const;

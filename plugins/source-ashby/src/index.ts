@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
-import { defineSourcePlugin, type RawPosting, type RemotePolicy } from '@jobforge/plugin-sdk';
+import { PluginError } from '@quarry/shared';
+import { defineSourcePlugin, type RawPosting, type RemotePolicy } from '@quarry/plugin-sdk';
 
 export const configSchema = z.object({
   /** Include compensation in the payload (kept for later stages; not normalized yet). */

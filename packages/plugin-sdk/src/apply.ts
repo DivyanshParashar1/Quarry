@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ApplicationProfile } from '@jobforge/shared';
+import type { ApplicationProfile } from '@quarry/shared';
 import type { Job, Profile } from './types.js';
 import { SessionBlockedError, type BrowserPage } from './browser.js';
 import type { OtpResult } from './otp.js';

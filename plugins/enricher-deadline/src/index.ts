@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineEnricherPlugin, type DeadlineEstimate, type Job } from '@jobforge/plugin-sdk';
+import { defineEnricherPlugin, type DeadlineEstimate, type Job } from '@quarry/plugin-sdk';
 
 export const configSchema = z
   .object({

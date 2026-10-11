@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { appendEvent, recordPosting, upsertCompany, type DB } from '@jobforge/db';
-import { emitStage, normalizePosting } from '@jobforge/core';
+import { appendEvent, recordPosting, upsertCompany, type DB } from '@quarry/db';
+import { emitStage, normalizePosting } from '@quarry/core';
 
 // Add a job by hand (a link the user found; the chatbot fetches the JD and posts
 // it here). It becomes a canonical job like any fetched posting — deduped by

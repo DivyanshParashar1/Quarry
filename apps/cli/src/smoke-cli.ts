@@ -1,4 +1,4 @@
-// Smoke test of the `jf` CLI: runs every read-only command once against your
+// Smoke test of the `quarry` CLI: runs every read-only command once against your
 // database (Postgres up, `pnpm db:migrate` done) and reports exit codes. Nothing
 // here sends, submits, approves, writes profile files or spends LLM money.
 //   pnpm smoke:cli [--network]   (--network adds the read-only commands that call public sites / Gmail)
@@ -50,7 +50,7 @@ for (const c of COMMANDS) {
   const ok = (c.ok ?? [0]).includes(r.code) && !/\bat .+\.ts:\d+:\d+\)/.test(r.out); // no stack traces
   if (!ok) failed++;
   const last = r.out.trim().split('\n').filter(Boolean).at(-1) ?? '';
-  console.log(`${ok ? 'OK  ' : 'FAIL'} jf ${c.args.join(' ').padEnd(58)} exit ${r.code} · ${String(r.ms).padStart(5)} ms  ${ok ? '' : last.slice(0, 160)}`);
+  console.log(`${ok ? 'OK  ' : 'FAIL'} quarry ${c.args.join(' ').padEnd(58)} exit ${r.code} · ${String(r.ms).padStart(5)} ms  ${ok ? '' : last.slice(0, 160)}`);
 }
 console.log(failed ? `\n${failed} command(s) failed` : '\nall commands passed');
 process.exit(failed ? 1 : 0);

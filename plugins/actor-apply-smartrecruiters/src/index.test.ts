@@ -12,8 +12,8 @@ import {
   type ApplyInput,
   type ApprovedDraft,
   type BrowserHandle,
-} from '@jobforge/plugin-sdk';
-import { fakeBrowser, fakeGmail, fixtureHttp, testContext } from '@jobforge/plugin-sdk/testing';
+} from '@quarry/plugin-sdk';
+import { fakeBrowser, fakeGmail, fixtureHttp, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { configSchema, configUrl, formUrl, laterKey, parseCompanyId, postingUrl, questionsFromConfig } from './index.js';
 
 const fx = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));

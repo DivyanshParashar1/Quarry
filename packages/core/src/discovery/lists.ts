@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { LLMClient, Logger } from '@jobforge/shared';
+import type { LLMClient, Logger } from '@quarry/shared';
 import { normalizeDomain } from './detect.js';
 import type { PageFetcher } from './page-fetcher.js';
 

@@ -9,7 +9,7 @@ import {
   type EmailSendResult,
   type OutreachActionInput,
   type PluginContext,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import { buildMime, messageIdFor, toBase64Url, type MimeAttachment } from './mime.js';
 import { outreachPrompt, outreachSchema, referralPrompt, referralSchema, REFERRAL_SYSTEM_PROMPT, SYSTEM_PROMPT } from './prompt.js';
 

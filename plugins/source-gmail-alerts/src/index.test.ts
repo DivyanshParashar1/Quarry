@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pluginManifestSchema, rawPostingSchema } from '@jobforge/plugin-sdk';
-import { collect, fakeGmail, testContext, testTarget } from '@jobforge/plugin-sdk/testing';
+import { pluginManifestSchema, rawPostingSchema } from '@quarry/plugin-sdk';
+import { collect, fakeGmail, testContext, testTarget } from '@quarry/plugin-sdk/testing';
 import plugin, { configSchema, parseAlertMessage, PARSERS, tokenize, tokenizeText } from './index.js';
 
 const html = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');
@@ -135,6 +135,6 @@ describe('source-gmail-alerts plugin', () => {
   });
 
   it('fails clearly without Gmail', async () => {
-    await expect(collect(plugin.fetch(testContext(configSchema.parse({})), testTarget('inbox')))).rejects.toThrow(/jf gmail auth/);
+    await expect(collect(plugin.fetch(testContext(configSchema.parse({})), testTarget('inbox')))).rejects.toThrow(/quarry gmail auth/);
   });
 });

@@ -1,14 +1,14 @@
-# Testing JobForge
+# Testing Quarry
 
 Four layers, cheapest first. Nothing here sends email, submits an application, approves a review item or spends LLM
 money unless the line says so.
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `pnpm test` | Unit + integration suites (vitest, recorded fixtures only, no live HTTP). `*.db.test.ts` need Postgres; `JOBFORGE_REQUIRE_DB=1` turns a missing DB into a failure. | `docker compose up -d` |
+| `pnpm test` | Unit + integration suites (vitest, recorded fixtures only, no live HTTP). `*.db.test.ts` need Postgres; `QUARRY_REQUIRE_DB=1` turns a missing DB into a failure. | `docker compose up -d` |
 | `pnpm typecheck && pnpm lint` | Types and lint across the workspace. | — |
-| `pnpm smoke:cli [--network]` | Runs every read-only `jf` command against your DB and checks exit codes / no stack traces. `--network` adds Gmail status + alert parsing (read-only), `discover_ats`, a YC list dry run. | DB; Gmail for `--network` |
-| `pnpm smoke:api [--base URL] [--no-ops]` | Against a **running** server: every read endpoint, the built dashboard, the CSRF guard (no `x-jobforge` header / foreign origin → 403), unknown routes → 404, and one orchestrator pass (ops actions only). | `pnpm server` |
+| `pnpm smoke:cli [--network]` | Runs every read-only `quarry` command against your DB and checks exit codes / no stack traces. `--network` adds Gmail status + alert parsing (read-only), `discover_ats`, a YC list dry run. | DB; Gmail for `--network` |
+| `pnpm smoke:api [--base URL] [--no-ops]` | Against a **running** server: every read endpoint, the built dashboard, the CSRF guard (no `x-quarry` header / foreign origin → 403), unknown routes → 404, and one orchestrator pass (ops actions only). | `pnpm server` |
 | `pnpm live:sources [--save dir]` | Phase 23 read-only: each source plugin against one real public board through the scoped HTTP + rate limits; nothing written to the DB. | network |
 
 ## What the vitest suites guarantee

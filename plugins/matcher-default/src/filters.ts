@@ -1,4 +1,4 @@
-import type { Job, Preferences } from '@jobforge/plugin-sdk';
+import type { Job, Preferences } from '@quarry/plugin-sdk';
 
 // Hard filters: cheap, deterministic, explainable. A job that fails one never
 // reaches the LLM. Each returns a human-readable reason, or null to pass.
@@ -11,7 +11,7 @@ export interface FilterOptions {
 export type HardFilter = (job: Job, p: Preferences, o: FilterOptions) => string | null;
 
 const lc = (s: string) => s.toLowerCase();
-const wordRe = (kw: string) => new RegExp(`(^|[^a-z0-9])${kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^a-z0-9])`);
+export const wordRe = (kw: string) => new RegExp(`(^|[^a-z0-9])${kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^a-z0-9])`);
 
 export const excludedCompany: HardFilter = (job, p) => {
   const c = lc(job.company);
@@ -31,6 +31,20 @@ export const excludedDescription: HardFilter = (job, p) => {
   return hit ? `Description mentions excluded keyword "${hit}"` : null;
 };
 
+export const titleKeywordMissing: HardFilter = (job, p) => {
+  const want = p.keywords.title_any;
+  if (!want.length) return null;
+  const t = lc(job.title);
+  return want.some((k) => wordRe(k).test(t)) ? null : `Title has none of your keywords (${want.slice(0, 6).join(', ')}${want.length > 6 ? ', …' : ''})`;
+};
+
+export const descriptionKeywordMissing: HardFilter = (job, p) => {
+  const want = p.keywords.description_any;
+  if (!want.length) return null;
+  const d = lc(`${job.title}\n${job.descriptionMd ?? ''}`);
+  return want.some((k) => wordRe(k).test(d)) ? null : `Description has none of your keywords (${want.slice(0, 6).join(', ')}${want.length > 6 ? ', …' : ''})`;
+};
+
 export const seniorityMismatch: HardFilter = (job, p) => {
   if (!p.seniority.length) return null;
   const level = job.seniority ?? 'mid';
@@ -42,12 +56,16 @@ export const locationMismatch: HardFilter = (job, p) => {
   if (job.remotePolicy && p.remote_policy.length && !p.remote_policy.includes(job.remotePolicy)) {
     return `${cap(job.remotePolicy)} roles are not in ${p.remote_policy.join('/')}`;
   }
-  if (job.remotePolicy === 'remote' && allowsRemote) return null;
   if (!p.locations.length || !job.locations.length) return null;
   const wanted = p.locations.map(lc);
   const ok = job.locations.some((l) => wanted.some((w) => lc(l).includes(w)));
+  // A remote job passes unless every location names a place ("Remote, US" is still US-only).
+  if (job.remotePolicy === 'remote' && allowsRemote && (ok || job.locations.some(placeless))) return null;
   return ok ? null : `Location ${job.locations.slice(0, 3).join('; ')} is outside ${p.locations.join('/')}`;
 };
+
+/** "Remote", "Anywhere", "Worldwide (Remote)": a location that names no place. */
+const placeless = (l: string) => !lc(l).replace(/\b(remote|anywhere|worldwide|global|work from home|wfh|fully)\b/g, '').replace(/[^a-z]/g, '');
 
 const BATCH_PATTERNS = [
   /\b((?:20\d\d)(?:\s*(?:\/|,|&|and|or|-)\s*(?:20)?\d\d)*)\s*(?:batch|grads?|graduates?|pass[\s-]?outs?|passing out)\b/gi,
@@ -99,11 +117,13 @@ export const experienceMismatch: HardFilter = (job, p, o) => {
 export const HARD_FILTERS: HardFilter[] = [
   excludedCompany,
   excludedTitle,
+  titleKeywordMissing,
   seniorityMismatch,
   locationMismatch,
   batchMismatch,
   experienceMismatch,
   excludedDescription,
+  descriptionKeywordMissing,
 ];
 
 /** First failing filter's reason, or null when the job passes all of them. */

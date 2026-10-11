@@ -50,7 +50,7 @@ describe('claude-code adapter', () => {
     expect(echo.schemaType).toBe('object');
     // The child reports its resolved cwd (macOS: /var -> /private/var).
     expect(echo.cwd.startsWith(realpathSync(tmpdir()))).toBe(true);
-    expect(echo.cwd).toMatch(/jobforge-claude-/);
+    expect(echo.cwd).toMatch(/quarry-claude-/);
     expect(existsSync(echo.cwd)).toBe(false); // cleaned up
     expect(res.usage).toEqual({ promptTokens: 120, completionTokens: 30, totalTokens: 150, costUsd: 0.0123 });
     expect(res.model).toBe('resolved-haiku');

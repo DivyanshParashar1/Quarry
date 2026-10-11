@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import type { PluginManifest, TrackerPlugin } from '@jobforge/plugin-sdk';
+import type { PluginManifest, TrackerPlugin } from '@quarry/plugin-sdk';
 import { generatePassword, keychainCredentials, type KeychainBackend } from './credentials.js';
 import { buildContext, loadPlugin } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';

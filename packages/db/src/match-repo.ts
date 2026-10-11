@@ -103,7 +103,7 @@ export async function jobsToMatch(
 
 export interface MatchResultInput {
   jobId: string;
-  method: 'filtered' | 'prefilter' | 'llm';
+  method: MatchMethod;
   score: number;
   similarity: number | null;
   rubric: Record<string, unknown>;
@@ -147,7 +147,9 @@ export async function saveMatchResults(
 // Dashboard queries
 // ---------------------------------------------------------------------------
 
-export type MatchMethod = 'filtered' | 'prefilter' | 'llm';
+export type MatchMethod = 'filtered' | 'prefilter' | 'llm' | 'keyword';
+/** Methods that produce a real score (the rest are exclusions). */
+export const RANKED_METHODS = ['llm', 'keyword'] as const satisfies readonly MatchMethod[];
 
 export interface RankedJobFilter {
   profileVersion: string | null;
@@ -360,7 +362,7 @@ export async function getJobDetail(db: DB, id: string, profileVersion: string | 
 export interface MatchStats {
   openJobs: number;
   embedded: number;
-  scored: { llm: number; prefilter: number; filtered: number };
+  scored: { llm: number; keyword: number; prefilter: number; filtered: number };
   unscored: number;
 }
 
@@ -369,6 +371,7 @@ export async function matchStats(db: DB, profileVersion: string | null): Promise
     open: number;
     embedded: number;
     llm: number;
+    keyword: number;
     prefilter: number;
     filtered: number;
   }>(sql`
@@ -376,13 +379,14 @@ export async function matchStats(db: DB, profileVersion: string | null): Promise
       count(*)::int as open,
       count(*) filter (where j.embedding is not null)::int as embedded,
       count(*) filter (where m.method = 'llm')::int as llm,
+      count(*) filter (where m.method = 'keyword')::int as keyword,
       count(*) filter (where m.method = 'prefilter')::int as prefilter,
       count(*) filter (where m.method = 'filtered')::int as filtered
     from ${jobs} j
     left join ${matchResults} m on m.job_id = j.id and m.profile_version = ${profileVersion ?? ''}
     where j.closed_at is null`);
-  const scored = { llm: r!.llm, prefilter: r!.prefilter, filtered: r!.filtered };
-  return { openJobs: r!.open, embedded: r!.embedded, scored, unscored: r!.open - scored.llm - scored.prefilter - scored.filtered };
+  const scored = { llm: r!.llm, keyword: r!.keyword, prefilter: r!.prefilter, filtered: r!.filtered };
+  return { openJobs: r!.open, embedded: r!.embedded, scored, unscored: r!.open - scored.llm - scored.keyword - scored.prefilter - scored.filtered };
 }
 
 export async function listCompanyNames(db: DB): Promise<string[]> {

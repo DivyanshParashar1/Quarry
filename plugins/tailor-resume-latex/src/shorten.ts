@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { GuardrailIssue, LLMClient, RewriteValidation } from '@jobforge/plugin-sdk';
+import type { GuardrailIssue, LLMClient, RewriteValidation } from '@quarry/plugin-sdk';
 import type { BulletRef, Shortener } from './fit.js';
 import { plainText } from './fit.js';
 

@@ -1,7 +1,7 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Job, LLMClient, LLMRequest, LLMResponse } from '@jobforge/plugin-sdk';
+import type { Job, LLMClient, LLMRequest, LLMResponse } from '@quarry/plugin-sdk';
 import { assembleTex } from './assembler.js';
 import { loadResume } from './manifest-loader.js';
 import { deterministicSelection } from './index.js';

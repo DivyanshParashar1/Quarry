@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { getContactImport, getJobDetail, latestRenderedResumeForJob, listContactImports, type DB } from '@jobforge/db';
+import { getContactImport, getJobDetail, latestRenderedResumeForJob, listContactImports, type DB } from '@quarry/db';
 import {
   commitContactImport,
   ContactImportError,
@@ -15,8 +15,8 @@ import {
   UnsupportedFileError,
   type OutreachDeps,
   type OutreachPolicy,
-} from '@jobforge/core';
-import type { LLMClient } from '@jobforge/shared';
+} from '@quarry/core';
+import type { LLMClient } from '@quarry/shared';
 
 // Phase 17: contact-sheet import (upload → preview → commit) and the manual
 // LinkedIn queue (drafts the user copies, then marks sent / replied).

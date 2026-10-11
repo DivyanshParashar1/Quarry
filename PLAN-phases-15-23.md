@@ -1,4 +1,4 @@
-# JobForge: Phase Plan 15–23 (Full Automation)
+# Quarry: Phase Plan 15–23 (Full Automation)
 
 > Extends `PLAN.md` and `PLAN-phases-6-13.md`. Current state: Phases 6–13 done, plus the Phase 14 backpressure.
 > Goal: the whole loop runs unattended. Each stage emits an event that triggers the next; an hourly
@@ -110,7 +110,7 @@ state, so a missed event only costs latency, never a lost job.
 - **Per-job tailoring = only the Technical Skills rewrite** on the chosen combo (always, one LLM call),
   then re-fit and re-score; the tailored resume is kept only if its ATS score for that job is ≥ the
   combo's, else the combo is used as-is. `selector.threshold` (75) only flags a weak fit.
-- **Manual:** `jf tailor <jobId>` / the job page go through the selector; `--force` / "Generate new"
+- **Manual:** `quarry tailor <jobId>` / the job page go through the selector; `--force` / "Generate new"
   re-picks the best combo and reruns the skills rewrite. Full per-job generation (Phase 15 path) runs
   only when the library is empty.
 - Done when: combos + base render; benchmarks score them per ATS; a new job picks the best combo with
@@ -122,7 +122,7 @@ state, so a missed event only costs latency, never a lost job.
 ## Phase 17 — Referral machine v2: Excel contact import + LinkedIn 1st/2nd degree + dashboard connect
 
 ### Scope
-- **Contact import** (`jf contacts import <file>`, `POST /api/contacts/import`, dashboard upload):
+- **Contact import** (`quarry contacts import <file>`, `POST /api/contacts/import`, dashboard upload):
   - Reads `.xlsx`, `.xls`, `.csv` (new dependency: `exceljs` for xlsx; csv via existing parsing).
   - EDA report: sheets, header row detection, column types, fill rates, duplicates, invalid emails, mixed name formats.
   - Column mapping: deterministic header/value heuristics (email regex, LinkedIn URL, company names matched to `companies`); **LLM fallback** only for columns it can't classify.

@@ -1,11 +1,12 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: jobforge-postgres
+    container_name: quarry-postgres
     # initdb can pick as few as 20 connections; the parallel DB test suite needs more.
     command: ["postgres", "-c", "max_connections=100"]
     restart: unless-stopped
     environment:
+      # Pre-rename credentials, kept: ./pgdata was initialised with them.
       POSTGRES_USER: jobforge
       POSTGRES_PASSWORD: jobforge
       POSTGRES_DB: jobforge

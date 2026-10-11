@@ -24,10 +24,10 @@ import {
   type BenchmarkCategoryRow,
   type DB,
   type ResumeVariantRow,
-} from '@jobforge/db';
-import { cosine, jobEmbeddingText } from '@jobforge/embeddings';
-import type { Job, Profile, ResumeComboSpec, TailoredResume, TailorPlugin } from '@jobforge/plugin-sdk';
-import { resumesConfigSchema, type ResumesConfig } from '@jobforge/shared';
+} from '@quarry/db';
+import { cosine, jobEmbeddingText } from '@quarry/embeddings';
+import type { Job, Profile, ResumeComboSpec, TailoredResume, TailorPlugin } from '@quarry/plugin-sdk';
+import { resumesConfigSchema, type ResumesConfig } from '@quarry/shared';
 import {
   analyzeResumeText,
   atsProfileFor,

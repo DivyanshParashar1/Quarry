@@ -6,7 +6,7 @@ import {
   type LinkedInNoteDraft,
   type LinkedInSendResult,
   type TrackEvent,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import {
   appendEvent,
   approvedDueItems,
@@ -26,7 +26,7 @@ import {
   transitionReviewItem,
   tryLease,
   type ReviewItemRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { buildContext } from './plugins.js';
 import { linkedinPaused, pauseLinkedIn, syncLinkedInAttention, type LinkedInDeps } from './linkedin.js';
 import { coreApprovedDraft, isCoreApproved, noteBatchSent, onThreadReplied, referralLimitProblem, type OutreachPolicy } from './outreach.js';

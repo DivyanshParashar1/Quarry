@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { DomainNotAllowedError } from '@jobforge/plugin-sdk';
+import { DomainNotAllowedError } from '@quarry/plugin-sdk';
 import { buildContext, loadPlugin, PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
 import { fakeClock, silentLogger } from './test-utils.js';

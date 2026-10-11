@@ -1,5 +1,5 @@
 # Fact bank for grounded tailoring and matching. See PLAN.md section 7.
-# Load into the DB with `pnpm jf profile load` (re-run after every edit).
+# Load into the DB with `pnpm quarry profile load` (re-run after every edit).
 #
 # Every fact becomes a row in `profile_facts`. The tailor may only select,
 # reorder, and rephrase these facts, and every bullet cites its fact `id`, so:

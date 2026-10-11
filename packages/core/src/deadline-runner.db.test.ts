@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { getJobDetail, recordPosting, saveMatchResults, sql, upsertCompany } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import deadlineEnricher from '@jobforge/enricher-deadline';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { getJobDetail, recordPosting, saveMatchResults, sql, upsertCompany } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
+import deadlineEnricher from '@quarry/enricher-deadline';
 import { normalizePosting } from './normalize.js';
 import { loadProfileData } from './profile-loader.js';
 import { PluginRegistry } from './plugins.js';

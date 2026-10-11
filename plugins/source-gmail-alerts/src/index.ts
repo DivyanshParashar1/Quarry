@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
-import { defineSourcePlugin, type GmailHandle, type PluginContext, type RawPosting } from '@jobforge/plugin-sdk';
+import { PluginError } from '@quarry/shared';
+import { defineSourcePlugin, type GmailHandle, type PluginContext, type RawPosting } from '@quarry/plugin-sdk';
 import { parseCards, type AlertParser, type AlertPosting } from './cards.js';
 import { tokenize, tokenizeText } from './html.js';
 import { PARSERS, PARSER_IDS } from './parsers/index.js';
@@ -66,7 +66,7 @@ async function messagesFor(gmail: GmailHandle, parser: AlertParser, after: numbe
 async function* readInbox(ctx: PluginContext<GmailAlertsConfig>, since: Date): AsyncGenerator<RawPosting> {
   const gmail = ctx.gmail;
   if (!gmail?.search || !gmail.getMessage || !gmail.getMessageBody) {
-    throw new PluginError('Gmail (read scope) is not connected; run `jf gmail auth`');
+    throw new PluginError('Gmail (read scope) is not connected; run `quarry gmail auth`');
   }
   const after = Math.floor(since.getTime() / 1000);
   const seen = new Set<string>();

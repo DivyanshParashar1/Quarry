@@ -3,10 +3,10 @@ import type { FastifyInstance } from 'fastify';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createReviewItem, insertResumeVariant, recordPosting, upsertCompany, upsertCompanySource, upsertContact, upsertIncident } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { loadProfileData, normalizePosting } from '@jobforge/core';
-import { preferencesSchema } from '@jobforge/shared';
+import { createReviewItem, insertResumeVariant, recordPosting, upsertCompany, upsertCompanySource, upsertContact, upsertIncident } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { loadProfileData, normalizePosting } from '@quarry/core';
+import { preferencesSchema } from '@quarry/shared';
 import { buildApi } from './api.js';
 import { routesFromTree } from './route-tree.js';
 
@@ -18,7 +18,7 @@ import { routesFromTree } from './route-tree.js';
 // without an entry fails `every registered route has a smoke entry`.
 
 const adminUrl = testDbAdminUrl();
-const H = { 'x-jobforge': '1', 'content-type': 'application/json' };
+const H = { 'x-quarry': '1', 'content-type': 'application/json' };
 const NIL = '00000000-0000-4000-8000-000000000000';
 
 interface Smoke {

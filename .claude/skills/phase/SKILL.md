@@ -1,11 +1,11 @@
 ---
 name: phase
-description: Work on a single PLAN.md phase end-to-end. Use when the user says "start Phase N", "finish the phase", or asks to resume work on JobForge. Enforces the one-phase-at-a-time rule and the stop-at-end-of-phase handoff.
+description: Work on a single PLAN.md phase end-to-end. Use when the user says "start Phase N", "finish the phase", or asks to resume work on Quarry. Enforces the one-phase-at-a-time rule and the stop-at-end-of-phase handoff.
 ---
 
 # phase
 
-JobForge is built in discrete phases defined in `PLAN.md` section 8. This skill runs one phase properly.
+Quarry is built in discrete phases defined in `PLAN.md` section 8. This skill runs one phase properly.
 
 ## When invoked
 
@@ -46,4 +46,4 @@ Then:
 
 - `pnpm db:generate` — generate Drizzle migration from schema changes
 - `pnpm db:migrate` — apply migrations (requires `docker compose up -d` first)
-- `pnpm --filter @jobforge/<pkg> <script>` — run a workspace script
+- `pnpm --filter @quarry/<pkg> <script>` — run a workspace script

@@ -2,16 +2,17 @@
 // the pg-boss stage workers.
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { findUp, loadAppConfig, loadEnv, createLogger } from '@jobforge/shared';
-import { createDb } from '@jobforge/db';
-import { createPageFetcher, embedPending, handleStageEvent, runMatch, runSweep, setStageSink, type StageEvent, importLinkedInEmployees, runAtsRecheck, runNightlyDiscovery, launchBrowser, runApplyTick, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@jobforge/core';
+import { findUp, loadAppConfig, loadEnv, createLogger } from '@quarry/shared';
+import { createDb } from '@quarry/db';
+import { createPageFetcher, embedPending, handleStageEvent, runMatch, runSweep, setStageSink, type StageEvent, importLinkedInEmployees, runAtsRecheck, runNightlyDiscovery, launchBrowser, runApplyTick, linkedinBrowserFactory, pollLinkedInTracker, runDeadlines, runLinkedInSendTick, DomainRateLimiter, enqueueSourceFetches, runAlertSource, registerOutreachWorkers, registerSourceWorker, runAutopilot, startBoss } from '@quarry/core';
 import { buildApi } from './api.js';
-import { createRegistry } from '@jobforge/plugins';
-import { createLazyEmbedder } from '@jobforge/embeddings';
+import { createRegistry } from '@quarry/plugins';
+import { createLazyEmbedder } from '@quarry/embeddings';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
 import { createOrchestrator } from './orchestrator.js';
 import { ChatRunner } from './chat-runner.js';
 import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -135,7 +136,7 @@ export async function bootstrap() {
   const match = async (jobIds?: string[]) => {
     const e = await embedPending({ db, embedder, log });
     const m = await runMatch({ db, registry, log, limiter, dryRun: env.MODE !== 'live', llm: await llmLazy(), embed: embedder }, { limit: config.sweeper.matchLimit, ...(jobIds ? { jobIds } : {}) });
-    return { embedded: e.jobs, llm: m.llm, prefilter: m.prefilter, filtered: m.filtered, unscored: m.unscored };
+    return { embedded: e.jobs, llm: m.llm, keyword: m.keyword, prefilter: m.prefilter, filtered: m.filtered, unscored: m.unscored };
   };
   const sweepDeps = {
     db,
@@ -222,7 +223,8 @@ export async function bootstrap() {
       db,
       log: log.child({ component: 'chat' }),
       repoDir: ws ? dirname(ws) : process.cwd(),
-      worktreeRoot: join(homedir(), '.jobforge', 'chat'),
+      // Pre-rename chats live in ~/.jobforge/chat; keep using it so they can still be resumed.
+      worktreeRoot: existsSync(join(homedir(), '.jobforge', 'chat')) ? join(homedir(), '.jobforge', 'chat') : join(homedir(), '.quarry', 'chat'),
       apiUrl: `http://127.0.0.1:${env.PORT}`,
       claude: { command: env.CLAUDE_CLI_PATH, ...(config.chat.model ? { model: config.chat.model } : {}), timeoutMs: config.chat.timeoutMin * 60_000 },
       setup: config.chat.setup,
@@ -276,7 +278,7 @@ export async function bootstrap() {
       outreachLoops: loops,
       plugins: registry.list().map((p) => p.manifest.id),
     },
-    'jobforge server started',
+    'quarry server started',
   );
 
   const shutdown = async (signal: string) => {

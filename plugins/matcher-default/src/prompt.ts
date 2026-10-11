@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Job, Profile } from '@jobforge/plugin-sdk';
+import type { Job, Profile } from '@quarry/plugin-sdk';
 
 export const rubricItemSchema = z.object({
   ref: z.string().describe('The job ref exactly as given, e.g. "J3"'),

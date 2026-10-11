@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pluginManifestSchema, type Company, type ContactRef, type DnsResolver } from '@jobforge/plugin-sdk';
-import { testContext } from '@jobforge/plugin-sdk/testing';
+import { pluginManifestSchema, type Company, type ContactRef, type DnsResolver } from '@quarry/plugin-sdk';
+import { testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { applyPattern, choosePattern, configSchema, nameParts, normalizeDomain } from './index.js';
 
 const dns = (records: Record<string, string[]>): DnsResolver => ({

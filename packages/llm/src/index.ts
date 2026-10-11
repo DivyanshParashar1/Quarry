@@ -1,4 +1,4 @@
-export type { LLMClient, LLMRequest, LLMResponse, LLMTask, Usage } from '@jobforge/shared';
+export type { LLMClient, LLMRequest, LLMResponse, LLMTask, Usage } from '@quarry/shared';
 export * from './provider.js';
 export * from './json-schema.js';
 export * from './client.js';

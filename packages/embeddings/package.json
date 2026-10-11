@@ -1,5 +1,5 @@
 {
-  "name": "@jobforge/embeddings",
+  "name": "@quarry/embeddings",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,6 +17,6 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
-    "@jobforge/shared": "workspace:*"
+    "@quarry/shared": "workspace:*"
   }
 }

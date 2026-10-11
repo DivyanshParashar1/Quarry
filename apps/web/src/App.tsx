@@ -109,7 +109,7 @@ export function App() {
     <div className="mx-auto flex h-screen max-w-[1500px] flex-col">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex items-center gap-4">
-          <h1 className="text-base font-semibold tracking-tight">JobForge</h1>
+          <h1 className="text-base font-semibold tracking-tight">Quarry</h1>
           <nav className="flex gap-1 text-sm">
             {(
               [
@@ -274,11 +274,11 @@ function Notices({
   let msg: string | null = null;
   if (!stats.profile)
     msg =
-      'No profile loaded yet. Fill in profile/facts.yaml and preferences.yaml, then run `pnpm jf profile load`.';
+      'No profile loaded yet. Fill in profile/facts.yaml and preferences.yaml, then run `pnpm quarry profile load`.';
   else if (stats.match.openJobs === 0)
-    msg = 'No jobs yet. Import companies and run `pnpm jf fetch`.';
-  else if (view === 'ranked' && stats.match.scored.llm === 0)
-    msg = 'Nothing scored yet. Run `pnpm jf match`, or switch to All.';
+    msg = 'No jobs yet. Import companies and run `pnpm quarry fetch`.';
+  else if (view === 'ranked' && stats.match.scored.llm + stats.match.scored.keyword === 0)
+    msg = 'Nothing scored yet. Run `pnpm quarry match`, or switch to All.';
   else if (view === 'ranked' && total === 0) msg = 'No ranked jobs match these filters.';
   if (!msg) return null;
   return <div className="border-b border-border bg-muted px-4 py-2 text-sm">{msg}</div>;

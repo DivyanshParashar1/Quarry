@@ -89,7 +89,7 @@ export function createClaudeCodeProvider(opts: ClaudeCodeOptions): LLMProvider {
           throw new ProviderError('prompt exceeds the 10MB stdin limit', 'claude-code');
         }
         // Empty cwd so no project CLAUDE.md, hooks, or .mcp.json are picked up.
-        const cwd = await mkdtemp(join(tmpdir(), 'jobforge-claude-'));
+        const cwd = await mkdtemp(join(tmpdir(), 'quarry-claude-'));
         try {
           const res = await run(cliPath, buildClaudeArgs(req), {
             stdin: req.prompt,

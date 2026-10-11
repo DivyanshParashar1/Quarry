@@ -3,9 +3,9 @@ import { readFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { fakeBrowser } from '@jobforge/plugin-sdk/testing';
-import { applicationDraftSchema } from '@jobforge/plugin-sdk';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { fakeBrowser } from '@quarry/plugin-sdk/testing';
+import { applicationDraftSchema } from '@quarry/plugin-sdk';
 import {
   createReviewItem,
   getReviewItem,
@@ -14,10 +14,10 @@ import {
   sql,
   upsertCompany,
   upsertCompanySource,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import greenhouseApply from '@jobforge/actor-apply-greenhouse';
-import { formUrl, questionsUrl } from '@jobforge/actor-apply-greenhouse';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import greenhouseApply from '@quarry/actor-apply-greenhouse';
+import { formUrl, questionsUrl } from '@quarry/actor-apply-greenhouse';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
 import { approveReviewItem, editDraft } from './outreach.js';
@@ -26,7 +26,7 @@ import { runSourceTarget } from './source-runner.js';
 import { loadProfileData } from './profile-loader.js';
 import { fakeClock, silentLogger } from './test-utils.js';
 import { z } from 'zod';
-import type { SourcePlugin } from '@jobforge/plugin-sdk';
+import type { SourcePlugin } from '@quarry/plugin-sdk';
 
 const adminUrl = testDbAdminUrl();
 const ghFixture = (f: string) => readFileSync(fileURLToPath(new URL(`../../../plugins/actor-apply-greenhouse/fixtures/${f}`, import.meta.url)), 'utf8');

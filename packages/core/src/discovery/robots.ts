@@ -79,7 +79,7 @@ export class RobotsCache {
 
   constructor(
     private readonly fetchRobots: RobotsFetch,
-    private readonly userAgent = 'JobForge',
+    private readonly userAgent = 'Quarry',
   ) {}
 
   async allowed(url: string): Promise<boolean> {

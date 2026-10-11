@@ -1,6 +1,6 @@
 // Response shapes of apps/server/src/api.ts (dates arrive as ISO strings).
 
-export type MatchMethod = 'llm' | 'prefilter' | 'filtered';
+export type MatchMethod = 'llm' | 'keyword' | 'prefilter' | 'filtered';
 
 export interface JobRow {
   id: string;
@@ -78,11 +78,11 @@ export async function getJson<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** Writes carry x-jobforge: 1; the server refuses state changes without it (CSRF guard). */
+/** Writes carry x-quarry: 1; the server refuses state changes without it (CSRF guard). */
 export async function send<T>(path: string, method: 'POST' | 'PATCH' | 'PUT' | 'DELETE', body: unknown = {}): Promise<T> {
   const res = await fetch(path, {
     method,
-    headers: { 'content-type': 'application/json', accept: 'application/json', 'x-jobforge': '1' },
+    headers: { 'content-type': 'application/json', accept: 'application/json', 'x-quarry': '1' },
     body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string; issues?: string[] };
@@ -104,7 +104,7 @@ export class ApiError extends Error {
 export async function upload<T>(path: string, file: File, field = 'file'): Promise<T> {
   const form = new FormData();
   form.append(field, file);
-  const res = await fetch(path, { method: 'POST', headers: { accept: 'application/json', 'x-jobforge': '1' }, body: form });
+  const res = await fetch(path, { method: 'POST', headers: { accept: 'application/json', 'x-quarry': '1' }, body: form });
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; message?: string };
   if (!res.ok) throw new ApiError(res.status, data.error ?? 'error', data.message ?? res.statusText);
   return data;

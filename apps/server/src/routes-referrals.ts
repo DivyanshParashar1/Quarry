@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { AppConfig } from '@jobforge/shared';
-import { getBatchForJob, type DB } from '@jobforge/db';
+import type { AppConfig } from '@quarry/shared';
+import { getBatchForJob, type DB } from '@quarry/db';
 import {
   approveBatch,
   fanOutReferrals,
@@ -13,7 +13,7 @@ import {
   syncLinkedInAttention,
   type LinkedInDeps,
   type OutreachDeps,
-} from '@jobforge/core';
+} from '@quarry/core';
 
 export interface ReferralRouteOptions {
   db: DB;

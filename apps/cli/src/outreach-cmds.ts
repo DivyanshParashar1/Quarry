@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { AppConfig, Env, Logger } from '@jobforge/shared';
+import type { AppConfig, Env, Logger } from '@quarry/shared';
 import {
   findCompanyByName,
   getReviewItem,
@@ -13,7 +13,7 @@ import {
   AmbiguousContactError,
   type DB,
   type ReviewListRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import {
   approveReviewItem,
   draftDueFollowups,
@@ -28,8 +28,8 @@ import {
   previewContactImport,
   type ImportPreview,
   type SendTickResult,
-} from '@jobforge/core';
-import { createLLMFromConfig } from '@jobforge/llm';
+} from '@quarry/core';
+import { createLLMFromConfig } from '@quarry/llm';
 import { fmtDate, table } from './format.js';
 import { outreachDeps } from './runtime.js';
 
@@ -86,7 +86,7 @@ const pct = (n: number | null) => (n === null ? '' : `${Math.round(n * 100)}%`);
 
 export async function contactsCommand(sub: string | undefined, v: CmdValues, c: CmdCtx, arg?: string): Promise<number> {
   if (sub === 'import') {
-    if (!arg) throw new CmdError('usage: jf contacts import <file.xlsx|file.csv> [--yes]');
+    if (!arg) throw new CmdError('usage: quarry contacts import <file.xlsx|file.csv> [--yes]');
     const path = resolve(arg);
     const llm = createLLMFromConfig(c.env, c.config, { log: c.log });
     const p = await previewContactImport(c.db, { data: readFileSync(path), filename: path }, { classify: llmColumnClassifier(llm) });
@@ -101,7 +101,7 @@ export async function contactsCommand(sub: string | undefined, v: CmdValues, c: 
     return 0;
   }
   if (sub === 'add') {
-    if (!v.company || !v.name) throw new CmdError('usage: jf contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]');
+    if (!v.company || !v.name) throw new CmdError('usage: quarry contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]');
     let company = await findCompanyByName(c.db, v.company);
     if (!company && !v.domain) throw new CmdError(`unknown company "${v.company}"; pass --domain to create it`);
     if (!company || v.domain) {
@@ -118,7 +118,7 @@ export async function contactsCommand(sub: string | undefined, v: CmdValues, c: 
       throw err instanceof AmbiguousContactError ? new CmdError(err.message) : err;
     });
     c.out(`${created ? 'added' : 'updated'} ${contact.name} at ${company!.name} (${contact.id.slice(0, 8)})${contact.email ? ` <${contact.email}>` : ''}`);
-    if (!contact.email) c.out('No email yet: run `jf contacts enrich` to infer one.');
+    if (!contact.email) c.out('No email yet: run `quarry contacts enrich` to infer one.');
     return 0;
   }
   if (sub === 'list') {
@@ -146,7 +146,7 @@ export async function contactsCommand(sub: string | undefined, v: CmdValues, c: 
       c.out(`${r.company}: ${r.error ? `FAILED ${r.error}` : `${r.emailDomain ?? 'no domain'} · ${r.pattern ?? '-'} (${pct(r.patternConfidence)}) · ${r.emailsSet} email(s) set`}`);
       for (const n of r.notes) c.out(`  - ${n}`);
     }
-    if (!res.length) c.out('No contacts yet. Add some with `jf contacts add`.');
+    if (!res.length) c.out('No contacts yet. Add some with `quarry contacts add`.');
     return 0;
   }
   throw new CmdError(`unknown command: contacts ${sub ?? ''}`);
@@ -171,7 +171,7 @@ export async function reviewCommand(sub: string | undefined, arg: string | undef
     c.out(rows.length ? reviewTable(rows) : 'Review queue is empty.');
     return 0;
   }
-  if (!arg) throw new CmdError(`usage: jf review ${sub} <id>`);
+  if (!arg) throw new CmdError(`usage: quarry review ${sub} <id>`);
   const id = await resolveIdPrefix(c.db, 'review_items', arg);
   if (sub === 'show') {
     const item = (await getReviewItem(c.db, id))!;
@@ -200,7 +200,7 @@ export async function reviewCommand(sub: string | undefined, arg: string | undef
   }
   if (sub === 'approve') {
     const item = await approveReviewItem(c.db, c.config.outreach, id, { overrideCompanyCap: !!v['override-company-cap'] });
-    c.out(`approved ${item.id.slice(0, 8)}. It is sent by \`jf outreach send --live\` (or the server in MODE=live).`);
+    c.out(`approved ${item.id.slice(0, 8)}. It is sent by \`quarry outreach send --live\` (or the server in MODE=live).`);
     return 0;
   }
   if (sub === 'reject') {
@@ -224,7 +224,7 @@ function printTick(r: SendTickResult, out: (s: string) => void): void {
 
 export async function outreachCommand(sub: string | undefined, v: CmdValues, c: CmdCtx): Promise<number> {
   if (sub === 'draft') {
-    if (!v.contact) throw new CmdError('usage: jf outreach draft --contact <id> [--job <id>] [--force]');
+    if (!v.contact) throw new CmdError('usage: quarry outreach draft --contact <id> [--job <id>] [--force]');
     const deps = await outreachDeps({ ...c, llm: true });
     const contactId = await resolveIdPrefix(c.db, 'contacts', v.contact);
     const jobId = v.job ? await resolveIdPrefix(c.db, 'jobs', v.job) : null;

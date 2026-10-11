@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { finishPluginRun, listSourceTargets, setCompanyTags, sql, startPluginRun, upsertCompany, upsertCompanySource } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { parseAppConfig } from '@jobforge/shared';
+import { finishPluginRun, listSourceTargets, setCompanyTags, sql, startPluginRun, upsertCompany, upsertCompanySource } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { parseAppConfig } from '@quarry/shared';
 import { silentLogger } from '../test-utils.js';
 import type { PageFetcher, PageResponse } from './page-fetcher.js';
 import { runAtsRecheck, runNightlyDiscovery } from './continuous.js';

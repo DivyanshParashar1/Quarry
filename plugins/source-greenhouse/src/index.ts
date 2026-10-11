@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
-import { decodeEntities, defineSourcePlugin, type RawPosting, type RemotePolicy } from '@jobforge/plugin-sdk';
+import { PluginError } from '@quarry/shared';
+import { decodeEntities, defineSourcePlugin, type RawPosting, type RemotePolicy } from '@quarry/plugin-sdk';
 
 export const configSchema = z.object({
   /** Fetch full descriptions (`content=true`). Larger payloads, but needed for matching. */

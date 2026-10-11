@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
+import { PluginError } from '@quarry/shared';
 import {
   decodeEntities,
   defineSourcePlugin,
   HttpError,
   matchesLocationFilter,
   type RawPosting,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 const HOST = 'api.smartrecruiters.com';
 export const PAGE_SIZE = 100;

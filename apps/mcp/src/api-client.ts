@@ -1,4 +1,4 @@
-// Thin client for the JobForge HTTP API (apps/server). The MCP server never
+// Thin client for the Quarry HTTP API (apps/server). The MCP server never
 // touches the database directly: everything goes through the same API and
 // guards the dashboard uses.
 
@@ -29,17 +29,17 @@ export function createApiClient(baseUrl: string, fetchImpl: typeof fetch = fetch
     async get(path, query = {}) {
       const qs = new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== '') as [string, string][]);
       const res = await fetchImpl(`${base}${path}${qs.size ? `?${qs}` : ''}`, { headers: { accept: 'application/json' } }).catch((err: Error) => {
-        throw new Error(`JobForge server not reachable at ${base} (start it with \`pnpm server\`): ${err.message}`);
+        throw new Error(`Quarry server not reachable at ${base} (start it with \`pnpm server\`): ${err.message}`);
       });
       return handle(res);
     },
     async send(method, path, body = {}) {
       const res = await fetchImpl(`${base}${path}`, {
         method,
-        headers: { 'content-type': 'application/json', accept: 'application/json', 'x-jobforge': '1' },
+        headers: { 'content-type': 'application/json', accept: 'application/json', 'x-quarry': '1' },
         body: JSON.stringify(body),
       }).catch((err: Error) => {
-        throw new Error(`JobForge server not reachable at ${base}: ${err.message}`);
+        throw new Error(`Quarry server not reachable at ${base}: ${err.message}`);
       });
       return handle(res);
     },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pluginManifestSchema } from '@jobforge/plugin-sdk';
-import { collect, fakeGmail, testContext } from '@jobforge/plugin-sdk/testing';
+import { pluginManifestSchema } from '@quarry/plugin-sdk';
+import { collect, fakeGmail, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { classify, configSchema } from './index.js';
 
 const meta = (headers: Record<string, string>) => ({ id: 'm', threadId: 't', labelIds: [], internalDate: new Date(), snippet: '', headers });

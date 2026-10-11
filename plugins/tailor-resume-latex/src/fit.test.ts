@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { createLogger } from '@jobforge/shared';
+import { createLogger } from '@quarry/shared';
 import { assembleTex } from './assembler.js';
 import { loadResume } from './manifest-loader.js';
 import { compileLatex } from './compile.js';
@@ -31,7 +31,7 @@ function fakeCompiler(capacity: number) {
   const calls: string[] = [];
   const compile = async (tex: string) => {
     calls.push(tex);
-    const m = tex.match(/% jobforge fit: ([\d.]+)pt, linespread ([\d.]+)/);
+    const m = tex.match(/% quarry fit: ([\d.]+)pt, linespread ([\d.]+)/);
     const font = m ? Number(m[1]) : 10;
     const spread = m ? Number(m[2]) : 1;
     const area = textArea(tex) * (font / 10) ** 2 * spread;
@@ -74,10 +74,10 @@ describe('fit preamble', () => {
   it('goes into a %%FIT%% slot when present, else before \\begin{document}', () => {
     const t = { fontPt: 9.5, linespread: 1 };
     const slotted = applyTypography('\\documentclass[10pt]{article}\n%%FIT%%\nX\n\\begin{document}\n\\end{document}', t);
-    expect(slotted.indexOf('jobforge fit')).toBeLessThan(slotted.indexOf('X'));
+    expect(slotted.indexOf('quarry fit')).toBeLessThan(slotted.indexOf('X'));
     const plain = applyTypography('\\documentclass[10pt]{article}\nX\n\\begin{document}\n\\end{document}', t);
-    expect(plain.indexOf('jobforge fit')).toBeGreaterThan(plain.indexOf('X'));
-    expect(plain.indexOf('jobforge fit')).toBeLessThan(plain.indexOf('\\begin{document}'));
+    expect(plain.indexOf('quarry fit')).toBeGreaterThan(plain.indexOf('X'));
+    expect(plain.indexOf('quarry fit')).toBeLessThan(plain.indexOf('\\begin{document}'));
   });
 
   it('steps font to the floor, then line spacing', () => {
@@ -134,7 +134,7 @@ describe('fitToOnePage', () => {
     expect(r.pages).toBe(1);
     expect(r.fit).toMatchObject({ fontPt: 9, linespread: 1, rounds: 0, compiles: 3, shortenedBullets: [] });
     expect(shortenCalls).toBe(0);
-    expect(r.tex).toContain('% jobforge fit: 9pt, linespread 1');
+    expect(r.tex).toContain('% quarry fit: 9pt, linespread 1');
   });
 
   it('shortens bullets when typography runs out, and reverts one that invents a number', async () => {

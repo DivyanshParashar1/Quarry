@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { createReviewItem, listContacts, recordPosting, upsertCompany } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { normalizePosting } from '@jobforge/core';
+import { createReviewItem, listContacts, recordPosting, upsertCompany } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { normalizePosting } from '@quarry/core';
 import { buildApi } from './api.js';
 
 const adminUrl = testDbAdminUrl();
-const H = { 'x-jobforge': '1' };
+const H = { 'x-quarry': '1' };
 
 function multipart(filename: string, content: string): { payload: Buffer; headers: Record<string, string> } {
   const boundary = '----jftest' + Math.random().toString(16).slice(2);
@@ -93,7 +93,7 @@ describe.skipIf(!adminUrl)('contacts import + manual LinkedIn API (postgres)', (
   });
 
   it('lists, edits and deletes saved application answers', async () => {
-    const { upsertBankAnswer } = await import('@jobforge/db');
+    const { upsertBankAnswer } = await import('@quarry/db');
     const a = await upsertBankAnswer(t.db, { question: 'Why us?', questionKey: 'why us', answer: 'Because of the payments work.', kind: 'text', origin: 'llm' });
     const json = { ...H, 'content-type': 'application/json' };
     expect((await app.inject({ url: '/api/answers' })).json().answers).toEqual([expect.objectContaining({ id: a.id, question: 'Why us?' })]);

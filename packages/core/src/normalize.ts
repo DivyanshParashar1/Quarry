@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { decodeEntities, type RawPosting, type RemotePolicy } from '@jobforge/plugin-sdk';
+import { decodeEntities, type RawPosting, type RemotePolicy } from '@quarry/plugin-sdk';
 
 export interface NormalizedJob {
   title: string;

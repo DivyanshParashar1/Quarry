@@ -10,9 +10,9 @@ import {
   upsertFactInFile,
   writePreferencesFile,
   type LLMClient,
-} from '@jobforge/shared';
-import { extractPdfText, loadProfile } from '@jobforge/core';
-import { deleteBankAnswer, listAnswerBank, updateBankAnswer, type DB } from '@jobforge/db';
+} from '@quarry/shared';
+import { extractPdfText, loadProfile } from '@quarry/core';
+import { deleteBankAnswer, listAnswerBank, updateBankAnswer, type DB } from '@quarry/db';
 
 // Full profile editor (PLAN.md §8 Phase 5-ish): facts.yaml + preferences.yaml are
 // the source of truth; the DB is a derived read model. Every write goes through

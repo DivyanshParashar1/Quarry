@@ -19,10 +19,10 @@ describe('dashboard filters', () => {
   });
 
   it('maps views to API methods', () => {
-    expect(apiParams(DEFAULT_FILTERS, 50, 0).get('method')).toBe('llm');
+    expect(apiParams(DEFAULT_FILTERS, 50, 0).get('method')).toBe('llm,keyword');
     expect(apiParams({ ...DEFAULT_FILTERS, view: 'all' }, 50, 0).has('method')).toBe(false);
     expect(apiParams({ ...DEFAULT_FILTERS, view: 'excluded' }, 50, 0).get('method')).toBe('filtered,prefilter');
-    expect(apiParams({ ...DEFAULT_FILTERS, q: '  ' }, 50, 50).toString()).toBe('limit=50&offset=50&sort=score&method=llm');
+    expect(apiParams({ ...DEFAULT_FILTERS, q: '  ' }, 50, 50).toString()).toBe('limit=50&offset=50&sort=score&method=llm%2Ckeyword');
   });
 
   it('score tones', () => {

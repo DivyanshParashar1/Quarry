@@ -1,10 +1,10 @@
 import { chmodSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
-import type { Env } from '@jobforge/shared';
-import { DomainRateLimiter, createGmailClient, exchangeGmailCode, gmailAuthUrl, type GmailCredentials } from '@jobforge/core';
+import type { Env } from '@quarry/shared';
+import { DomainRateLimiter, createGmailClient, exchangeGmailCode, gmailAuthUrl, type GmailCredentials } from '@quarry/core';
 
-// `jf gmail auth`: local OAuth (installed-app flow) against the user's own
+// `quarry gmail auth`: local OAuth (installed-app flow) against the user's own
 // Google OAuth client. The refresh token goes into .env (gitignored, 0600)
 // and is never printed or logged.
 
@@ -32,7 +32,7 @@ export function waitForAuthCode(redirectUri: string, state: string, timeoutMs = 
       const code = url.searchParams.get('code');
       const ok = !error && code && url.searchParams.get('state') === state;
       res.writeHead(ok ? 200 : 400, { 'content-type': 'text/plain', connection: 'close' });
-      res.end(ok ? 'JobForge is connected to Gmail. You can close this tab.' : `Authorization failed: ${error ?? 'state mismatch'}`);
+      res.end(ok ? 'Quarry is connected to Gmail. You can close this tab.' : `Authorization failed: ${error ?? 'state mismatch'}`);
       finish(() => (ok ? resolve(code) : reject(new Error(`authorization failed: ${error ?? 'state mismatch'}`))));
     });
     const timer = setTimeout(() => finish(() => reject(new Error('timed out waiting for the Google redirect'))), timeoutMs);

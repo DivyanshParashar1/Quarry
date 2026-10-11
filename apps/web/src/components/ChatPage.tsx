@@ -123,7 +123,7 @@ export function ChatPage() {
           {!current.data?.messages.length && (
             <div className="mx-auto mt-8 flex max-w-xl flex-col gap-3 text-sm">
               <div className="flex items-center gap-2 font-medium">
-                <Bot className="size-5" /> JobForge assistant
+                <Bot className="size-5" /> Quarry assistant
               </div>
               <p className="text-muted-foreground">
                 It can use the whole product (jobs, resumes, referrals, applications, contacts, health), read the web, run scripts, and change the code — code changes are checked
@@ -178,7 +178,7 @@ function Message({ m }: { m: ChatMessage }) {
   if (m.role === 'user') return <div className="ml-auto max-w-[85%] whitespace-pre-wrap rounded-lg bg-muted px-3 py-2 text-sm">{m.content}</div>;
   if (m.role === 'assistant') return <div className="max-w-[90%] whitespace-pre-wrap text-sm leading-relaxed">{m.content}</div>;
   if (m.role === 'tool') {
-    const name = m.content.replace(/^mcp__jobforge__/, '');
+    const name = m.content.replace(/^mcp__quarry__/, '');
     return (
       <details className="text-xs text-muted-foreground">
         <summary className="flex cursor-pointer items-center gap-1">

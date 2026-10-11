@@ -6,7 +6,7 @@ import { waitForAuthCode, writeEnvVar } from './gmail-auth.js';
 
 describe('writeEnvVar', () => {
   it('replaces an existing key, appends a missing one, and makes the file owner-only', () => {
-    const f = join(mkdtempSync(join(tmpdir(), 'jf-env-')), '.env');
+    const f = join(mkdtempSync(join(tmpdir(), 'quarry-env-')), '.env');
     writeFileSync(f, 'A=1\nGMAIL_REFRESH_TOKEN=\nB=2\n', { mode: 0o644 });
     writeEnvVar(f, 'GMAIL_REFRESH_TOKEN', 'tok');
     expect(readFileSync(f, 'utf8')).toBe('A=1\nGMAIL_REFRESH_TOKEN=tok\nB=2\n');

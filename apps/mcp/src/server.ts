@@ -23,7 +23,7 @@ async function run(fn: () => Promise<unknown>): Promise<CallToolResult> {
   try {
     return ok(await fn());
   } catch (err) {
-    return fail(err instanceof ApiError ? `JobForge API ${err.status}: ${err.message}` : err instanceof Error ? err.message : String(err));
+    return fail(err instanceof ApiError ? `Quarry API ${err.status}: ${err.message}` : err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -35,8 +35,8 @@ interface DraftLike {
   contactEmailConfidence?: number | null;
 }
 
-export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {}): McpServer {
-  const server = new McpServer({ name: 'jobforge', version: opts.version ?? '0.3.0' });
+export function createQuarryMcp(api: ApiClient, opts: { version?: string } = {}): McpServer {
+  const server = new McpServer({ name: 'quarry', version: opts.version ?? '0.3.0' });
   const readOnly = { readOnlyHint: true, openWorldHint: false } as const;
 
   server.registerTool(
@@ -68,7 +68,7 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
           company: a.company,
           location: a.location,
           remote: a.remote?.join(','),
-          method: { ranked: 'llm', all: undefined, unscored: 'unscored', excluded: 'filtered,prefilter' }[a.view],
+          method: { ranked: 'llm,keyword', all: undefined, unscored: 'unscored', excluded: 'filtered,prefilter' }[a.view],
           minScore: a.minScore,
           limit: a.limit,
         }),

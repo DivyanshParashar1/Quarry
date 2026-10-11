@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { preferencesSchema, type Job } from '@jobforge/plugin-sdk';
+import { preferencesSchema, type Job } from '@quarry/plugin-sdk';
 import { applyHardFilters, eligibleBatches, requiredYears } from './filters.js';
 
 const job = (o: Partial<Job> = {}): Job => ({
@@ -35,6 +35,17 @@ describe('hard filters', () => {
     );
   });
 
+  it('keyword gates: title and description must each hit one keyword (word-bounded)', () => {
+    const kw = { keywords: { title_any: ['software', 'sde', 'backend'] } };
+    expect(check({ title: 'Software Engineer Intern' }, kw)).toBeNull();
+    expect(check({ title: 'SDE Intern' }, kw)).toBeNull();
+    expect(check({ title: 'Marketing Intern' }, kw)).toMatch(/Title has none of your keywords/);
+    expect(check({ title: 'Backendless Ops' }, kw)).toMatch(/Title has none/);
+    const desc = { keywords: { description_any: ['node.js', 'typescript'] } };
+    expect(check({ descriptionMd: 'We use Node.js and Postgres.' }, desc)).toBeNull();
+    expect(check({ descriptionMd: 'We use Java.' }, desc)).toMatch(/Description has none/);
+  });
+
   it('seniority: untagged titles count as mid', () => {
     expect(check({ seniority: 'senior' }, { seniority: ['junior', 'mid'] })).toMatch(/Level senior/);
     expect(check({ seniority: null }, { seniority: ['junior', 'mid'] })).toBeNull();
@@ -45,7 +56,12 @@ describe('hard filters', () => {
     const p = { locations: ['Bengaluru', 'Bangalore'], remote_policy: ['remote', 'hybrid'] };
     expect(check({ locations: ['Bangalore, KA'] }, p)).toBeNull();
     expect(check({ locations: ['San Francisco, CA'] }, p)).toMatch(/outside Bengaluru\/Bangalore/);
-    expect(check({ locations: ['San Francisco, CA'], remotePolicy: 'remote' }, p)).toBeNull();
+    expect(check({ locations: ['Remote'], remotePolicy: 'remote' }, p)).toBeNull();
+    expect(check({ locations: ['Worldwide (Remote)'], remotePolicy: 'remote' }, p)).toBeNull();
+    expect(check({ locations: ['Remote - Bangalore'], remotePolicy: 'remote' }, p)).toBeNull();
+    // A remote job pinned to another country is not open to you.
+    expect(check({ locations: ['San Francisco, CA'], remotePolicy: 'remote' }, p)).toMatch(/outside/);
+    expect(check({ locations: ['Remote, US'], remotePolicy: 'remote' }, p)).toMatch(/outside/);
     expect(check({ locations: ['Bengaluru'], remotePolicy: 'onsite' }, p)).toMatch(/Onsite roles are not in remote\/hybrid/);
     expect(check({ locations: [] }, p)).toBeNull(); // unknown location: let the LLM judge
     expect(check({ locations: ['Remote'], remotePolicy: 'remote' }, { locations: ['Pune'], remote_policy: ['onsite'] })).toMatch(/Remote roles/);

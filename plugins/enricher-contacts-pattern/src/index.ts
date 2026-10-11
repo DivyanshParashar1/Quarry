@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { defineEnricherPlugin, type CompanyEnrichment } from '@jobforge/plugin-sdk';
+import { defineEnricherPlugin, type CompanyEnrichment } from '@quarry/plugin-sdk';
 import { applyPattern, choosePattern, normalizeDomain, rankPatterns, type PatternEvidence } from './patterns.js';
 
 export * from './patterns.js';
@@ -36,7 +36,7 @@ export default defineEnricherPlugin<PatternEnricherConfig, CompanyEnrichment>({
     const domain = normalizeDomain(company.emailDomain) ?? normalizeDomain(company.domain);
     const out: CompanyEnrichment = { emailDomain: domain, mxHosts: [], pattern: null, patternConfidence: null, contacts: [], notes };
     if (!domain) {
-      notes.push(`No domain for ${company.name}; add one (jf contacts add --domain, or the companies CSV).`);
+      notes.push(`No domain for ${company.name}; add one (quarry contacts add --domain, or the companies CSV).`);
       return out;
     }
     const mx = await ctx.dns!.resolveMx(domain);

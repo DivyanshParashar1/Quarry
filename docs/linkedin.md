@@ -6,9 +6,9 @@ Referral fan-out **never automates LinkedIn**. Nothing logs into your account.
 
 1. Export your connections: LinkedIn → Settings → Data privacy → *Get a copy of your data* →
    **Connections**. You get `Connections.csv` by email.
-2. Import it (Contacts tab → Upload, or `pnpm jf contacts import Connections.csv --yes`). Everyone
+2. Import it (Contacts tab → Upload, or `pnpm quarry contacts import Connections.csv --yes`). Everyone
    in it is recorded as a 1st-degree connection. Hand-made `.xlsx`/`.csv` lists import the same way.
-3. When a job is fanned out (`jf referrals fanout <jobId>` or the job page), imported people are
+3. When a job is fanned out (`quarry referrals fanout <jobId>` or the job page), imported people are
    asked first:
    - a **connection** at the company gets a full tailored message (role, job link, one resume
      bullet, "resume attached");
@@ -16,8 +16,8 @@ Referral fan-out **never automates LinkedIn**. Nothing logs into your account.
      (≤ 300 characters);
    - everyone else gets an email as before.
 4. You send them yourself: the dashboard (Contacts tab, job page, review queue) has **Copy text**,
-   **Open profile**, **Download resume PDF**, then **I sent it** — or `jf linkedin drafts`,
-   `jf linkedin sent <id>`. When they answer, **They replied** / `jf linkedin replied <id>`.
+   **Open profile**, **Download resume PDF**, then **I sent it** — or `quarry linkedin drafts`,
+   `quarry linkedin sent <id>`. When they answer, **They replied** / `quarry linkedin replied <id>`.
    Marking sent keeps the 30-day per-person cooldown, the job's referral batch and the
    apply-after-reply timing correct.
 
@@ -38,16 +38,16 @@ accepted and isolated to that account. Never point this at your main profile.
    ```
    LINKEDIN_ENABLED=true
    # optional: a 32+ char key; otherwise the OS keychain (macOS `security`,
-   # Linux `secret-tool`) or ~/.config/jobforge/linkedin-session.key is used
-   # JOBFORGE_SESSION_KEY=...
+   # Linux `secret-tool`) or ~/.config/quarry/linkedin-session.key is used
+   # QUARRY_SESSION_KEY=...
    ```
 3. Log in once (opens a real browser window):
    ```
-   pnpm jf linkedin login
+   pnpm quarry linkedin login
    ```
    The session is saved AES-256-GCM encrypted to `data/linkedin/state.enc`
    (mode 600). Later runs are headless (`BROWSER_HEADLESS=false` to watch).
-4. Check: `pnpm jf linkedin status`.
+4. Check: `pnpm quarry linkedin status`.
 
 Everything that touches LinkedIn also needs a **live** run: `--live` on the CLI
 or `MODE=live` for the server loops. Without it you get dry-run previews.
@@ -55,12 +55,12 @@ or `MODE=live` for the server loops. Without it you get dry-run previews.
 ## Flow
 
 ```
-jf referrals fanout <jobId> [--count 10] [--live]   # drafts N asks; with --live, searches LinkedIn for more engineers first
-jf referrals show <jobId>                          # or the Referrals panel on the job page
-jf referrals approve <jobId>                       # one click: approve the whole batch
-jf outreach send --live                            # email asks
-jf linkedin send --live --watch                    # LinkedIn asks: connection request + ≤300-char note
-jf linkedin track --live                           # accepted connections / replies → batch "replied"
+quarry referrals fanout <jobId> [--count 10] [--live]   # drafts N asks; with --live, searches LinkedIn for more engineers first
+quarry referrals show <jobId>                          # or the Referrals panel on the job page
+quarry referrals approve <jobId>                       # one click: approve the whole batch
+quarry outreach send --live                            # email asks
+quarry linkedin send --live --watch                    # LinkedIn asks: connection request + ≤300-char note
+quarry linkedin track --live                           # accepted connections / replies → batch "replied"
 ```
 
 The server runs `linkedin.send` every minute and `linkedin.track` every 30
@@ -73,9 +73,9 @@ minutes when `LINKEDIN_ENABLED=true` and `MODE=live`.
   mouse movement and typing, one people search per 60 s.
 - Any checkpoint, captcha, login wall, "restricted" or weekly-limit page **pauses
   every LinkedIn loop** and raises an *attention* item in the review queue. No
-  retries. Fix it by hand in the dedicated account (or `jf linkedin login` if the
+  retries. Fix it by hand in the dedicated account (or `quarry linkedin login` if the
   session expired), then approve the attention item ("Fixed — resume") or run
-  `jf linkedin resume`. Each block doubles the next cool-down.
+  `quarry linkedin resume`. Each block doubles the next cool-down.
 - A profile that already shows *Pending* or *1st* is never sent a second request.
 - Pre/post screenshots of every request land in `data/screenshots/linkedin/`.
 

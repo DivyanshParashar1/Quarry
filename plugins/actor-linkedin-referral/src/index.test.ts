@@ -11,9 +11,9 @@ import {
   type BrowserHandle,
   type LinkedInNoteDraft,
   type OutreachActionInput,
-} from '@jobforge/plugin-sdk';
-import { fakeBrowser, testContext } from '@jobforge/plugin-sdk/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
+} from '@quarry/plugin-sdk';
+import { fakeBrowser, testContext } from '@quarry/plugin-sdk/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
 import plugin, { configSchema, SEL } from './index.js';
 
 const html = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PluginError } from '@jobforge/shared';
+import { PluginError } from '@quarry/shared';
 import {
   decodeEntities,
   defineSourcePlugin,
@@ -9,7 +9,7 @@ import {
   remotePolicyFromText,
   type RawPosting,
   type TaleoBoard,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 const options = z.object({
   locations: z.array(z.string()).default([]),

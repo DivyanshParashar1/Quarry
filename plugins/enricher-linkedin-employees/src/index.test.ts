@@ -9,8 +9,8 @@ import {
   SessionBlockedError,
   type BrowserHandle,
   type Company,
-} from '@jobforge/plugin-sdk';
-import { fakeBrowser, testContext } from '@jobforge/plugin-sdk/testing';
+} from '@quarry/plugin-sdk';
+import { fakeBrowser, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { configSchema } from './index.js';
 
 const html = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');

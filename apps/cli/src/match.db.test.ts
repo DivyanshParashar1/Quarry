@@ -6,16 +6,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pino from 'pino';
-import { parseAppConfig } from '@jobforge/shared';
-import { getActiveProfile, listRankedJobs, listSourceTargets, recordLlmCall } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { DomainRateLimiter, embedPending, loadProfile, runMatch, runSourceTarget } from '@jobforge/core';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import { createHashEmbedder } from '@jobforge/embeddings';
-import { boardUrl } from '@jobforge/source-greenhouse';
-import { postingsUrl } from '@jobforge/source-lever';
+import { parseAppConfig } from '@quarry/shared';
+import { getActiveProfile, listRankedJobs, listSourceTargets, recordLlmCall } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { DomainRateLimiter, embedPending, loadProfile, runMatch, runSourceTarget } from '@quarry/core';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
+import { createHashEmbedder } from '@quarry/embeddings';
+import { boardUrl } from '@quarry/source-greenhouse';
+import { postingsUrl } from '@quarry/source-lever';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
-import { createRegistry } from '@jobforge/plugins';
+import { createRegistry } from '@quarry/plugins';
 
 const adminUrl = testDbAdminUrl();
 const fixture = (plugin: string, f: string) =>
@@ -28,7 +28,7 @@ const fakeFetch = (async (url: URL) => new Response(routes[url.href]!, { status:
 
 const log = pino({ level: 'silent' });
 
-describe.skipIf(!adminUrl)('jf match end to end (postgres)', () => {
+describe.skipIf(!adminUrl)('quarry match end to end (postgres)', () => {
   let t: TestDb;
   const provider = createFakeProvider((req) => ({
     results: [...req.prompt.matchAll(/^## (J\d+): (.*)$/gm)].map((m) => ({
@@ -56,7 +56,7 @@ describe.skipIf(!adminUrl)('jf match end to end (postgres)', () => {
   afterAll(async () => t?.drop());
 
   it('ranks real fixture jobs against a profile with explanations', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'jf-profile-'));
+    const dir = mkdtempSync(join(tmpdir(), 'quarry-profile-'));
     writeFileSync(
       join(dir, 'facts.yaml'),
       'facts:\n  - {id: skill-systems, kind: skill, content: Business systems engineering and sales engineering}\n',

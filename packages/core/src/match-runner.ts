@@ -1,5 +1,5 @@
-import type { Logger } from '@jobforge/shared';
-import type { Job, MatchResult } from '@jobforge/plugin-sdk';
+import type { Logger } from '@quarry/shared';
+import type { Job, MatchResult } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   finishPluginRun,
@@ -8,7 +8,7 @@ import {
   saveMatchResults,
   startPluginRun,
   type DB,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { emitStage } from './triggers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
@@ -24,6 +24,7 @@ export interface MatchRunSummary {
   profileVersion: string;
   candidates: number;
   llm: number;
+  keyword: number;
   prefilter: number;
   filtered: number;
   /** Candidates with no result this run (not embedded yet, or an LLM batch failed); retried next run. */
@@ -32,7 +33,7 @@ export interface MatchRunSummary {
 
 export class NoProfileError extends Error {
   constructor() {
-    super('No profile loaded. Fill in profile/*.yaml and run `jf profile load`.');
+    super('No profile loaded. Fill in profile/*.yaml and run `quarry profile load`.');
   }
 }
 
@@ -59,6 +60,7 @@ export async function runMatch(
     profileVersion: profile.version,
     candidates: rows.length,
     llm: 0,
+    keyword: 0,
     prefilter: 0,
     filtered: 0,
     unscored: 0,
@@ -75,7 +77,7 @@ export async function runMatch(
     const results = validResults(await loaded.plugin.score(ctx, jobs, profile), new Set(rows.map((r) => r.id)), log);
     await saveMatchResults(deps.db, profile.version, pluginId, results);
     for (const r of results) summary[r.method]++;
-    emitStage({ kind: 'job.matched', jobIds: results.filter((r) => r.method === 'llm').map((r) => r.jobId) });
+    emitStage({ kind: 'job.matched', jobIds: results.filter((r) => r.method === 'llm' || r.method === 'keyword').map((r) => r.jobId) });
     summary.unscored = rows.length - results.length;
     await finishPluginRun(deps.db, runId, {
       status: 'succeeded',

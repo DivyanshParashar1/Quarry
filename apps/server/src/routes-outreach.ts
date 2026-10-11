@@ -2,7 +2,7 @@ import { createReadStream, existsSync } from 'node:fs';
 import type { FastifyInstance } from 'fastify';
 import { publicVariant } from './routes-library.js';
 import { z } from 'zod';
-import type { AppConfig } from '@jobforge/shared';
+import type { AppConfig } from '@quarry/shared';
 import {
   actionsForReviewItem,
   findCompanyByName,
@@ -26,8 +26,8 @@ import {
   AmbiguousContactError,
   ATS_TYPES,
   type DB,
-} from '@jobforge/db';
-import { getReviewItem } from '@jobforge/db';
+} from '@quarry/db';
+import { getReviewItem } from '@quarry/db';
 import {
   approveReviewItem,
   draftOutreach,
@@ -42,7 +42,7 @@ import {
   type DeadlineDeps,
   type OutreachDeps,
   type TailorRunDeps,
-} from '@jobforge/core';
+} from '@quarry/core';
 
 export interface OutreachRouteOptions {
   db: DB;

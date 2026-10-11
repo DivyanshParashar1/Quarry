@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { createChatSession, deleteChatSession, getChatSession, listChatMessages, listChatSessions, updateChatSession, type DB } from '@jobforge/db';
+import { createChatSession, deleteChatSession, getChatSession, listChatMessages, listChatSessions, updateChatSession, type DB } from '@quarry/db';
 import type { ChatRunner } from './chat-runner.js';
 
 // The chatbot's API (dashboard Chat tab). Sending a message starts a background

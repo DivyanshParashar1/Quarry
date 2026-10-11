@@ -1,5 +1,5 @@
 {
-  "name": "@jobforge/enricher-contacts-pattern",
+  "name": "@quarry/enricher-contacts-pattern",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,8 +14,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@jobforge/plugin-sdk": "workspace:*",
-    "@jobforge/shared": "workspace:*",
+    "@quarry/plugin-sdk": "workspace:*",
+    "@quarry/shared": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {

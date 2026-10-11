@@ -1,5 +1,5 @@
 {
-  "name": "@jobforge/orchestrator",
+  "name": "@quarry/orchestrator",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,13 +14,13 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@jobforge/core": "workspace:*",
-    "@jobforge/db": "workspace:*",
-    "@jobforge/shared": "workspace:*",
+    "@quarry/core": "workspace:*",
+    "@quarry/db": "workspace:*",
+    "@quarry/shared": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@jobforge/llm": "workspace:*",
+    "@quarry/llm": "workspace:*",
     "typescript": "^5.6.3"
   }
 }

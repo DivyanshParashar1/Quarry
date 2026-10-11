@@ -3,10 +3,10 @@ import { randomBytes } from 'node:crypto';
 import { createDb, type DbHandle } from './client.js';
 import { runMigrations } from './migrate.js';
 
-export const TEMPLATE_DB = 'jobforge_test_template';
+export const TEMPLATE_DB = 'quarry_test_template';
 export const DEFAULT_ADMIN_URL = 'postgres://jobforge:jobforge@localhost:5432/jobforge';
 
-const ADMIN_URL_ENV = 'JOBFORGE_TEST_DB_ADMIN_URL';
+const ADMIN_URL_ENV = 'QUARRY_TEST_DB_ADMIN_URL';
 
 /** Set by the vitest global setup once the template is ready; workers inherit it. */
 export function setTestDbAdminUrl(url: string): void {
@@ -56,7 +56,7 @@ export interface TestDb extends DbHandle {
 
 /** An isolated, already-migrated database cloned from the template. */
 export async function createTestDb(adminUrl: string): Promise<TestDb> {
-  const name = `jobforge_test_${randomBytes(4).toString('hex')}`;
+  const name = `quarry_test_${randomBytes(4).toString('hex')}`;
   const admin = postgres(adminUrl, { max: 1, onnotice: () => {} });
   await admin.unsafe(`CREATE DATABASE ${name} TEMPLATE ${TEMPLATE_DB}`);
   await admin.end();

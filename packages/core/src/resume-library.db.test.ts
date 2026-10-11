@@ -10,8 +10,8 @@ import {
   type FixedRenderRequest,
   type ResumeComboSpec,
   type TailoredResume,
-} from '@jobforge/plugin-sdk';
-import { preferencesSchema, resumesConfigSchema } from '@jobforge/shared';
+} from '@quarry/plugin-sdk';
+import { preferencesSchema, resumesConfigSchema } from '@quarry/shared';
 import {
   getJobResume,
   latestRenderedResumeForJob,
@@ -23,8 +23,8 @@ import {
   sql,
   upsertCompany,
   type DB,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
 import { normalizePosting } from './normalize.js';
 import { loadProfileData } from './profile-loader.js';
 import { PluginRegistry } from './plugins.js';
@@ -147,7 +147,7 @@ describe.skipIf(!adminUrl)('resume library (postgres)', () => {
       log: silentLogger,
       limiter: new DomainRateLimiter(),
       dryRun: true,
-      resumeDir: await mkdtemp(join(tmpdir(), 'jf-library-')),
+      resumeDir: await mkdtemp(join(tmpdir(), 'quarry-library-')),
       resumes: resumesConfigSchema.parse({
         benchmarks: {
           perCategory: 5,

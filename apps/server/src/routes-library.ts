@@ -13,7 +13,7 @@ import {
   upsertBenchmarkCategory,
   type DB,
   type ResumeVariantRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import {
   autoPickBenchmarks,
   ensureCategories,
@@ -23,7 +23,7 @@ import {
   type BenchmarkCell,
   type LibraryRunItem,
   type TailorRunDeps,
-} from '@jobforge/core';
+} from '@quarry/core';
 
 // Phase 16: the resume library (Resumes page), benchmarks, and the per-job selector.
 

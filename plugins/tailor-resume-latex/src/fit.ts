@@ -1,5 +1,5 @@
-import type { FitInfo, RewriteValidation } from '@jobforge/plugin-sdk';
-import type { Logger } from '@jobforge/shared';
+import type { FitInfo, RewriteValidation } from '@quarry/plugin-sdk';
+import type { Logger } from '@quarry/shared';
 import type { CompileResult } from './compile.js';
 import { validateShortening } from './shorten.js';
 
@@ -107,7 +107,7 @@ export function fitPreamble(t: Typography, basePt = 10): string {
   }
   if (t.linespread !== 1) lines.push(`\\linespread{${fmt(t.linespread)}}`);
   if (!lines.length) return '';
-  return [`% jobforge fit: ${t.fontPt}pt, linespread ${t.linespread}`, ...lines].join('\n');
+  return [`% quarry fit: ${t.fontPt}pt, linespread ${t.linespread}`, ...lines].join('\n');
 }
 
 export function applyTypography(tex: string, t: Typography): string {

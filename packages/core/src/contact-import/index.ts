@@ -11,8 +11,8 @@ import {
   upsertContact,
   type ContactImportRow,
   type DB,
-} from '@jobforge/db';
-import type { LLMClient } from '@jobforge/shared';
+} from '@quarry/db';
+import type { LLMClient } from '@quarry/shared';
 import { normalizeCompanyName } from '../normalize.js';
 import { analyzeSheets, COLUMN_TYPES, type ColumnClassifier, type EdaReport, type ImportRow } from './analyze.js';
 import { readSpreadsheet } from './read.js';

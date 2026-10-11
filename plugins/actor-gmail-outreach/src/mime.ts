@@ -58,7 +58,7 @@ export function buildMime(m: MimeInput): string {
   if (!atts.length) {
     return `${commonHeaders.join('\r\n')}\r\n${textPart}\r\n`;
   }
-  const boundary = `jf-${randomBytes(12).toString('hex')}`;
+  const boundary = `quarry-${randomBytes(12).toString('hex')}`;
   const parts = [
     `--${boundary}\r\n${textPart}`,
     ...atts.map((a) => `--${boundary}\r\n${attachmentPart(a)}`),
@@ -88,6 +88,7 @@ export function toBase64Url(s: string): string {
 }
 
 /** Deterministic Message-ID for an idempotency key: a retry produces the same ID, so it can be found in Sent. */
+// Keeps the pre-rename "jobforge." prefix: changing it would make a retry miss mail already sent under the old ID and send it twice.
 export function messageIdFor(idempotencyKey: string, fromAddress: string): string {
   const domain = fromAddress.split('@')[1] ?? 'jobforge.local';
   return `<jobforge.${createHash('sha256').update(idempotencyKey).digest('hex').slice(0, 32)}@${domain}>`;

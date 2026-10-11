@@ -1,4 +1,4 @@
-import type { AppConfig, Logger } from '@jobforge/shared';
+import type { AppConfig, Logger } from '@quarry/shared';
 import {
   appendEvent,
   autopilotApprovesSince,
@@ -14,7 +14,8 @@ import {
   type DB,
   type ResumeVariantRow,
   type ReviewItemRow,
-} from '@jobforge/db';
+  RANKED_METHODS,
+} from '@quarry/db';
 import { draftOutreach, type OutreachDeps } from './outreach.js';
 import { selectResumeForJob } from './resume-library.js';
 import type { TailorRunDeps } from './tailor-runner.js';
@@ -95,7 +96,7 @@ export async function runAutopilot(deps: AutopilotRunDeps, opts: { limit?: numbe
   const limit = Math.min(policy.candidateBatch, opts.limit ?? policy.candidateBatch);
   const ranked = await listRankedJobs(deps.db, {
     profileVersion: profile.version,
-    methods: ['llm'],
+    methods: [...RANKED_METHODS],
     minScore: policy.minMatchScore,
     sort: 'score',
     limit,

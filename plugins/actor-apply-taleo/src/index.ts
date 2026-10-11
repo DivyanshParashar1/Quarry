@@ -17,7 +17,7 @@ import {
   type FormQuestion,
   type WizardSpec,
   type WizardTenant,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 // Phase 21: Taleo (Oracle Taleo Enterprise career sections) apply, best effort.
 // prepare has no side effects and no network: the apply URL is the job's

@@ -1,7 +1,7 @@
-import { createLazyEmbedder } from '@jobforge/embeddings';
+import { createLazyEmbedder } from '@quarry/embeddings';
 import { dirname } from 'node:path';
-import { findUp } from '@jobforge/shared';
-import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, listIncidents, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@jobforge/db';
+import { findUp } from '@quarry/shared';
+import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, listIncidents, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@quarry/db';
 import {
   advanceJob,
   embedPending,
@@ -30,11 +30,11 @@ import {
   type LinkedInDeps,
   type SequencerDeps,
   budgetGuardedLlm,
-} from '@jobforge/core';
-import { runOrchestratorTick } from '@jobforge/orchestrator';
-import { DomainRateLimiter } from '@jobforge/core';
+} from '@quarry/core';
+import { runOrchestratorTick } from '@quarry/orchestrator';
+import { DomainRateLimiter } from '@quarry/core';
 import { table } from './format.js';
-import { createRegistry } from '@jobforge/plugins';
+import { createRegistry } from '@quarry/plugins';
 import { outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, type CmdCtx } from './outreach-cmds.js';
 
@@ -73,7 +73,7 @@ export function linkedinDeps(c: CmdCtx, live: boolean): LinkedInDeps & { closeBr
 export async function referralsCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues, c: CmdCtx): Promise<number> {
   const live = !!v.live || c.env.MODE === 'live';
   if (sub === 'fanout') {
-    if (!arg) throw new CmdError('usage: jf referrals fanout <jobId> [--count <n>] [--live]');
+    if (!arg) throw new CmdError('usage: quarry referrals fanout <jobId> [--count <n>] [--live]');
     const jobId = await resolveIdPrefix(c.db, 'jobs', arg);
     const deps = await outreachDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live, llm: true });
     const li = linkedinDeps(c, live);
@@ -99,7 +99,7 @@ export async function referralsCommand(sub: string | undefined, arg: string | un
           (r.shortBy ? ` · short by ${r.shortBy}` : ''),
       );
       for (const s of r.skipped.slice(0, 15)) c.out(`  - skipped ${s.name}: ${s.reason}`);
-      if (r.drafted.length) c.out('Review them in the dashboard or `jf referrals approve <jobId>`. LinkedIn drafts are sent by you: copy them from the dashboard (or `jf linkedin drafts`), then `jf linkedin sent <id>`.');
+      if (r.drafted.length) c.out('Review them in the dashboard or `quarry referrals approve <jobId>`. LinkedIn drafts are sent by you: copy them from the dashboard (or `quarry linkedin drafts`), then `quarry linkedin sent <id>`.');
       return 0;
     } finally {
       await li.closeBrowser();
@@ -107,10 +107,10 @@ export async function referralsCommand(sub: string | undefined, arg: string | un
   }
 
   if (sub === 'show') {
-    if (!arg) throw new CmdError('usage: jf referrals show <jobId>');
+    if (!arg) throw new CmdError('usage: quarry referrals show <jobId>');
     const p = await referralPanel(c.db, await resolveIdPrefix(c.db, 'jobs', arg));
     if (!p.batch) {
-      c.out('No referral batch for this job yet. `jf referrals fanout <jobId>` creates one.');
+      c.out('No referral batch for this job yet. `quarry referrals fanout <jobId>` creates one.');
       return 0;
     }
     const b = p.batch;
@@ -130,24 +130,24 @@ export async function referralsCommand(sub: string | undefined, arg: string | un
   }
 
   if (sub === 'approve') {
-    if (!arg) throw new CmdError('usage: jf referrals approve <jobId>');
+    if (!arg) throw new CmdError('usage: quarry referrals approve <jobId>');
     const jobId = await resolveIdPrefix(c.db, 'jobs', arg);
     const batch = await getBatchForJob(c.db, jobId);
     if (!batch) throw new CmdError('no referral batch for this job');
     const r = await approveBatch(c.db, c.config.outreach, batch.id);
     c.out(`approved ${r.approved.length} ask(s)${r.failed.length ? `; ${r.failed.length} refused:` : ''}`);
     for (const f of r.failed) c.out(`  - ${f.reviewItemId.slice(0, 8)}: ${f.error}`);
-    c.out('Emails go out via `jf outreach send --live` (or the server loop); LinkedIn notes via `jf linkedin send --live`.');
+    c.out('Emails go out via `quarry outreach send --live` (or the server loop); LinkedIn notes via `quarry linkedin send --live`.');
     return r.failed.length && !r.approved.length ? 1 : 0;
   }
-  throw new CmdError('usage: jf referrals fanout|show|approve <jobId>');
+  throw new CmdError('usage: quarry referrals fanout|show|approve <jobId>');
 }
 
 export async function linkedinCommand(sub: string | undefined, v: ReferralValues, c: CmdCtx, arg?: string): Promise<number> {
   // Phase 17: LinkedIn referral messages are sent by hand.
   if (sub === 'drafts') {
     const drafts = await listLinkedInDrafts(c.db, v.job ? { jobId: await resolveIdPrefix(c.db, 'jobs', v.job) } : {});
-    if (!drafts.length) c.out('no LinkedIn drafts waiting (fan out a job with `jf referrals fanout <jobId>`)');
+    if (!drafts.length) c.out('no LinkedIn drafts waiting (fan out a job with `quarry referrals fanout <jobId>`)');
     for (const d of drafts) {
       c.out(`── ${d.id.slice(0, 8)} · ${d.status} · ${d.linkedin.kind} to ${d.linkedin.toName} (${d.companyName ?? ''})${d.linkedin.jobTitle ? ` · ${d.linkedin.jobTitle}` : ''}`);
       c.out(`   profile: ${d.linkedin.profileUrl}`);
@@ -156,19 +156,19 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
       c.out(d.linkedin.text);
       c.out('');
     }
-    if (drafts.length) c.out('After sending one on LinkedIn: `jf linkedin sent <id>`; when they answer: `jf linkedin replied <id>`.');
+    if (drafts.length) c.out('After sending one on LinkedIn: `quarry linkedin sent <id>`; when they answer: `quarry linkedin replied <id>`.');
     return 0;
   }
   if (sub === 'accepted') {
-    if (!arg) throw new CmdError('usage: jf linkedin accepted <reviewItemId of the sent connection note>');
+    if (!arg) throw new CmdError('usage: quarry linkedin accepted <reviewItemId of the sent connection note>');
     const id = await resolveIdPrefix(c.db, 'review_items', arg);
     const out = await outreachDeps({ env: c.env, config: c.config, db: c.db, log: c.log, live: false, llm: true });
     const item = await markLinkedInAccepted(out, id);
-    c.out(`drafted the full referral message (${item.id.slice(0, 8)}): see \`jf linkedin drafts\`, send it with the resume attached, then \`jf linkedin sent ${item.id.slice(0, 8)}\`.`);
+    c.out(`drafted the full referral message (${item.id.slice(0, 8)}): see \`quarry linkedin drafts\`, send it with the resume attached, then \`quarry linkedin sent ${item.id.slice(0, 8)}\`.`);
     return 0;
   }
   if (sub === 'sent' || sub === 'replied') {
-    if (!arg) throw new CmdError(`usage: jf linkedin ${sub} <reviewItemId>`);
+    if (!arg) throw new CmdError(`usage: quarry linkedin ${sub} <reviewItemId>`);
     const id = await resolveIdPrefix(c.db, 'review_items', arg);
     if (sub === 'sent') {
       const r = await markLinkedInSent(c.db, c.config.outreach, id);
@@ -207,7 +207,7 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
     c.out(
       [
         `enabled: ${c.env.LINKEDIN_ENABLED ? 'yes' : 'no (set LINKEDIN_ENABLED=true)'} · mode ${c.env.MODE}`,
-        `session: ${store.exists() ? `saved (${store.path}, key from ${store.keySource})` : 'none — run `jf linkedin login`'}`,
+        `session: ${store.exists() ? `saved (${store.path}, key from ${store.keySource})` : 'none — run `quarry linkedin login`'}`,
         `health: ${paused ?? 'ok'}${h.reason ? ` (last: ${h.reason} at ${h.url})` : ''}`,
       ].join('\n'),
     );
@@ -219,7 +219,7 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
     return 0;
   }
   if (sub === 'employees') {
-    if (!v.company) throw new CmdError('usage: jf linkedin employees --company <name> [--limit <n>] [--live]');
+    if (!v.company) throw new CmdError('usage: quarry linkedin employees --company <name> [--limit <n>] [--live]');
     const company = await findCompanyByName(c.db, v.company);
     if (!company) throw new CmdError(`unknown company ${v.company}`);
     const live = !!v.live || c.env.MODE === 'live';
@@ -261,7 +261,7 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
       await li.closeBrowser();
     }
   }
-  throw new CmdError('usage: jf linkedin drafts [--job <id>] | sent <id> | accepted <id> | replied <id>  (automation, off by default: login|status|resume|employees|send|track)');
+  throw new CmdError('usage: quarry linkedin drafts [--job <id>] | sent <id> | accepted <id> | replied <id>  (automation, off by default: login|status|resume|employees|send|track)');
 }
 
 export async function applyCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues & { 'no-preview'?: boolean | undefined }, c: CmdCtx): Promise<number> {
@@ -274,7 +274,7 @@ export async function applyCommand(sub: string | undefined, arg: string | undefi
   };
   try {
     if (sub === 'draft') {
-      if (!arg) throw new CmdError('usage: jf apply draft <jobId> [--no-preview]');
+      if (!arg) throw new CmdError('usage: quarry apply draft <jobId> [--no-preview]');
       const item = await draftApplication(deps, await resolveIdPrefix(c.db, 'jobs', arg), { preview: !v['no-preview'] });
       const d = item.draft as { fields: { label: string; value: string | null; required: boolean }[]; missingRequired: string[]; previewScreenshots: string[] };
       c.out(`application ${item.id.slice(0, 8)} drafted (${item.pluginId}) · ${d.fields.filter((f) => f.value).length}/${d.fields.length} answered`);
@@ -294,7 +294,7 @@ export async function applyCommand(sub: string | undefined, arg: string | undefi
         if (!v.watch || r.mode === 'dry_run' || !r.outcomes.length) return 0;
       }
     }
-    throw new CmdError('usage: jf apply draft <jobId> | send [--live] [--watch]');
+    throw new CmdError('usage: quarry apply draft <jobId> | send [--live] [--watch]');
   } finally {
     await holder.browser?.close?.();
   }
@@ -344,7 +344,7 @@ export async function sweepCommand(v: ReferralValues, c: CmdCtx): Promise<number
         match: async (jobIds?: string[]) => {
           const e = await embedPending({ db: c.db, embedder, log: c.log });
           const m = await runMatch({ db: c.db, registry: out.registry, log: c.log, limiter: out.limiter, dryRun: !live, ...(out.llm ? { llm: out.llm } : {}), embed: embedder }, { limit: c.config.sweeper.matchLimit, ...(jobIds ? { jobIds } : {}) });
-          return { embedded: e.jobs, llm: m.llm, prefilter: m.prefilter, filtered: m.filtered, unscored: m.unscored };
+          return { embedded: e.jobs, llm: m.llm, keyword: m.keyword, prefilter: m.prefilter, filtered: m.filtered, unscored: m.unscored };
         },
         sequencer: async () => seq,
         deadlines: async () => ({ db: c.db, registry: out.registry, log: c.log, limiter: out.limiter, dryRun: !live, ...(out.llm ? { llm: out.llm } : {}), policy: c.config.deadlines }),
@@ -356,7 +356,7 @@ export async function sweepCommand(v: ReferralValues, c: CmdCtx): Promise<number
     for (const s of r.steps) {
       c.out(`  ${s.name.padEnd(10)} ${s.skipped ? `skipped (${s.skipped})` : s.ok ? `ok ${JSON.stringify(s.result ?? {})}` : `FAILED: ${s.error}`}${s.ms ? ` · ${s.ms} ms` : ''}`);
     }
-    if (r.steps.find((s) => s.name === 'fetch')?.skipped) c.out('Board fetches are queued by the server (`pnpm server`); use `jf fetch` to fetch now.');
+    if (r.steps.find((s) => s.name === 'fetch')?.skipped) c.out('Board fetches are queued by the server (`pnpm server`); use `quarry fetch` to fetch now.');
     return r.steps.some((s) => !s.ok) ? 1 : 0;
   } finally {
     await seq.close();
@@ -385,12 +385,12 @@ export async function pipelineCommand(sub: string | undefined, arg: string | und
     return 0;
   }
   if (sub === 'show') {
-    if (!arg) throw new CmdError('usage: jf pipeline show <jobId>');
+    if (!arg) throw new CmdError('usage: quarry pipeline show <jobId>');
     for (const e of await jobTimeline(c.db, await resolveIdPrefix(c.db, 'jobs', arg))) c.out(`${e.at.toISOString().slice(0, 16).replace('T', ' ')}  ${e.summary}`);
     return 0;
   }
   if (sub === 'advance') {
-    if (!arg) throw new CmdError('usage: jf pipeline advance <jobId> [--live]');
+    if (!arg) throw new CmdError('usage: quarry pipeline advance <jobId> [--live]');
     const d = await sequencerDeps(c, live);
     try {
       const r = await advanceJob(d, await resolveIdPrefix(c.db, 'jobs', arg));
@@ -401,12 +401,12 @@ export async function pipelineCommand(sub: string | undefined, arg: string | und
     }
   }
   if (sub === 'expire') {
-    if (!arg) throw new CmdError('usage: jf pipeline expire <jobId> --reason <text>');
+    if (!arg) throw new CmdError('usage: quarry pipeline expire <jobId> --reason <text>');
     const r = await expireJob(c.db, await resolveIdPrefix(c.db, 'jobs', arg), v.reason ?? 'expired by hand');
     c.out(`job ${r.jobId.slice(0, 8)} expired`);
     return 0;
   }
-  throw new CmdError('usage: jf pipeline list [--state s1,s2] [--company] | show <jobId> | advance <jobId> | expire <jobId> --reason <text>');
+  throw new CmdError('usage: quarry pipeline list [--state s1,s2] [--company] | show <jobId> | advance <jobId> | expire <jobId> --reason <text>');
 }
 
 /** Phase 22: one orchestrator pass from the CLI (ops actions only), or the incident list. */

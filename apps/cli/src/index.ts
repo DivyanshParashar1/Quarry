@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { createLogger, findUp, loadAppConfig, loadEnv, type AppConfig, type Env } from '@jobforge/shared';
+import { createLogger, findUp, loadAppConfig, loadEnv, type AppConfig, type Env } from '@quarry/shared';
 import {
   countJobs,
   createDb,
@@ -18,7 +18,7 @@ import {
   matchStats,
   resolveIdPrefix,
   type AtsType,
-} from '@jobforge/db';
+} from '@quarry/db';
 import {
   checkLatex,
   COMPANY_LISTS,
@@ -52,136 +52,136 @@ import {
   startBoss,
   waitForJobs,
   type SourceRunSummary,
-} from '@jobforge/core';
-import { checkClaudeCli } from '@jobforge/llm';
+} from '@quarry/core';
+import { checkClaudeCli } from '@quarry/llm';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
 import { fmtDate, table } from './format.js';
-import { createRegistry } from '@jobforge/plugins';
+import { createRegistry } from '@quarry/plugins';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
 import { applyCommand, sweepCommand, linkedinCommand, orchestratorCommand, pipelineCommand, referralsCommand, sequencerDeps } from './referral-cmds.js';
 
-const HELP = `jf — JobForge CLI
+const HELP = `quarry — Quarry CLI
 
 Usage:
-  jf companies import <file.csv> [--skip-invalid]
+  quarry companies import <file.csv> [--skip-invalid]
       CSV header: name,ats_type,board_token[,domain,tags,location,notes]
       tags are ';'-separated. Re-importing is idempotent.
-  jf companies list
-  jf fetch [--plugin <id>] [--company <name>] [--concurrency <n>] [--no-alerts] [--verbose]
+  quarry companies list
+  quarry fetch [--plugin <id>] [--company <name>] [--concurrency <n>] [--no-alerts] [--verbose]
       Fetch every active board (or a subset) through the job queue. When Gmail is
       connected, job-alert emails (LinkedIn, Naukri, Wellfound, YC, Instahyre,
       Internshala, Unstop) are read too, unless --no-alerts or --plugin/--company narrow it.
-  jf gmail alerts [--since <ISO date>] [--dump <messageId>]
+  quarry gmail alerts [--since <ISO date>] [--dump <messageId>]
       Read job-alert emails only. --dump prints one message's HTML (to build a fixture).
-  jf gmail subscribe-template
+  quarry gmail subscribe-template
       Print the job-alert searches to set up on each portal (from preferences.yaml).
-  jf discover_ats <domain|company name> [--name <company>] [--save] [--no-probe]
+  quarry discover_ats <domain|company name> [--name <company>] [--save] [--no-probe]
       Detect a company's ATS from its careers pages (robots.txt respected), falling
       back to ATS API probes by name. --save writes the company + detected boards.
-  jf discover_ats --missing [--limit <n>]
+  quarry discover_ats --missing [--limit <n>]
       Run detection for companies that have no board yet (e.g. seeded with a domain only).
-  jf discover_companies --list <yc|gcc-journal|wellfound|internshala|hirect> [--max-new <n>] [--dry-run] [--concurrency <n>]
+  quarry discover_companies --list <yc|gcc-journal|wellfound|internshala|hirect> [--max-new <n>] [--dry-run] [--concurrency <n>]
       Crawl a public company list, detect each new company's ATS, save company + boards.
-  jf discover_companies --all
+  quarry discover_companies --all
       Every enabled list (what the server's nightly discovery runs).
-  jf discover_ats --recheck [--limit <n>]
+  quarry discover_ats --recheck [--limit <n>]
       Re-detect ATSs for companies not checked in discovery.recheckDays; adds new boards and
       marks a board stale when the company moved to another ATS and the old board stopped working.
-  jf jobs list [--company <name>] [--q <title text>] [--limit <n>] [--all]
-      Sorted by match score once \`jf match\` has run. --all includes closed jobs.
-  jf profile load [--dir <profile dir>]
+  quarry jobs list [--company <name>] [--q <title text>] [--limit <n>] [--all]
+      Sorted by match score once \`quarry match\` has run. --all includes closed jobs.
+  quarry profile load [--dir <profile dir>]
       Validate profile/facts.yaml + preferences.yaml and make them the active profile.
-  jf profile show
-  jf embed
+  quarry profile show
+  quarry embed
       Embed new/changed jobs, facts, and the profile (local model; downloads once).
-  jf match [--rescore] [--limit <n>] [--no-embed]
+  quarry match [--rescore] [--limit <n>] [--no-embed]
       Score open jobs against the active profile: hard filters, similarity
       prefilter, then the LLM rubric. Already-scored jobs are skipped unless --rescore.
-  jf tailor <jobId> [--force]
+  quarry tailor <jobId> [--force]
       Pick the best resume from the library for this job (ATS + similarity vs the JD),
       then rewrite only its Technical Skills for the job, kept if the ATS score holds.
       An earlier decision is reused unless --force. Empty library → full per-job tailor.
       Requires \`latexmk\` (TeX Live) on PATH.
-  jf resumes generate [--retire] | list [--all] | bench [--pick]
+  quarry resumes generate [--retire] | list [--all] | bench [--pick]
       Resume library (Phase 16): render every project combo (resumes.projectsPerResume)
       + profile/resume/base/*.yaml once; --retire = scrap & regenerate. list = library
       with benchmark averages; bench = ATS-score the library against the benchmark JDs
       (--pick re-picks each category's auto JDs first).
-  jf autopilot [--limit <n>] [--live]
+  quarry autopilot [--limit <n>] [--live]
       autopilot.strategy = referrals (default, Phase 12): one sequencer tick —
       admit top matches that pass the match + tailor gates, fan out referral asks
       (confident ones auto-approved), wait for a reply / referralWaitDays / a near
       deadline, then queue the application; expire closed jobs.
       strategy = single_email: the Phase 4.5 one-email-per-job loop.
-  jf pipeline list [--state s1,s2] [--company <name>] | show <jobId>
+  quarry pipeline list [--state s1,s2] [--company <name>] | show <jobId>
       Every job the sequencer took on, its state, asks and application; show = timeline.
-  jf pipeline advance <jobId> [--live] | expire <jobId> --reason <text>
+  quarry pipeline advance <jobId> [--live] | expire <jobId> --reason <text>
       Manual override: push a job one step (ready_to_apply → applied = applied by hand), or give up on it.
-  jf deadlines [--job <id>] [--limit <n>] [--rescore]
+  quarry deadlines [--job <id>] [--limit <n>] [--rescore]
       Estimate application close dates (LLM + web search, cited) for well-matched
       open jobs; re-runs estimates older than deadlines.staleDays; closes jobs whose
       confident deadline has passed.
-  jf llm check
+  quarry llm check
       Show the provider/model per task and check the provider is reachable (no model call).
 
 Outreach (nothing is sent without an approved review item; dry run unless --live or MODE=live):
-  jf gmail auth | status         Connect your Gmail (OAuth, local) / show the connected account.
-  jf contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]
-  jf contacts import <file.xlsx|file.csv> [--yes]
+  quarry gmail auth | status         Connect your Gmail (OAuth, local) / show the connected account.
+  quarry contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]
+  quarry contacts import <file.xlsx|file.csv> [--yes]
       Any contact sheet, or LinkedIn's Connections.csv export (Settings → Data privacy →
       Get a copy of your data): EDA report + column mapping first; --yes writes it.
       Imported people are asked first; LinkedIn connections get a direct message.
-  jf contacts list [--company <name>]
-  jf contacts enrich [--company <name>]    Infer emails from the company pattern (MX-checked).
-  jf outreach draft --contact <id> [--job <id>] [--force]
+  quarry contacts list [--company <name>]
+  quarry contacts enrich [--company <name>]    Infer emails from the company pattern (MX-checked).
+  quarry outreach draft --contact <id> [--job <id>] [--force]
       LLM-draft an email into the review queue.
-  jf review list [--all] | show <id> | edit <id> [--subject] [--to] [--body-file <path>]
-  jf review approve <id> [--override-company-cap] | reject <id> [--reason <text>]
-  jf outreach send [--live] [--watch]
+  quarry review list [--all] | show <id> | edit <id> [--subject] [--to] [--body-file <path>]
+  quarry review approve <id> [--override-company-cap] | reject <id> [--reason <text>]
+  quarry outreach send [--live] [--watch]
       Send approved emails (one per run; --watch keeps going, respecting caps and spacing).
-  jf outreach followups           Draft due follow-ups for review.
-  jf outreach track               Check Gmail for replies and bounces.
-  jf outreach threads
+  quarry outreach followups           Draft due follow-ups for review.
+  quarry outreach track               Check Gmail for replies and bounces.
+  quarry outreach threads
 
 Applications (Greenhouse, Lever, Ashby, SmartRecruiters, Workday, SuccessFactors, Taleo):
-  jf apply draft <jobId> [--no-preview]
+  quarry apply draft <jobId> [--no-preview]
       Map the form's questions from preferences.yaml \`application\` + the tailored
       resume; opens the form once to screenshot it filled (never submits).
-  jf apply send [--live] [--watch]
+  quarry apply send [--live] [--watch]
       Submit approved applications (dry run fills + screenshots only).
 
 Referrals (Phase 8; no global send cap — a person is asked at most once per cooldown, a job at most N times):
-  jf referrals fanout <jobId> [--count <n>] [--live]
+  quarry referrals fanout <jobId> [--count <n>] [--live]
       Draft N referral asks to distinct people at the company (email, or LinkedIn
       when there's no usable address). With --live + LINKEDIN_ENABLED=true, finds
       more engineers on LinkedIn first when the company has too few contacts.
-  jf referrals show <jobId>        Batch status: each ask, its channel, send/reply state.
-  jf referrals approve <jobId>     Approve every pending ask in the job's batch.
-  jf linkedin drafts [--job <id>]  LinkedIn messages/notes to send BY HAND (copy, attach the PDF).
-  jf linkedin sent <id> | accepted <id> | replied <id>
+  quarry referrals show <jobId>        Batch status: each ask, its channel, send/reply state.
+  quarry referrals approve <jobId>     Approve every pending ask in the job's batch.
+  quarry linkedin drafts [--job <id>]  LinkedIn messages/notes to send BY HAND (copy, attach the PDF).
+  quarry linkedin sent <id> | accepted <id> | replied <id>
       Record that you sent one (cooldown + batch updated) / that they accepted your connection
       note (drafts the full message with the resume) / that they answered.
-  jf answers [list] | delete <id>
+  quarry answers [list] | delete <id>
       Application answers you approved (reused first for similar questions; edit them on the
       dashboard's Profile → answers tab).
-  jf orchestrator run              One orchestrator pass now: health checks → incidents → expert plan →
+  quarry orchestrator run              One orchestrator pass now: health checks → incidents → expert plan →
                                    ops actions (no code changes from the CLI). The server runs it every 15 min.
-  jf incidents [--all]             Open incidents (with --all: resolved ones too); see the dashboard's Health tab.
-  jf sweep [--live]
+  quarry incidents [--all]             Open incidents (with --all: resolved ones too); see the dashboard's Health tab.
+  quarry sweep [--live]
       One sweeper pass now (the server runs it on start and hourly): alerts, reply tracking,
       deadline expiry; with autopilot.enabled also match, resume, fan-out, the single 24 h
       follow-up (email auto-approved by confidence; LinkedIn drafted for you).
   Automated LinkedIn (off by default; LINKEDIN_ENABLED=true + --live; fan-out never uses it):
-  jf linkedin login | status | resume
+  quarry linkedin login | status | resume
       Save the dedicated account's session (headed browser, encrypted at rest) /
       show health / clear a pause after fixing a checkpoint.
-  jf linkedin employees --company <name> [--limit <n>] [--live]
-  jf linkedin send [--live] [--watch]
+  quarry linkedin employees --company <name> [--limit <n>] [--live]
+  quarry linkedin send [--live] [--watch]
       Send approved LinkedIn referral asks: one per run (random 45–120 s gaps with
       --watch), at most linkedin.dailyConnectionCap per day. Any checkpoint pauses.
-  jf linkedin track [--live]      Accepted connections and replies → batch replied.
+  quarry linkedin track [--live]      Accepted connections and replies → batch replied.
 Ids can be shortened to their first 8 characters.
 `;
 
@@ -304,7 +304,7 @@ async function main(argv: string[]): Promise<number> {
       if (values['no-alerts'] || values.company || (values.plugin && values.plugin !== ALERT_SOURCE_ID)) return code;
       const gmail = await createGmail(env, new DomainRateLimiter()).catch(() => undefined);
       if (!gmail) {
-        if (values.plugin === ALERT_SOURCE_ID) throw new CmdError('Gmail is not connected; run `jf gmail auth`');
+        if (values.plugin === ALERT_SOURCE_ID) throw new CmdError('Gmail is not connected; run `quarry gmail auth`');
         return code;
       }
       const alerts = await alertsCommand(gmail, values, db, log, config);
@@ -312,7 +312,7 @@ async function main(argv: string[]): Promise<number> {
     }
     if (cmd === 'gmail' && sub === 'alerts') {
       const gmail = await createGmail(env, new DomainRateLimiter());
-      if (!gmail) throw new CmdError('Gmail is not connected; run `jf gmail auth`');
+      if (!gmail) throw new CmdError('Gmail is not connected; run `quarry gmail auth`');
       if (values.dump) {
         const body = await gmail.getMessageBody!(values.dump);
         process.stdout.write(body.html ?? body.text ?? '');
@@ -336,14 +336,14 @@ async function main(argv: string[]): Promise<number> {
       const p = await getActiveProfile(db);
       if (p && !p.facts.length && !p.preferences.roles.length) {
         console.log('Warning: profile has no facts and no roles; fill in profile/*.yaml before matching.');
-      } else if (r.snapshotCreated) console.log('Next: `jf match` scores jobs against this version.');
+      } else if (r.snapshotCreated) console.log('Next: `quarry match` scores jobs against this version.');
       return 0;
     }
 
     if (cmd === 'profile' && sub === 'show') {
       const p = await getActiveProfile(db);
       if (!p) {
-        console.log('No profile loaded. Fill in profile/*.yaml and run `jf profile load`.');
+        console.log('No profile loaded. Fill in profile/*.yaml and run `quarry profile load`.');
         return 1;
       }
       console.log(`version ${p.version} · ${p.facts.length} facts · embedded: ${p.embedding ? 'yes' : 'no'}\n`);
@@ -358,13 +358,14 @@ async function main(argv: string[]): Promise<number> {
     }
 
     if (cmd === 'match') {
-      if (!values['no-embed']) {
+      const keywordMode = config.plugins['matcher-default']?.mode === 'keywords';
+      if (!values['no-embed'] && !keywordMode) {
         const s = await runEmbed(db, config, log);
         if (s.jobs || s.facts || s.profile) console.log(`embedded ${s.jobs} jobs, ${s.facts} facts${s.profile ? ', profile' : ''}`);
       }
       const llm = createLLM(env, config, db, log);
       const route = llm.route('match');
-      console.log(`matching with ${route.provider.name}/${route.model} …`);
+      console.log(keywordMode ? 'matching by keywords (no LLM) …' : `matching with ${route.provider.name}/${route.model} …`);
       const before = await llmUsageSummary(db);
       const started = Date.now();
       const s = await runMatch(
@@ -373,11 +374,11 @@ async function main(argv: string[]): Promise<number> {
       );
       const after = await llmUsageSummary(db);
       console.log(
-        `${s.candidates} candidates · ${s.llm} LLM-scored · ${s.prefilter} below prefilter · ${s.filtered} filtered · ` +
+        `${s.candidates} candidates · ${s.keyword ? `${s.keyword} keyword-scored · ` : ''}${s.llm} LLM-scored · ${s.prefilter} below prefilter · ${s.filtered} filtered · ` +
           `${s.unscored} left for next run · ${after.calls - before.calls} LLM calls ` +
           `(${after.failed - before.failed} failed, $${(after.costUsd - before.costUsd).toFixed(4)}) · ${((Date.now() - started) / 1000).toFixed(1)}s`,
       );
-      return s.candidates && !s.llm && !s.prefilter && !s.filtered ? 1 : 0;
+      return s.candidates && !s.llm && !s.keyword && !s.prefilter && !s.filtered ? 1 : 0;
     }
 
     if (cmd === 'tailor') {
@@ -457,7 +458,7 @@ async function main(argv: string[]): Promise<number> {
     }
     if (cmd === 'gmail' && sub === 'status') {
       const gmail = await createGmail(env, new DomainRateLimiter());
-      console.log(gmail ? `connected: ${gmail.address} · mode ${env.MODE}` : 'Gmail not connected. Run `jf gmail auth`.');
+      console.log(gmail ? `connected: ${gmail.address} · mode ${env.MODE}` : 'Gmail not connected. Run `quarry gmail auth`.');
       return gmail ? 0 : 1;
     }
 
@@ -506,7 +507,7 @@ function profileDir(): string {
 
 function scoreCell(r: { score: number | null; method: string | null }): string {
   if (r.method === null) return '-';
-  if (r.method === 'llm') return String(r.score);
+  if (r.method === 'llm' || r.method === 'keyword') return String(r.score);
   return r.method === 'filtered' ? 'filt' : 'low';
 }
 
@@ -572,7 +573,7 @@ async function fetchCommand(
     await listSourceTargets(db, { ...(atsTypes ? { atsTypes } : {}), ...(values.company ? { companyName: values.company } : {}) })
   ).filter((t) => SOURCE_PLUGIN_FOR_ATS[t.atsType]);
   if (!targets.length) {
-    console.log('No matching boards. Import some with `jf companies import <csv>`.');
+    console.log('No matching boards. Import some with `quarry companies import <csv>`.');
     return 0;
   }
 
@@ -712,7 +713,7 @@ async function resumesCommand(
       });
       console.log(`${r.id.slice(0, 8)}  ${r.kind.padEnd(5)}  ${(r.retiredAt ? 'retired' : r.status).padEnd(10)}  ${cells.join('  ')}  ${r.label ?? ''}`);
     }
-    if (!resumes.length) console.log('(empty — run `jf resumes generate`)');
+    if (!resumes.length) console.log('(empty — run `quarry resumes generate`)');
     return 0;
   }
   throw new UsageError(`unknown resumes subcommand "${sub}"`);
@@ -847,7 +848,7 @@ async function discoverCompaniesCommand(
   if (values.all) {
     const s = await runNightlyDiscovery({ db, pages: pageFetcher(), llm: createLLM(env, config, db, log), log }, config.discovery);
     for (const l of s.lists) console.log(`${l.list}: ${l.candidates} candidates · ${l.existing} known · ${l.added} added (${l.withAts} with a board) · ${l.errors} errors`);
-    console.log(`\n${s.added} companies added · ${s.newSources} new boards (run \`jf fetch\` to ingest them)`);
+    console.log(`\n${s.added} companies added · ${s.newSources} new boards (run \`quarry fetch\` to ingest them)`);
     return 0;
   }
   if (!values.list) throw new UsageError(`--list is required (${Object.keys(COMPANY_LISTS).join(', ')}), or --all`);
@@ -913,8 +914,8 @@ export function subscribeTemplate(roles: string[], locations: string[]): string 
   const l = locations.length ? locations : ['India', 'Bengaluru', 'Hyderabad', 'Pune'];
   const q = (s: string) => encodeURIComponent(s);
   const lines = [
-    'Set up these job alerts so new postings land in the Gmail account JobForge reads.',
-    'Use daily frequency where offered. Run `jf fetch` (or let the server poll) afterwards.',
+    'Set up these job alerts so new postings land in the Gmail account Quarry reads.',
+    'Use daily frequency where offered. Run `quarry fetch` (or let the server poll) afterwards.',
     '',
     'LinkedIn (Jobs → search → "Set alert" toggle, Daily, email):',
     ...r.flatMap((role) => l.slice(0, 2).map((loc) => `  https://www.linkedin.com/jobs/search/?keywords=${q(role)}&location=${q(loc)}&f_TPR=r86400`)),
@@ -932,7 +933,7 @@ export function subscribeTemplate(roles: string[], locations: string[]): string 
     `Locations: ${l.join(', ')}`,
     '',
     'Gmail tip: create a filter (from:(linkedin.com OR naukri.com OR wellfound.com OR workatastartup.com OR instahyre.com',
-    'OR internshala.com OR unstop.com) → Skip Inbox, apply label "job-alerts") to keep your inbox clean; JobForge searches all mail.',
+    'OR internshala.com OR unstop.com) → Skip Inbox, apply label "job-alerts") to keep your inbox clean; Quarry searches all mail.',
   ];
   return lines.join('\n');
 }

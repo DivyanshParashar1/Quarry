@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { pluginManifestSchema, preferencesSchema, type ApprovedDraft, type EmailDraft, type OutreachActionInput } from '@jobforge/plugin-sdk';
-import { fakeGmail, parseRfc822, testContext } from '@jobforge/plugin-sdk/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
+import { pluginManifestSchema, preferencesSchema, type ApprovedDraft, type EmailDraft, type OutreachActionInput } from '@quarry/plugin-sdk';
+import { fakeGmail, parseRfc822, testContext } from '@quarry/plugin-sdk/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
 import plugin, { buildMime, configSchema, encodeHeader, messageIdFor } from './index.js';
 
 const input = (o: Partial<OutreachActionInput> = {}): OutreachActionInput => ({

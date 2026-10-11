@@ -6,7 +6,7 @@ import {
   linkedinManualDraftSchema,
   type LinkedInManualDraft,
   type OutreachActionInput,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 // Phase 17: LinkedIn outreach is manual. This actor only drafts: a full referral
 // message for a 1st-degree connection (from the user's Connections export), or a
@@ -215,6 +215,6 @@ export default defineActorPlugin<LinkedInManualConfig, OutreachActionInput, Link
   },
 
   async execute() {
-    throw new Error(`${PLUGIN_ID} is manual: send the message yourself, then mark it sent in the dashboard (or \`jf linkedin sent <id>\`)`);
+    throw new Error(`${PLUGIN_ID} is manual: send the message yourself, then mark it sent in the dashboard (or \`quarry linkedin sent <id>\`)`);
   },
 });

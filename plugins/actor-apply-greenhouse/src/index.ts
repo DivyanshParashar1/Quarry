@@ -13,7 +13,7 @@ import {
   type ApplyInput,
   type FieldKind,
   type FormQuestion,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
 export const PLUGIN_ID = 'actor-apply-greenhouse';
 

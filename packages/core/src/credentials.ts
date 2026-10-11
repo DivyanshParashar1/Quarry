@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import type { CredentialStore } from '@jobforge/plugin-sdk';
+import type { CredentialStore } from '@quarry/plugin-sdk';
 import { keychainGet, keychainSet } from './keychain.js';
 
 // Phase 20: passwords for accounts a plugin creates on a portal (one per

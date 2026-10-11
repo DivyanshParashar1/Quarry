@@ -1,16 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { sql, upsertCompany, upsertCompanySource, listSourceTargets, getState } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
-import gmailAlerts from '@jobforge/source-gmail-alerts';
+import { sql, upsertCompany, upsertCompanySource, listSourceTargets, getState } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
+import gmailAlerts from '@quarry/source-gmail-alerts';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
 import { runAlertSource } from './alert-runner.js';
 import { runSourceTarget } from './source-runner.js';
 import { silentLogger } from './test-utils.js';
-import type { SourcePlugin } from '@jobforge/plugin-sdk';
+import type { SourcePlugin } from '@quarry/plugin-sdk';
 import { z } from 'zod';
 
 const adminUrl = testDbAdminUrl();

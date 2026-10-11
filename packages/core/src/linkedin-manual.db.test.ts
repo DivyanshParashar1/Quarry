@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
-import { getBatchForJob, getReviewItem, listBatchItems, listContacts, recordPosting, setContactHints, upsertCompany, upsertContact } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
-import gmailActor from '@jobforge/actor-gmail-outreach';
-import linkedinManual from '@jobforge/actor-linkedin-manual';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
+import { getBatchForJob, getReviewItem, listBatchItems, listContacts, recordPosting, setContactHints, upsertCompany, upsertContact } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
+import gmailActor from '@quarry/actor-gmail-outreach';
+import linkedinManual from '@quarry/actor-linkedin-manual';
 import { commitContactImport, previewContactImport } from './contact-import/index.js';
 import { listLinkedInDrafts, markLinkedInReplied, markLinkedInSent } from './linkedin-manual.js';
 import { normalizePosting } from './normalize.js';
@@ -124,7 +124,7 @@ describe.skipIf(!adminUrl)('manual LinkedIn referrals (postgres)', () => {
     const r = await fanOutReferrals(deps, ids.job2!, { count: 3 });
     // Everyone was asked (or queued) for the first job.
     expect(r.drafted).toEqual([]);
-    const { createReviewItem } = await import('@jobforge/db');
+    const { createReviewItem } = await import('@quarry/db');
     const again = await createReviewItem(t.db, {
       kind: 'referral_ask',
       pluginId: 'actor-linkedin-manual',

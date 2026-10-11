@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
 import {
   applicationDraftSchema,
   defineActorPlugin,
@@ -12,7 +12,7 @@ import {
   type ApplicationResult,
   type ApplyInput,
   type FormQuestion,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import {
   getReviewItem,
   insertResumeVariant,
@@ -22,9 +22,9 @@ import {
   transitionReviewItem,
   upsertCompany,
   upsertCompanySource,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
 import { draftApplication, runApplyTick, type ApplyDeps } from './apply.js';
 import { normalizePosting } from './normalize.js';
 import { approveReviewItem, editDraft } from './outreach.js';

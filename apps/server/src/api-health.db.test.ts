@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { upsertIncident } from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { setLlmPausedUntil, setPluginPause } from '@jobforge/core';
+import { upsertIncident } from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { setLlmPausedUntil, setPluginPause } from '@quarry/core';
 import { buildApi } from './api.js';
 
 const adminUrl = testDbAdminUrl();
-const H = { 'x-jobforge': '1', 'content-type': 'application/json' };
+const H = { 'x-quarry': '1', 'content-type': 'application/json' };
 
 describe.skipIf(!adminUrl)('health API (postgres)', () => {
   let t: TestDb;

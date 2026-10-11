@@ -3,7 +3,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { ApiError, type ApiClient } from './api-client.js';
-import { createJobForgeMcp } from './server.js';
+import { createQuarryMcp } from './server.js';
 
 const ID = '11111111-1111-4111-8111-111111111111';
 
@@ -24,7 +24,7 @@ function fakeApi(responses: Record<string, unknown> = {}) {
 }
 
 async function connect(api: ApiClient, elicit?: (msg: string) => { action: 'accept' | 'decline' | 'cancel'; content?: Record<string, unknown> }) {
-  const server = createJobForgeMcp(api);
+  const server = createQuarryMcp(api);
   const client = new Client({ name: 'test', version: '0' }, { capabilities: elicit ? { elicitation: {} } : {} });
   const prompts: string[] = [];
   if (elicit) {
@@ -42,7 +42,7 @@ async function connect(api: ApiClient, elicit?: (msg: string) => { action: 'acce
 const text = (r: unknown) => ((r as { content: { text: string }[] }).content[0]!.text);
 const pending = { id: ID, status: 'pending', kind: 'outreach', draft: { to: 'jane@acme.com', toName: 'Jane Doe', subject: 'Hello', body: 'Body text' }, contactEmailConfidence: 0.68 };
 
-describe('jobforge MCP server', () => {
+describe('quarry MCP server', () => {
   it('exposes the PLAN §6 tools, with approve marked destructive', async () => {
     const { client } = await connect(fakeApi().api);
     const { tools } = await client.listTools();
@@ -79,7 +79,7 @@ describe('jobforge MCP server', () => {
     const { client } = await connect(fakeApi().api);
     const r = await client.callTool({ name: 'get_job', arguments: { id: ID } });
     expect(r.isError).toBe(true);
-    expect(text(r)).toMatch(/JobForge API 404/);
+    expect(text(r)).toMatch(/Quarry API 404/);
   });
 
   it('approve asks the user and only approves on an explicit yes', async () => {

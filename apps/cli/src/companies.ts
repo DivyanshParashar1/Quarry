@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { ATS_TYPES, upsertCompany, upsertCompanySource, type DB } from '@jobforge/db';
-import { formatWorkdayToken, parseWorkdayToken } from '@jobforge/source-workday';
+import { ATS_TYPES, upsertCompany, upsertCompanySource, type DB } from '@quarry/db';
+import { formatWorkdayToken, parseWorkdayToken } from '@quarry/source-workday';
 import { parseCsvRecords } from './csv.js';
 
 const blankToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v);

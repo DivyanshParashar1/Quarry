@@ -8,7 +8,7 @@ import { factHash, preferencesSchema, profileSummary, profileVersion, readProfil
 const repoProfile = fileURLToPath(new URL('../../../profile', import.meta.url));
 
 function dirWith(facts: string, prefs: string): string {
-  const d = mkdtempSync(join(tmpdir(), 'jf-profile-'));
+  const d = mkdtempSync(join(tmpdir(), 'quarry-profile-'));
   writeFileSync(join(d, 'facts.yaml'), facts);
   writeFileSync(join(d, 'preferences.yaml'), prefs);
   return d;

@@ -22,7 +22,7 @@ import {
 // Later phases add resume_variants, contacts, review_items, actions, outreach_threads
 // (see PLAN.md section 7).
 
-/** bge-small-en-v1.5 output size; must match @jobforge/embeddings. */
+/** bge-small-en-v1.5 output size; must match @quarry/embeddings. */
 export const EMBEDDING_DIM = 384;
 
 export const atsTypeEnum = pgEnum('ats_type', [
@@ -248,7 +248,7 @@ export const profileSnapshots = pgTable('profile_snapshots', {
   loadedAt: timestamp('loaded_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const matchMethodEnum = pgEnum('match_method', ['filtered', 'prefilter', 'llm']);
+export const matchMethodEnum = pgEnum('match_method', ['filtered', 'prefilter', 'llm', 'keyword']);
 
 export const matchResults = pgTable(
   'match_results',

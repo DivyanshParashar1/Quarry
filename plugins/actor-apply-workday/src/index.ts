@@ -18,9 +18,9 @@ import {
   type ApplyInput,
   type FormQuestion,
   type WizardSpec,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 
-export { listboxFields, questionKey, stepSlug } from '@jobforge/plugin-sdk';
+export { listboxFields, questionKey, stepSlug } from '@quarry/plugin-sdk';
 
 // Phase 20: Workday apply. Every tenant is its own site with its own candidate
 // account. prepare: GET the posting from the public CXS API (no side effects),

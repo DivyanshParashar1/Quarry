@@ -26,7 +26,7 @@ describe('jobEmbeddingText', () => {
 });
 
 // Downloads ~130MB from huggingface.co on first run, so it's opt-in.
-describe.skipIf(process.env.JOBFORGE_EMBED_MODEL_TEST !== '1')('local bge-small embedder (model download)', () => {
+describe.skipIf(process.env.QUARRY_EMBED_MODEL_TEST !== '1')('local bge-small embedder (model download)', () => {
   it('produces normalized 384-dim vectors with sensible similarity', async () => {
     const e = await createLocalEmbedder();
     const [a, b, c] = await e.embed(['Backend engineer, Go and Postgres', 'Server-side developer using Golang and SQL', 'Pastry chef']);

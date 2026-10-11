@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Job, LLMClient } from '@jobforge/plugin-sdk';
+import type { Job, LLMClient } from '@quarry/plugin-sdk';
 import type { LoadedResume } from './manifest-loader.js';
 
 // Technical Skills tailoring (v2, Phase 15):

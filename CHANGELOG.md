@@ -542,3 +542,10 @@ emails or LinkedIn actions. Those parts wait for the user (listed below).
   main, one run per chat via the API. Not run against the real Claude CLI here (it spends your usage) — try it from
   the Chat tab. See `docs/chatbot.md`.
 
+
+## Keyword matcher (no LLM)
+
+- `matcher-default` `mode: keywords`: hard filters, then a deterministic score (`keywordBase` 70 + `keywordPerHit` 6 per `stack` keyword found, capped at 100). No embeddings, no LLM calls. Results use the new `keyword` match method (migration `0019`), ranked alongside `llm` everywhere (dashboard Ranked view, CLI, MCP, autopilot/sequencer, deadlines).
+- Preferences `keywords.title_any` / `keywords.description_any`: new hard filters (whole-word, case-insensitive) in both modes.
+- Sweeper runs the match step without `autopilot.enabled` when the matcher is in keyword mode (it costs nothing).
+- Location filter: a remote job no longer bypasses `locations` when it names another place ("Remote, US"); placeless locations ("Remote", "Worldwide") still pass.

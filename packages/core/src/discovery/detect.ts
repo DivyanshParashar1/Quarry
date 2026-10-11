@@ -6,8 +6,8 @@ import {
   parseSuccessFactorsToken,
   parseTaleoToken,
   parseWorkdayUrl,
-} from '@jobforge/plugin-sdk';
-import type { AtsType } from '@jobforge/db';
+} from '@quarry/plugin-sdk';
+import type { AtsType } from '@quarry/db';
 
 /** One ATS board found for a company, with the evidence that pointed at it. */
 export interface AtsDetection {

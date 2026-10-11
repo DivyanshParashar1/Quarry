@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { AppConfig, LLMClient, Logger } from '@jobforge/shared';
-import { discoveredCountSince, listRecentlyDiscovered, setCompanyTags, type DB } from '@jobforge/db';
-import { COMPANY_LISTS, discoverAndSave, discoverAts, runAtsRecheck, runDiscoverCompanies, runNightlyDiscovery, type PageFetcher } from '@jobforge/core';
+import type { AppConfig, LLMClient, Logger } from '@quarry/shared';
+import { discoveredCountSince, listRecentlyDiscovered, setCompanyTags, type DB } from '@quarry/db';
+import { COMPANY_LISTS, discoverAndSave, discoverAts, runAtsRecheck, runDiscoverCompanies, runNightlyDiscovery, type PageFetcher } from '@quarry/core';
 
 export interface DiscoveryRouteOptions {
   db: DB;

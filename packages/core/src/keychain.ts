@@ -2,21 +2,27 @@ import { execFile } from 'node:child_process';
 import { platform } from 'node:os';
 import { promisify } from 'node:util';
 
-// The OS keychain (macOS `security`, Linux `secret-tool`), service "jobforge".
+// The OS keychain (macOS `security`, Linux `secret-tool`), service "quarry".
+// Reads fall back to the pre-rename service "jobforge" so existing secrets keep working.
 // Used for the session-file key and (Phase 20) per-portal account passwords.
 // Both functions fail soft: null / false when no keychain is available.
 
 const run = promisify(execFile);
-const SERVICE = 'jobforge';
+const SERVICE = 'quarry';
+const LEGACY_SERVICE = 'jobforge';
 
 export async function keychainGet(account: string): Promise<string | null> {
+  return (await keychainRead(SERVICE, account)) ?? (await keychainRead(LEGACY_SERVICE, account));
+}
+
+async function keychainRead(service: string, account: string): Promise<string | null> {
   try {
     if (platform() === 'darwin') {
-      const { stdout } = await run('security', ['find-generic-password', '-s', SERVICE, '-a', account, '-w']);
+      const { stdout } = await run('security', ['find-generic-password', '-s', service, '-a', account, '-w']);
       return stdout.trim() || null;
     }
     if (platform() === 'linux') {
-      const { stdout } = await run('secret-tool', ['lookup', 'service', SERVICE, 'account', account]);
+      const { stdout } = await run('secret-tool', ['lookup', 'service', service, 'account', account]);
       return stdout.trim() || null;
     }
   } catch {
@@ -32,7 +38,7 @@ export async function keychainSet(account: string, secret: string): Promise<bool
       return true;
     }
     if (platform() === 'linux') {
-      const child = execFile('secret-tool', ['store', '--label', `JobForge ${account}`, 'service', SERVICE, 'account', account]);
+      const child = execFile('secret-tool', ['store', '--label', `Quarry ${account}`, 'service', SERVICE, 'account', account]);
       child.stdin?.end(secret);
       await new Promise<void>((res, rej) => child.on('exit', (c) => (c === 0 ? res() : rej(new Error(`secret-tool exited ${c}`)))).on('error', rej));
       return true;

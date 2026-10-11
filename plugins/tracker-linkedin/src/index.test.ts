@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { pluginManifestSchema, SessionBlockedError, type BrowserHandle } from '@jobforge/plugin-sdk';
-import { collect, fakeBrowser, testContext } from '@jobforge/plugin-sdk/testing';
+import { pluginManifestSchema, SessionBlockedError, type BrowserHandle } from '@quarry/plugin-sdk';
+import { collect, fakeBrowser, testContext } from '@quarry/plugin-sdk/testing';
 import plugin, { CONNECTIONS_URL, configSchema, MESSAGING_URL, parseConnections, parseInbox } from './index.js';
 
 const html = (f: string) => readFileSync(fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url)), 'utf8');

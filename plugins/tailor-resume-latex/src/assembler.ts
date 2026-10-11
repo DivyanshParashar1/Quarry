@@ -1,4 +1,4 @@
-import type { BulletRewrite, TechStackRewrite, SkillsReorder } from '@jobforge/plugin-sdk';
+import type { BulletRewrite, TechStackRewrite, SkillsReorder } from '@quarry/plugin-sdk';
 import type { LoadedResume } from './manifest-loader.js';
 
 export interface AssembleInput {

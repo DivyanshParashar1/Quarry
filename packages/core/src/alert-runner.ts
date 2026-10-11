@@ -1,5 +1,5 @@
-import type { Logger } from '@jobforge/shared';
-import { rawPostingSchema, type SourceTarget } from '@jobforge/plugin-sdk';
+import type { Logger } from '@quarry/shared';
+import { rawPostingSchema, type SourceTarget } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   finishPluginRun,
@@ -10,8 +10,8 @@ import {
   startPluginRun,
   upsertCompany,
   type DB,
-} from '@jobforge/db';
-import type { GmailHandle } from '@jobforge/plugin-sdk';
+} from '@quarry/db';
+import type { GmailHandle } from '@quarry/plugin-sdk';
 import { companyMatchKey, normalizePosting } from './normalize.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 

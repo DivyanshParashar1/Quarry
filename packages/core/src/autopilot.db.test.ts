@@ -2,7 +2,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
 import {
   autopilotApprovesSince,
   getReviewItem,
@@ -15,12 +15,12 @@ import {
   upsertCompany,
   upsertContact,
   type DB,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient, type ProviderRequest } from '@jobforge/llm';
-import gmailOutreach from '@jobforge/actor-gmail-outreach';
-import tailorResume from '@jobforge/tailor-resume-latex';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient, type ProviderRequest } from '@quarry/llm';
+import gmailOutreach from '@quarry/actor-gmail-outreach';
+import tailorResume from '@quarry/tailor-resume-latex';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
 import { runAutopilot, type AutopilotRunDeps } from './autopilot.js';
 import { normalizePosting } from './normalize.js';
 import { loadProfileData } from './profile-loader.js';
@@ -139,7 +139,7 @@ describe.skipIf(!adminUrl)('autopilot (postgres)', () => {
     registry.register(gmailOutreach);
     const limiter = new DomainRateLimiter();
     const llm = createLLMClient({ providers: { 'claude-code': provider }, defaultProvider: 'claude-code', onCall: (rec) => recordLlmCall(t.db, rec) });
-    const resumeDir = await mkdtemp(join(tmpdir(), 'jf-autopilot-'));
+    const resumeDir = await mkdtemp(join(tmpdir(), 'quarry-autopilot-'));
     const outreachDeps: OutreachDeps = {
       db: t.db,
       registry,

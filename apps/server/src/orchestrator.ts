@@ -1,7 +1,7 @@
-import type { AppConfig, Env, LLMClient, Logger } from '@jobforge/shared';
-import type { DB } from '@jobforge/db';
-import { advanceJob, expireJob, fanOutReferrals, type PluginRegistry, type SequencerDeps, type startBoss } from '@jobforge/core';
-import { ntfyNotifier, runOrchestratorTick, type TickResult } from '@jobforge/orchestrator';
+import type { AppConfig, Env, LLMClient, Logger } from '@quarry/shared';
+import type { DB } from '@quarry/db';
+import { advanceJob, expireJob, fanOutReferrals, type PluginRegistry, type SequencerDeps, type startBoss } from '@quarry/core';
+import { ntfyNotifier, runOrchestratorTick, type TickResult } from '@quarry/orchestrator';
 
 type PgBoss = Awaited<ReturnType<typeof startBoss>>;
 
@@ -10,7 +10,7 @@ type PgBoss = Awaited<ReturnType<typeof startBoss>>;
 // Automatic code fixes are NOT wired into the running server yet: an expert's
 // code_fix proposal is recorded on the incident as "automatic code fixes are
 // off", and the incident escalates to you. (The gated pipeline exists in
-// @jobforge/orchestrator; connecting it here needs your go-ahead.)
+// @quarry/orchestrator; connecting it here needs your go-ahead.)
 
 export interface OrchestratorWiring {
   boss: PgBoss;

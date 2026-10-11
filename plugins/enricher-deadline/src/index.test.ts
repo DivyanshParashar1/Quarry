@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { pluginManifestSchema, type Company, type Job } from '@jobforge/plugin-sdk';
-import { testContext } from '@jobforge/plugin-sdk/testing';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
+import { pluginManifestSchema, type Company, type Job } from '@quarry/plugin-sdk';
+import { testContext } from '@quarry/plugin-sdk/testing';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
 import plugin, { configSchema } from './index.js';
 
 const job: Job = {

@@ -1,5 +1,5 @@
 {
-  "name": "@jobforge/plugin-sdk",
+  "name": "@quarry/plugin-sdk",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@jobforge/shared": "workspace:*",
+    "@quarry/shared": "workspace:*",
     "zod": "^3.23.8",
     "pino": "^9.5.0"
   },

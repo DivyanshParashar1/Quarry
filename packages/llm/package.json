@@ -1,5 +1,5 @@
 {
-  "name": "@jobforge/llm",
+  "name": "@quarry/llm",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "smoke": "node --env-file-if-exists=../../.env --import tsx/esm scripts/smoke.ts"
   },
   "dependencies": {
-    "@jobforge/shared": "workspace:*",
+    "@quarry/shared": "workspace:*",
     "zod": "^3.23.8",
     "zod-to-json-schema": "^3.25.2"
   },

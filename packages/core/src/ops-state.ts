@@ -1,5 +1,5 @@
-import type { LLMClient, LLMRequest, LLMResponse } from '@jobforge/shared';
-import { getState, setState, type DB } from '@jobforge/db';
+import type { LLMClient, LLMRequest, LLMResponse } from '@quarry/shared';
+import { getState, setState, type DB } from '@quarry/db';
 import type { LoadedPlugin } from './plugins.js';
 
 // Phase 22: runtime switches the orchestrator (or you) can flip without a

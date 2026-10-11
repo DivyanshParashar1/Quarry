@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { defineActorPlugin, linkedinManualDraftSchema, type OutreachActionInput } from '@jobforge/plugin-sdk';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { defineActorPlugin, linkedinManualDraftSchema, type OutreachActionInput } from '@quarry/plugin-sdk';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
 import {
   createReviewItem,
   getBatchForJob,
@@ -13,11 +13,11 @@ import {
   sql,
   upsertCompany,
   upsertContact,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import actor from '@jobforge/actor-gmail-outreach';
-import tracker from '@jobforge/tracker-gmail';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
+import actor from '@quarry/actor-gmail-outreach';
+import tracker from '@quarry/tracker-gmail';
 import { normalizePosting } from './normalize.js';
 import { approveReviewItem, draftDueFollowups, OutreachError, pollTracker, rejectReviewItem, runSendTick, type OutreachDeps } from './outreach.js';
 import { approveBatch, bulletsFromTex, fanOutReferrals, latexToText, rankReferralContacts, referralPanel } from './referrals.js';
@@ -131,7 +131,7 @@ describe.skipIf(!adminUrl)('referral fan-out (postgres)', () => {
   afterAll(async () => t?.drop());
 
   it('ranks reachable engineers first', async () => {
-    const { listContacts } = await import('@jobforge/db');
+    const { listContacts } = await import('@quarry/db');
     const ranked = rankReferralContacts(await listContacts(t.db, { companyId: ids.company! }), 0.3).map((c) => c.name);
     expect(ranked.slice(0, 4)).toEqual(['Ana Engineer', 'Olga Asked', 'Mona Manager', 'Ravi Recruiter']);
     expect(ranked.at(-1)).toBe('No Reach');

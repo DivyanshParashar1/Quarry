@@ -11,7 +11,7 @@ import {
   type PluginContext,
   type Profile,
   type TailoredResume,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import {
   getResumeVariant,
   latestRenderedResumeForJob,
@@ -20,8 +20,8 @@ import {
   recordPosting,
   upsertCompany,
   type DB,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
 import { normalizePosting } from './normalize.js';
 import { loadProfileData } from './profile-loader.js';
 import { PluginRegistry } from './plugins.js';
@@ -110,7 +110,7 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
     const { id: companyId } = await upsertCompany(t.db, { name: 'Acme' });
     const r = await addJob(t.db, companyId, 'Acme', 'a', 'Senior Backend Engineer', 'Go, Postgres, payments');
     jobId = r.jobId;
-    const resumeDir = await mkdtemp(join(tmpdir(), 'jf-resumes-'));
+    const resumeDir = await mkdtemp(join(tmpdir(), 'quarry-resumes-'));
     deps = {
       db: t.db,
       registry,

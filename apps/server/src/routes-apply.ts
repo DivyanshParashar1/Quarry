@@ -2,8 +2,8 @@ import { createReadStream, existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { actionsForReviewItem, getReviewItem, type DB } from '@jobforge/db';
-import { draftApplication, type ApplyDeps } from '@jobforge/core';
+import { actionsForReviewItem, getReviewItem, type DB } from '@quarry/db';
+import { draftApplication, type ApplyDeps } from '@quarry/core';
 
 export interface ApplyRouteOptions {
   db: DB;

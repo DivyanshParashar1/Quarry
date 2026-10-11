@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { OutreachActionInput } from '@jobforge/plugin-sdk';
+import type { OutreachActionInput } from '@quarry/plugin-sdk';
 
 export const PLACEHOLDER_RE = /\[[A-Z][^\]]{0,40}\]|\{\{[^}]*\}\}|<(?:name|company|role)>/i;
 

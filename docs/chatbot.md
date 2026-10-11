@@ -1,11 +1,11 @@
-# The JobForge chatbot
+# The Quarry chatbot
 
 Dashboard → **Chat** (or `POST /api/chat/sessions` + `/messages`). Each message runs the Claude Code CLI you are
 logged into (`CLAUDE_CLI_PATH`, uses your Claude usage) in the chat's own git worktree of `main`
-(`~/.jobforge/chat/<session>`), resuming the same Claude conversation each time.
+(`~/.quarry/chat/<session>`), resuming the same Claude conversation each time.
 
 What it can do
-- The whole product through the JobForge MCP tools (jobs, `add_job` from any link, tailoring, referral asks, outreach
+- The whole product through the Quarry MCP tools (jobs, `add_job` from any link, tailoring, referral asks, outreach
   and application drafts, contacts, discovery, pipeline, health/incidents, the orchestrator).
 - The web (WebSearch / WebFetch) — e.g. "here's a link, tailor my resume and draft referrals": it fetches the JD,
   adds the job, tailors, fans out referral drafts.

@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
-import type { ResumeComboSpec } from '@jobforge/plugin-sdk';
+import type { ResumeComboSpec } from '@quarry/plugin-sdk';
 import type { LoadedResume } from './manifest-loader.js';
 
 // Phase 16 resume library. Every subset of exactly N project blocks (always_include

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { appendEvent, countCodeFixesSince, listIncidents, releaseLease, tryLease, updateIncident, upsertIncident, type IncidentLogEntry, type IncidentRow } from '@jobforge/db';
-import { llmPausedUntil } from '@jobforge/core';
-import type { LLMClient, Logger, OrchestratorConfig } from '@jobforge/shared';
+import { appendEvent, countCodeFixesSince, listIncidents, releaseLease, tryLease, updateIncident, upsertIncident, type IncidentLogEntry, type IncidentRow } from '@quarry/db';
+import { llmPausedUntil } from '@quarry/core';
+import type { LLMClient, Logger, OrchestratorConfig } from '@quarry/shared';
 import { executeAction, raiseAttention, type ActionOutcome, type OpsDeps } from './actions.js';
 import { fingerprintOf, runChecks, type Finding } from './checks.js';
 import { revertMerge, runCodeChange, type CodeChangeOptions, type CodeChangeResult } from './codefix.js';
@@ -114,7 +114,7 @@ async function handle(deps: OrchestratorDeps, f: Finding, inc: IncidentRow, now:
   }
 
   if (f.humanOnly) {
-    await escalate(deps, inc, now, 'JobForge needs you (blocked by a captcha, checkpoint or login wall)', `${f.summary}\n\nThese are never automated. The affected loop is paused; clear it by hand, then resolve this item.`, out);
+    await escalate(deps, inc, now, 'Quarry needs you (blocked by a captcha, checkpoint or login wall)', `${f.summary}\n\nThese are never automated. The affected loop is paused; clear it by hand, then resolve this item.`, out);
     return;
   }
 
@@ -197,7 +197,7 @@ async function tryCodeFix(deps: OrchestratorDeps, f: Finding, inc: IncidentRow, 
   if ((await countCodeFixesSince(deps.db, midnight)) >= deps.config.maxCodeFixesPerDay) return { status: 'rejected', branch, files: [], reason: `daily limit of ${deps.config.maxCodeFixesPerDay} code fixes reached` };
   const captures = Array.isArray(f.data.captures) ? (f.data.captures as string[]) : [];
   const prompt = [
-    `You are fixing an incident in this repository (JobForge, a TypeScript pnpm monorepo; read CLAUDE.md first).`,
+    `You are fixing an incident in this repository (Quarry, a TypeScript pnpm monorepo; read CLAUDE.md first).`,
     `Incident ${inc.id}: ${f.summary}`,
     `Diagnosis: ${advice.plan.diagnosis}`,
     `What to change: ${a.instructions ?? a.title ?? 'see the diagnosis'}`,

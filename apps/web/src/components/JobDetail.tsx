@@ -59,7 +59,7 @@ export function JobDetail({ id, onClose, onOpenReview }: { id: string; onClose: 
 
       <Card className="p-4">
         <h3 className="mb-2 text-sm font-semibold">Why this score</h3>
-        {!m && <p className="text-sm text-muted-foreground">Not scored against the current profile yet. Run <code>jf match</code>.</p>}
+        {!m && <p className="text-sm text-muted-foreground">Not scored against the current profile yet. Run <code>quarry match</code>.</p>}
         {m && (
           <>
             <p className="text-sm">{m.reasons}</p>

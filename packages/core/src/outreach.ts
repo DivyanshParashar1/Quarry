@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { JobForgeError, type AppConfig, type Logger } from '@jobforge/shared';
+import { QuarryError, type AppConfig, type Logger } from '@quarry/shared';
 import {
   emailDraftPatchSchema,
   emailDraftSchema,
@@ -17,7 +17,7 @@ import {
   type GmailTrackEvent,
   type Job,
   type OutreachActionInput,
-} from '@jobforge/plugin-sdk';
+} from '@quarry/plugin-sdk';
 import {
   appendEvent,
   approvedDueItems,
@@ -62,7 +62,7 @@ import {
   type DB,
   type ReviewItemRow,
   type ThreadRow,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { requireGmail } from './capabilities.js';
 import { loadCompanyRef } from './contacts-runner.js';
 import { emitStage } from './triggers.js';
@@ -98,7 +98,7 @@ export type OutreachErrorCode =
   | 'no_profile'
   | 'job_closed';
 
-export class OutreachError extends JobForgeError {
+export class OutreachError extends QuarryError {
   constructor(
     message: string,
     readonly code: OutreachErrorCode,
@@ -168,7 +168,7 @@ export async function draftOutreach(
   const contact = await getContact(db, opts.contactId);
   if (!contact) throw new OutreachError(`contact ${opts.contactId} not found`, 'not_found');
   if (contact.status !== 'active') throw new OutreachError(`${contact.name} is marked ${contact.status}`, 'contact_inactive');
-  if (!contact.email) throw new OutreachError(`${contact.name} has no email yet; add one or run \`jf contacts enrich\``, 'no_email');
+  if (!contact.email) throw new OutreachError(`${contact.name} has no email yet; add one or run \`quarry contacts enrich\``, 'no_email');
   if (!opts.force) {
     if ((await openOutreachForContact(db, contact.id)).length) {
       throw new OutreachError(`an email to ${contact.name} is already in the review queue`, 'duplicate');
@@ -178,7 +178,7 @@ export async function draftOutreach(
     }
   }
   const profile = await getActiveProfile(db);
-  if (!profile) throw new OutreachError('no profile loaded; run `jf profile load`', 'no_profile');
+  if (!profile) throw new OutreachError('no profile loaded; run `quarry profile load`', 'no_profile');
   const job = opts.jobId ? await loadJob(db, opts.jobId) : null;
   const company = (await loadCompanyRef(db, contact.companyId))!;
 

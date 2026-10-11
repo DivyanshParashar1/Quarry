@@ -1,4 +1,4 @@
-import { decodeEntities } from '@jobforge/plugin-sdk';
+import { decodeEntities } from '@quarry/plugin-sdk';
 
 export type Token = { type: 'text'; text: string } | { type: 'link'; href: string; text: string };
 

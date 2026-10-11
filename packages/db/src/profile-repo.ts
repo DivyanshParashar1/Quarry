@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, notInArray, sql } from 'drizzle-orm';
-import type { Preferences, Profile, ProfileFact } from '@jobforge/shared';
+import type { Preferences, Profile, ProfileFact } from '@quarry/shared';
 import type { DB } from './client.js';
 import { profileFacts, profileSnapshots } from './schema.js';
 

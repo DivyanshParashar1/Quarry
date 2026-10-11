@@ -1,4 +1,4 @@
-# JobForge: Build Plan
+# Quarry: Build Plan
 
 > Working name. Rename freely.
 > This document is the source of truth for the coding agent. Read it fully before writing code. Work one phase at a time, and stop at the end of each phase for review.
@@ -61,12 +61,12 @@ If any of these turns out to be blocking, propose an alternative in the phase su
 ## 3. Repository layout
 
 ```
-jobforge/
+quarry/
   apps/
     server/            # Fastify API, pg-boss workers, pipeline orchestration
     web/               # React review dashboard
     mcp/               # MCP server exposing system tools to Claude Code
-    cli/               # `jf` command: run pipeline, seed companies, manage plugins
+    cli/               # `quarry` command: run pipeline, seed companies, manage plugins
   packages/
     core/              # pipeline engine, plugin host, rate limiter, idempotency
     db/                # drizzle schema, migrations, repositories
@@ -95,7 +95,7 @@ jobforge/
   CLAUDE.md            # short agent working rules, derived from section 10
 ```
 
-Plugins depend only on `@jobforge/plugin-sdk` and `@jobforge/shared`, never on `core` or `db` directly.
+Plugins depend only on `@quarry/plugin-sdk` and `@quarry/shared`, never on `core` or `db` directly.
 
 ---
 
@@ -290,8 +290,8 @@ Each phase ends with: passing tests, a short summary of what was built, known ga
 - `core`: pg-boss setup, stage workers, ScopedHttp (domain allowlist, token bucket per domain, retries with backoff), plugin_runs logging.
 - `source-greenhouse` (public board API, e.g. `boards-api.greenhouse.io/v1/boards/{token}/jobs?content=true`) and `source-lever` (`api.lever.co/v0/postings/{company}?mode=json`). Verify endpoints and response shapes before coding against them; record fixtures for tests.
 - Normalizer + dedup.
-- `jf` CLI: `jf companies import <csv>`, `jf fetch [--plugin] [--company]`, `jf jobs list`.
-- **Done when:** importing ~50 companies and running `jf fetch` produces deduplicated canonical jobs, rerunning is idempotent, and a failing board doesn't stop the others.
+- `quarry` CLI: `quarry companies import <csv>`, `quarry fetch [--plugin] [--company]`, `quarry jobs list`.
+- **Done when:** importing ~50 companies and running `quarry fetch` produces deduplicated canonical jobs, rerunning is idempotent, and a failing board doesn't stop the others.
 
 ### Phase 2: LLM layer, profile, matching, review UI
 - `packages/llm` with both adapters, per-task routing, `llm_calls` logging. Contract tests that run against a fake provider; a manual smoke script for each real provider.

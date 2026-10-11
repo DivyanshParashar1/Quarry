@@ -1,4 +1,4 @@
-import { canonicalProfileUrl } from '@jobforge/plugin-sdk';
+import { canonicalProfileUrl } from '@quarry/plugin-sdk';
 import type { SheetGrid } from './read.js';
 
 // Deterministic contact-sheet analysis: find the header row, classify each

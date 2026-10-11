@@ -1,4 +1,4 @@
-import { PluginError } from '@jobforge/shared';
+import { PluginError } from '@quarry/shared';
 
 /** Thrown by ScopedHttp for non-2xx responses (after retries) and rejected hosts. */
 export class HttpError extends PluginError {

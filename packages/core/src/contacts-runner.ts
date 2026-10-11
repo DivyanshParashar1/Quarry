@@ -1,5 +1,5 @@
-import type { Logger } from '@jobforge/shared';
-import type { Company, CompanyEnrichment, ContactRef } from '@jobforge/plugin-sdk';
+import type { Logger } from '@quarry/shared';
+import type { Company, CompanyEnrichment, ContactRef } from '@quarry/plugin-sdk';
 import {
   appendEvent,
   finishPluginRun,
@@ -12,7 +12,7 @@ import {
   type CompanyRow,
   type ContactRow,
   type DB,
-} from '@jobforge/db';
+} from '@quarry/db';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 export function toContactRef(c: ContactRow): ContactRef {

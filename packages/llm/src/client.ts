@@ -9,7 +9,7 @@ import {
   type LLMTask,
   type Logger,
   type Usage,
-} from '@jobforge/shared';
+} from '@quarry/shared';
 import { toJsonSchema } from './json-schema.js';
 import { addUsage, emptyUsage, type LLMProvider, type ProviderResponse } from './provider.js';
 

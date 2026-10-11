@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { emailDraftSchema } from '@jobforge/plugin-sdk';
-import { fakeGmail } from '@jobforge/plugin-sdk/testing';
+import { parseAppConfig, preferencesSchema } from '@quarry/shared';
+import { emailDraftSchema } from '@quarry/plugin-sdk';
+import { fakeGmail } from '@quarry/plugin-sdk/testing';
 import {
   claimAction,
   getContact,
@@ -16,12 +16,12 @@ import {
   sql,
   upsertCompany,
   upsertContact,
-} from '@jobforge/db';
-import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
-import { createFakeProvider, createLLMClient } from '@jobforge/llm';
-import actor from '@jobforge/actor-gmail-outreach';
-import tracker from '@jobforge/tracker-gmail';
-import enricher from '@jobforge/enricher-contacts-pattern';
+} from '@quarry/db';
+import { createTestDb, testDbAdminUrl, type TestDb } from '@quarry/db/testing';
+import { createFakeProvider, createLLMClient } from '@quarry/llm';
+import actor from '@quarry/actor-gmail-outreach';
+import tracker from '@quarry/tracker-gmail';
+import enricher from '@quarry/enricher-contacts-pattern';
 import { enrichContacts } from './contacts-runner.js';
 import { createDnsResolver } from './capabilities.js';
 import { normalizePosting } from './normalize.js';
