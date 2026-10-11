@@ -4,14 +4,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
 import { fakeBrowser } from '@jobforge/plugin-sdk/testing';
-import { getBatchForJob, listReviewItems, recordPosting, setContactHints, sql, upsertCompany, upsertContact } from '@jobforge/db';
+import { createReviewItem, ensureBatch, getActiveProfile, getBatchForJob, listReviewItems, recordPosting, setContactHints, sql, upsertCompany, upsertContact } from '@jobforge/db';
 import { createTestDb, testDbAdminUrl, type TestDb } from '@jobforge/db/testing';
 import { createFakeProvider, createLLMClient } from '@jobforge/llm';
 import linkedinActor from '@jobforge/actor-linkedin-referral';
 import linkedinTracker from '@jobforge/tracker-linkedin';
 import { normalizePosting } from './normalize.js';
-import { approveReviewItem } from './outreach.js';
-import { approveBatch, fanOutReferrals, referralPanel } from './referrals.js';
+import { approveReviewItem, loadJobForOutreach, prepareDraft } from './outreach.js';
+import { loadCompanyRef } from './contacts-runner.js';
+import { approveBatch, referralPanel } from './referrals.js';
 import { linkedinPaused } from './linkedin.js';
 import { pollLinkedInTracker, runLinkedInSendTick, type LinkedInSendDeps } from './linkedin-send.js';
 import { loadProfileData } from './profile-loader.js';
@@ -87,10 +88,25 @@ describe.skipIf(!adminUrl)('LinkedIn send + track loops (postgres)', () => {
       await setContactHints(t.db, ids[k]!, { roleHint: 'engineer' });
     }
     await loadProfileData(t.db, [{ id: 'exp-ledger', kind: 'experience', content: 'Built a Go ledger service', metrics: {}, tags: [] }], preferencesSchema.parse({}));
-    const fan = await fanOutReferrals({ ...deps, linkedinAvailable: true, gmail: undefined } as never, ids.job, { count: 2 });
-    expect(fan.skipped).toEqual([]);
-    expect(fan.drafted.map((d) => d.channel)).toEqual(['linkedin', 'linkedin']);
-    const r = await approveBatch(t.db, config.outreach, fan.batch.id);
+    // Since Phase 17 fan-out never picks the automated actor (LinkedIn is sent by hand);
+    // this dormant loop is exercised with asks drafted by the automated actor directly.
+    const { batch } = await ensureBatch(t.db, ids.job, 2);
+    const job = await loadJobForOutreach(t.db, ids.job);
+    const company = (await loadCompanyRef(t.db, ids.company))!;
+    const profile = (await getActiveProfile(t.db))!;
+    for (const k of ['a', 'r'] as const) {
+      const ref = company.contacts.find((c) => c.id === ids[k])!;
+      const draft = await prepareDraft({ ...deps, gmail: undefined } as never, 'actor-linkedin-referral', {
+        kind: 'referral_ask',
+        job,
+        company,
+        contact: { ...ref, email: '' },
+        profile,
+        resumeBullets: [{ id: 'exp-ledger', text: 'Built a Go ledger service' }],
+      });
+      await createReviewItem(t.db, { kind: 'referral_ask', pluginId: 'actor-linkedin-referral', jobId: ids.job, contactId: ids[k]!, companyId: ids.company, batchId: batch.id, draft });
+    }
+    const r = await approveBatch(t.db, config.outreach, batch.id);
     expect(r.approved).toHaveLength(2);
   });
   afterAll(async () => t?.drop());

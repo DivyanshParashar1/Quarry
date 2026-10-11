@@ -3,6 +3,8 @@ import { JobForgeError, type AppConfig, type Logger } from '@jobforge/shared';
 import {
   emailDraftPatchSchema,
   emailDraftSchema,
+  linkedinManualDraftPatchSchema,
+  linkedinManualDraftSchema,
   linkedinNoteDraftPatchSchema,
   linkedinNoteDraftSchema,
   applicationDraftPatchSchema,
@@ -71,6 +73,8 @@ import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.j
 //   -> tracker: replies/bounces close threads and cancel follow-ups.
 
 export const OUTREACH_ACTOR = 'actor-gmail-outreach';
+/** Phase 17: LinkedIn drafts the user sends by hand (never executed by a loop). */
+export const LINKEDIN_MANUAL_ACTOR = 'actor-linkedin-manual';
 export const GMAIL_TRACKER = 'tracker-gmail';
 export type OutreachPolicy = AppConfig['outreach'];
 
@@ -204,6 +208,7 @@ async function prepare(deps: OutreachDeps, pluginId: string, input: OutreachActi
 /** Validate a stored draft against its actor's schema (email, LinkedIn note, or application). */
 export function parseDraftFor(pluginId: string, draft: unknown): Record<string, unknown> {
   if (pluginId === OUTREACH_ACTOR) return emailDraftSchema.parse(draft);
+  if (pluginId === LINKEDIN_MANUAL_ACTOR) return linkedinManualDraftSchema.parse(draft);
   if (pluginId.startsWith('actor-apply-')) return applicationDraftSchema.parse(draft);
   return linkedinNoteDraftSchema.parse(draft);
 }
@@ -235,7 +240,12 @@ export async function editDraft(db: DB, id: string, patch: unknown): Promise<Rev
     merged = applicationDraftSchema.parse({ ...d, fields, missingRequired: fields.filter((f) => f.required && !f.value).map((f) => f.label) });
     fieldsChanged = [...byKey.keys()];
   } else {
-    const p = item.pluginId === OUTREACH_ACTOR ? emailDraftPatchSchema.parse(patch) : linkedinNoteDraftPatchSchema.parse(patch);
+    const p =
+      item.pluginId === OUTREACH_ACTOR
+        ? emailDraftPatchSchema.parse(patch)
+        : item.pluginId === LINKEDIN_MANUAL_ACTOR
+          ? linkedinManualDraftPatchSchema.parse(patch)
+          : linkedinNoteDraftPatchSchema.parse(patch);
     merged = parseDraftFor(item.pluginId, { ...(item.draft as object), ...p });
     fieldsChanged = Object.keys(p);
   }

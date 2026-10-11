@@ -27,6 +27,8 @@ export function toContactRef(c: ContactRow): ContactRef {
     roleHint: c.roleHint,
     department: c.department,
     linkedinUrl: c.linkedinUrl,
+    linkedinDegree: c.linkedinDegree,
+    notes: c.notes,
   };
 }
 

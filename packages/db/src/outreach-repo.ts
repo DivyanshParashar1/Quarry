@@ -453,3 +453,9 @@ export async function countEvents(db: DB, kind: string, subjectId: string): Prom
 export async function reassignAction(db: DB, actionId: string, reviewItemId: string): Promise<void> {
   await db.update(actions).set({ reviewItemId }).where(eq(actions.id, actionId));
 }
+
+/** The thread a sent review item opened (Phase 17: manual LinkedIn messages). */
+export async function threadForReviewItem(db: DB, reviewItemId: string): Promise<ThreadRow | null> {
+  const [r] = await db.select().from(outreachThreads).where(eq(outreachThreads.reviewItemId, reviewItemId));
+  return r ?? null;
+}

@@ -28,6 +28,7 @@
   "devDependencies": {
     "@jobforge/actor-apply-greenhouse": "workspace:*",
     "@jobforge/actor-gmail-outreach": "workspace:*",
+    "@jobforge/actor-linkedin-manual": "workspace:*",
     "@jobforge/actor-linkedin-referral": "workspace:*",
     "@jobforge/enricher-contacts-pattern": "workspace:*",
     "@jobforge/enricher-deadline": "workspace:*",

@@ -20,8 +20,7 @@ import {
   type ReviewItemRow,
 } from '@jobforge/db';
 import { loadCompanyRef } from './contacts-runner.js';
-import { LINKEDIN_ACTOR } from './linkedin-send.js';
-import { approveReviewItem, OutreachError, prepareDraft, resolveResumeAttachment, loadJobForOutreach, type OutreachDeps } from './outreach.js';
+import { approveReviewItem, LINKEDIN_MANUAL_ACTOR, OutreachError, OUTREACH_ACTOR, prepareDraft, resolveResumeAttachment, loadJobForOutreach, type OutreachDeps } from './outreach.js';
 
 const DAY = 86_400_000;
 
@@ -101,11 +100,25 @@ export async function resumeBulletsForJob(db: DB, jobId: string): Promise<Resume
 
 const ROLE_RANK: Record<string, number> = { engineer: 0, manager: 1, leader: 2, recruiter: 3, other: 4 };
 
-/** Who to ask first: engineers (the team), then managers, leaders, recruiters; reachable contacts before unreachable. */
+/** Contacts the user brought in themselves (Phase 17 import). */
+export const IMPORTED_CONTACT_SOURCES = new Set(['linkedin_export', 'manual_import']);
+
+/** email = the Gmail actor; linkedin_manual = a message/note the user sends by hand (Phase 17). */
+export type ReferralChannel = 'email' | 'linkedin_manual';
+
+/**
+ * Who to ask first (Phase 17): people the user imported, then their LinkedIn
+ * connections, then everyone else; within that, reachable before unreachable,
+ * engineers (the team) before managers, leaders, recruiters.
+ */
 export function rankReferralContacts(contacts: ContactListRow[], minEmailConfidence: number): ContactListRow[] {
+  const imported = (c: ContactListRow) => (IMPORTED_CONTACT_SOURCES.has(c.source) ? 0 : 1);
+  const connected = (c: ContactListRow) => (c.linkedinDegree === 1 ? 0 : 1);
   const reach = (c: ContactListRow) => (c.email && (c.emailConfidence ?? 0) >= minEmailConfidence ? 0 : c.linkedinUrl ? 1 : 2);
   return [...contacts].sort(
     (a, b) =>
+      imported(a) - imported(b) ||
+      connected(a) - connected(b) ||
       reach(a) - reach(b) ||
       (ROLE_RANK[a.roleHint ?? 'other'] ?? 4) - (ROLE_RANK[b.roleHint ?? 'other'] ?? 4) ||
       (b.emailConfidence ?? 0) - (a.emailConfidence ?? 0) ||
@@ -113,10 +126,15 @@ export function rankReferralContacts(contacts: ContactListRow[], minEmailConfide
   );
 }
 
-/** Email when the address is good enough, else LinkedIn when we have a profile, else nothing. */
-export function channelFor(c: ContactListRow, minEmailConfidence: number, linkedinAvailable: boolean): 'email' | 'linkedin' | null {
+/**
+ * A LinkedIn connection gets a direct message (sent by hand); otherwise email when
+ * the address is good enough; otherwise a connection-request note (by hand) when
+ * we have their profile. LinkedIn is never automated from the fan-out.
+ */
+export function channelFor(c: ContactListRow, minEmailConfidence: number): ReferralChannel | null {
+  if (c.linkedinDegree === 1 && c.linkedinUrl) return 'linkedin_manual';
   if (c.email && (c.emailConfidence ?? 0) >= minEmailConfidence) return 'email';
-  if (c.linkedinUrl && linkedinAvailable) return 'linkedin';
+  if (c.linkedinUrl) return 'linkedin_manual';
   return null;
 }
 
@@ -127,13 +145,11 @@ export function channelFor(c: ContactListRow, minEmailConfidence: number, linked
 export interface FanOutDeps extends OutreachDeps {
   /** Find more people when the company has too few (LinkedIn search + email patterns). Optional. */
   findMoreContacts?: (companyId: string, jobId: string, wanted: number) => Promise<number>;
-  /** True when the LinkedIn actor is registered and enabled. */
-  linkedinAvailable?: boolean;
 }
 
 export interface FanOutResult {
   batch: ReferralBatchRow;
-  drafted: { reviewItemId: string; contactId: string; channel: 'email' | 'linkedin' }[];
+  drafted: { reviewItemId: string; contactId: string; channel: ReferralChannel; kind?: 'message' | 'note' }[];
   skipped: { contactId: string; name: string; reason: string }[];
   /** How many more asks the batch still wants (0 = full). */
   shortBy: number;
@@ -170,7 +186,7 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
   const eligible = async () => {
     const all = (await listContacts(db, { companyId: job.companyId })).filter((c) => c.status === 'active' && !inBatch.has(c.id));
     const cooled = await contactsAskedSince(db, all.map((c) => c.id), new Date(now.getTime() - policy.perContactCooldownDays * DAY));
-    return { all, usable: all.filter((c) => !cooled.has(c.id) && channelFor(c, policy.referralMinEmailConfidence, !!deps.linkedinAvailable)), cooled };
+    return { all, usable: all.filter((c) => !cooled.has(c.id) && channelFor(c, policy.referralMinEmailConfidence)), cooled };
   };
   let pool = await eligible();
   if (pool.usable.length < wanted && deps.findMoreContacts) {
@@ -179,7 +195,7 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
   }
   for (const c of pool.all) {
     if (pool.cooled.has(c.id)) res.skipped.push({ contactId: c.id, name: c.name, reason: `asked in the last ${policy.perContactCooldownDays} days` });
-    else if (!channelFor(c, policy.referralMinEmailConfidence, !!deps.linkedinAvailable)) {
+    else if (!channelFor(c, policy.referralMinEmailConfidence)) {
       res.skipped.push({ contactId: c.id, name: c.name, reason: 'no usable email and no LinkedIn profile' });
     }
   }
@@ -189,8 +205,8 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
   const attachments = await resolveResumeAttachment(db, jobId);
   for (const c of rankReferralContacts(pool.usable, policy.referralMinEmailConfidence)) {
     if (wanted <= 0) break;
-    const channel = channelFor(c, policy.referralMinEmailConfidence, !!deps.linkedinAvailable)!;
-    const pluginId = channel === 'email' ? 'actor-gmail-outreach' : LINKEDIN_ACTOR;
+    const channel = channelFor(c, policy.referralMinEmailConfidence)!;
+    const pluginId = channel === 'email' ? OUTREACH_ACTOR : LINKEDIN_MANUAL_ACTOR;
     try {
       const ref = company.contacts.find((x) => x.id === c.id)!;
       const draft = await prepareDraft(deps, pluginId, {
@@ -200,7 +216,8 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
         contact: { ...ref, email: c.email ?? '' },
         profile,
         resumeBullets: bullets,
-        ...(channel === 'email' ? { attachments } : {}),
+        // LinkedIn drafts only reference the resume (the user attaches it by hand).
+        attachments,
       });
       const item = await createReviewItem(db, {
         kind: 'referral_ask',
@@ -211,7 +228,7 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
         batchId: batch.id,
         draft,
       });
-      res.drafted.push({ reviewItemId: item.id, contactId: c.id, channel });
+      res.drafted.push({ reviewItemId: item.id, contactId: c.id, channel, ...(channel === 'linkedin_manual' ? { kind: (draft as { kind: 'message' | 'note' }).kind } : {}) });
       inBatch.add(c.id);
       wanted--;
     } catch (err) {
@@ -226,7 +243,14 @@ export async function fanOutReferrals(deps: FanOutDeps, jobId: string, opts: { c
     kind: 'referral.fanout',
     subjectType: 'job',
     subjectId: jobId,
-    payload: { batchId: batch.id, drafted: res.drafted.length, shortBy: res.shortBy, emails: res.drafted.filter((d) => d.channel === 'email').length },
+    payload: {
+      batchId: batch.id,
+      drafted: res.drafted.length,
+      shortBy: res.shortBy,
+      emails: res.drafted.filter((d) => d.channel === 'email').length,
+      linkedinMessages: res.drafted.filter((d) => d.kind === 'message').length,
+      linkedinNotes: res.drafted.filter((d) => d.kind === 'note').length,
+    },
   });
   return res;
 }

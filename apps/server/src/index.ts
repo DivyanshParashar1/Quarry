@@ -111,7 +111,6 @@ export async function bootstrap() {
       outreachPolicy: config.outreach,
       fanOutDeps: {
         ...out,
-        linkedinAvailable: env.LINKEDIN_ENABLED,
         ...(li.enabled
           ? { findMoreContacts: async (companyId: string, _jobId: string, wanted: number) => (await importLinkedInEmployees(li, companyId, { maxProfiles: Math.max(wanted * 2, config.linkedin.profilesPerCompany) })).contactsCreated }
           : {}),

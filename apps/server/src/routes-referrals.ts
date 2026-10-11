@@ -45,7 +45,6 @@ export function registerReferralRoutes(app: FastifyInstance, o: ReferralRouteOpt
     const r = await fanOutReferrals(
       {
         ...(await deps()),
-        linkedinAvailable: !!o.linkedinEnabled,
         ...(li?.enabled
           ? {
               findMoreContacts: async (companyId: string, _jobId: string, wanted: number) =>

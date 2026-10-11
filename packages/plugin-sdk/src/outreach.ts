@@ -48,6 +48,10 @@ export interface ContactRef {
   roleHint?: string | null;
   department?: string | null;
   linkedinUrl?: string | null;
+  /** Phase 17: 1 = a connection of the user's own LinkedIn (from the Connections export); null = unknown. */
+  linkedinDegree?: number | null;
+  /** Phase 17: free-text context from an imported sheet ("college senior"). */
+  notes?: string | null;
 }
 
 /** What a contacts enricher returns for one company. The core decides what to persist. */
@@ -191,6 +195,36 @@ export const linkedinNoteDraftSchema = z
 export type LinkedInNoteDraft = z.infer<typeof linkedinNoteDraftSchema>;
 
 export const linkedinNoteDraftPatchSchema = z.object({ note: z.string().trim().min(20).max(LINKEDIN_NOTE_MAX).optional() }).strict();
+
+/**
+ * Phase 17: a LinkedIn message the user sends by hand (no automation). `message`
+ * goes to a 1st-degree connection; `note` is a ≤300-char connection-request note.
+ */
+export const LINKEDIN_MESSAGE_MAX = 1500;
+
+export const linkedinManualDraftSchema = z
+  .object({
+    channel: z.literal('linkedin_manual'),
+    kind: z.enum(['message', 'note']),
+    profileUrl: z.string().url().refine((u) => /^https:\/\/(www\.)?linkedin\.com\/in\//.test(u), 'must be a linkedin.com/in/ profile URL'),
+    toName: z.string().min(1),
+    text: z.string().trim().min(20).max(LINKEDIN_MESSAGE_MAX),
+    jobTitle: z.string().nullable().default(null),
+    jobUrl: z.string().url().nullable().default(null),
+    /** The tailored resume to attach by hand (messages only). */
+    resumeVariantId: z.string().nullable().default(null),
+    resumeBulletId: z.string().nullable().default(null),
+    confidence: z.number().min(0).max(1).nullable().default(null),
+  })
+  .strict()
+  .superRefine((d, ctx) => {
+    if (d.kind === 'note' && d.text.length > LINKEDIN_NOTE_MAX) {
+      ctx.addIssue({ code: 'custom', path: ['text'], message: `a connection-request note is at most ${LINKEDIN_NOTE_MAX} characters` });
+    }
+  });
+export type LinkedInManualDraft = z.infer<typeof linkedinManualDraftSchema>;
+
+export const linkedinManualDraftPatchSchema = z.object({ text: z.string().trim().min(20).max(LINKEDIN_MESSAGE_MAX).optional() }).strict();
 
 export interface LinkedInSendResult {
   [key: string]: unknown;

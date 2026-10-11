@@ -98,7 +98,7 @@ describe.skipIf(!adminUrl)('autopilot sequencer (postgres)', () => {
       log: silentLogger,
       policy: config.autopilot,
       outreachPolicy: config.outreach,
-      fanOutDeps: { ...outreach, linkedinAvailable: false },
+      fanOutDeps: { ...outreach },
       tailorDeps: { ...outreach },
       applyDeps: { ...outreach, openBrowser: async () => ({ newPage: () => site.newPage() }) },
       now: () => clock,

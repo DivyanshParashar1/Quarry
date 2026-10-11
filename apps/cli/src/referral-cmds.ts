@@ -68,7 +68,6 @@ export async function referralsCommand(sub: string | undefined, arg: string | un
       const r = await fanOutReferrals(
         {
           ...deps,
-          linkedinAvailable: c.env.LINKEDIN_ENABLED,
           findMoreContacts: async (companyId, _jobId, wanted) => {
             const imp = await importLinkedInEmployees(li, companyId, { maxProfiles: Math.max(wanted * 2, c.config.linkedin.profilesPerCompany) });
             if (imp.skipped) c.out(`LinkedIn search skipped: ${imp.skipped}`);
@@ -81,12 +80,13 @@ export async function referralsCommand(sub: string | undefined, arg: string | un
       );
       c.out(
         `batch ${r.batch.id.slice(0, 8)} · ${r.batch.draftedCount}/${r.batch.requestedCount} asks drafted ` +
-          `(${r.drafted.filter((d) => d.channel === 'email').length} email, ${r.drafted.filter((d) => d.channel === 'linkedin').length} LinkedIn new this run)` +
+          `(${r.drafted.filter((d) => d.channel === 'email').length} email, ${r.drafted.filter((d) => d.kind === 'message').length} LinkedIn message, ` +
+          `${r.drafted.filter((d) => d.kind === 'note').length} LinkedIn note new this run)` +
           (r.foundContacts ? ` · ${r.foundContacts} new contacts from LinkedIn` : '') +
           (r.shortBy ? ` · short by ${r.shortBy}` : ''),
       );
       for (const s of r.skipped.slice(0, 15)) c.out(`  - skipped ${s.name}: ${s.reason}`);
-      if (r.drafted.length) c.out('Review them in the dashboard or `jf referrals approve <jobId>`.');
+      if (r.drafted.length) c.out('Review them in the dashboard or `jf referrals approve <jobId>`. LinkedIn drafts are sent by you: copy them from the dashboard (or `jf linkedin drafts`), then `jf linkedin sent <id>`.');
       return 0;
     } finally {
       await li.closeBrowser();
@@ -264,7 +264,6 @@ export async function sequencerDeps(c: CmdCtx, live: boolean): Promise<Sequencer
     outreachPolicy: c.config.outreach,
     fanOutDeps: {
       ...out,
-      linkedinAvailable: c.env.LINKEDIN_ENABLED,
       ...(li.enabled
         ? { findMoreContacts: async (companyId: string, _j: string, wanted: number) => (await importLinkedInEmployees(li, companyId, { maxProfiles: Math.max(wanted * 2, c.config.linkedin.profilesPerCompany) })).contactsCreated }
         : {}),

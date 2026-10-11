@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { parseAppConfig, preferencesSchema } from '@jobforge/shared';
-import { defineActorPlugin, linkedinNoteDraftSchema, type OutreachActionInput } from '@jobforge/plugin-sdk';
+import { defineActorPlugin, linkedinManualDraftSchema, type OutreachActionInput } from '@jobforge/plugin-sdk';
 import { fakeGmail } from '@jobforge/plugin-sdk/testing';
 import {
   createReviewItem,
@@ -29,20 +29,24 @@ import { silentLogger } from './test-utils.js';
 const adminUrl = testDbAdminUrl();
 const DAY = 86_400_000;
 
-/** Stands in for the Phase 9 LinkedIn actor: drafts a note, never executes here. */
-const linkedinStub = defineActorPlugin<unknown, OutreachActionInput, z.infer<typeof linkedinNoteDraftSchema>, Record<string, unknown>>({
-  manifest: { id: 'actor-linkedin-referral', version: '0.0.1', stage: 'actor', description: 'stub', configSchema: z.object({}), permissions: { domains: [] }, sideEffects: 'external' },
+/** Stands in for the Phase 17 manual LinkedIn actor: drafts a message (connections) or a note (others). */
+const linkedinStub = defineActorPlugin<unknown, OutreachActionInput, z.infer<typeof linkedinManualDraftSchema>, Record<string, unknown>>({
+  manifest: { id: 'actor-linkedin-manual', version: '0.0.1', stage: 'actor', description: 'stub', configSchema: z.object({}), permissions: { domains: [] }, sideEffects: 'external' },
   async prepare(_ctx, input) {
-    return linkedinNoteDraftSchema.parse({
-      channel: 'linkedin',
+    return linkedinManualDraftSchema.parse({
+      channel: 'linkedin_manual',
+      kind: input.contact.linkedinDegree === 1 ? 'message' : 'note',
       profileUrl: input.contact.linkedinUrl!,
       toName: input.contact.name,
-      note: `Hi ${input.contact.name.split(' ')[0]}, would you refer me for ${input.job?.title}?`,
+      text: `Hi ${input.contact.name.split(' ')[0]}, would you refer me for ${input.job?.title}?`,
+      jobTitle: input.job?.title ?? null,
       jobUrl: input.job?.applyUrl ?? null,
+      resumeVariantId: input.attachments?.[0]?.resumeVariantId ?? null,
+      confidence: 0.9,
     });
   },
   async execute() {
-    throw new Error('not in Phase 8 tests');
+    throw new Error('manual: never executed');
   },
 });
 
@@ -63,7 +67,7 @@ describe('latex bullets', () => {
 
 describe.skipIf(!adminUrl)('referral fan-out (postgres)', () => {
   let t: TestDb;
-  let deps: OutreachDeps & { linkedinAvailable: boolean };
+  let deps: OutreachDeps;
   let clock = new Date('2026-10-05T09:00:00Z');
   const gmail = fakeGmail('asha@gmail.com');
   const ids: Record<string, string> = {};
@@ -101,7 +105,6 @@ describe.skipIf(!adminUrl)('referral fan-out (postgres)', () => {
       policy: config.outreach,
       now: () => clock,
       random: () => 0.5,
-      linkedinAvailable: true,
     };
     ids.company = (await upsertCompany(t.db, { name: 'Acme', domain: 'acme.com' })).id;
     ids.job = await addJob('j1', 'Backend Engineer');
@@ -167,7 +170,7 @@ describe.skipIf(!adminUrl)('referral fan-out (postgres)', () => {
     await expect(approveReviewItem(t.db, config.outreach, extra.id)).rejects.toMatchObject({ code: 'job_cap' });
   });
 
-  it('sends the email asks one per tick (LinkedIn items are left to their own loop)', async () => {
+  it('sends the email asks one per tick (LinkedIn items wait for the user to send them)', async () => {
     for (let i = 0; i < 5; i++) {
       clock = new Date(clock.getTime() + 60_000);
       await runSendTick(deps);
