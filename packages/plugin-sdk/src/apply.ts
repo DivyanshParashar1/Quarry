@@ -2,13 +2,14 @@ import { z } from 'zod';
 import type { ApplicationProfile } from '@jobforge/shared';
 import type { Job, Profile } from './types.js';
 import { SessionBlockedError, type BrowserPage } from './browser.js';
+import type { OtpResult } from './otp.js';
 
 // Phase 11: ATS auto-apply. Shared by actor-apply-greenhouse / -lever / -ashby.
 // The actor reads the form's questions (public API or page, no side effects),
 // answers them only from the user's own preferences.yaml `application`
 // section, and submits only with a core-built ApprovedDraft.
 
-export type ApplyAts = 'greenhouse' | 'lever' | 'ashby';
+export type ApplyAts = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters';
 
 /** What the core hands an apply actor's prepare(). */
 export interface ApplyInput {
@@ -38,9 +39,23 @@ export interface FormQuestion {
   selectors: string[];
   /** compliance/EEO questions answer from `application.eeo` only. */
   eeo?: keyof ApplicationProfile['eeo'];
+  /** Character limit the form enforces (free text). */
+  maxLength?: number;
 }
 
-export const answerSourceEnum = z.enum(['profile', 'resume', 'answers', 'eeo', 'human']);
+/**
+ * Phase 19: a multi-step form showed required questions the draft has no answers
+ * for (they only appear after "Next"). The core adds them to the draft, answers
+ * what it can, and sends the item back for review — nothing was submitted.
+ */
+export class UnansweredQuestionsError extends Error {
+  constructor(readonly questions: FormQuestion[]) {
+    super(`the form asked ${questions.length} question(s) the draft doesn't answer: ${questions.map((q) => q.label).join('; ')}`);
+  }
+}
+
+/** Phase 19: llm = written by the LLM from your facts + the JD; bank = an answer you approved before. */
+export const answerSourceEnum = z.enum(['profile', 'resume', 'answers', 'eeo', 'human', 'llm', 'bank']);
 
 export const applicationFieldSchema = z
   .object({
@@ -53,6 +68,11 @@ export const applicationFieldSchema = z
     /** null = unanswered (left blank). */
     value: z.string().nullable(),
     source: answerSourceEnum.nullable(),
+    maxLength: z.number().int().positive().optional(),
+    /** LLM answers: self-reported confidence 0..1. */
+    confidence: z.number().min(0).max(1).optional(),
+    /** LLM answers: why it is grounded (facts used), or why it was left blank. */
+    note: z.string().optional(),
   })
   .strict();
 export type ApplicationField = z.infer<typeof applicationFieldSchema>;
@@ -60,7 +80,7 @@ export type ApplicationField = z.infer<typeof applicationFieldSchema>;
 export const applicationDraftSchema = z
   .object({
     channel: z.literal('apply'),
-    ats: z.enum(['greenhouse', 'lever', 'ashby']),
+    ats: z.enum(['greenhouse', 'lever', 'ashby', 'smartrecruiters']),
     title: z.string(),
     company: z.string(),
     jobUrl: z.string().url(),
@@ -199,6 +219,7 @@ export function mapAnswers(questions: FormQuestion[], input: ApplyInput): { fiel
       required: q.required,
       selectors: q.selectors,
       ...(q.options ? { options: q.options } : {}),
+      ...(q.maxLength ? { maxLength: q.maxLength } : {}),
       value,
       source,
     });
@@ -264,6 +285,17 @@ export interface ApplyFlowOptions {
   typingDelayMs?: number;
   /** How long to wait for the confirmation after submitting. */
   confirmTimeoutMs?: number;
+  /**
+   * Phase 19: the ATS may ask for an emailed code after submit. When `prompt`
+   * shows up, `wait` reads the code from Gmail; it is typed into `input` and
+   * `submit` is clicked. A magic link is opened instead when that's all there is.
+   */
+  otp?: {
+    prompt: RegExp;
+    input: string[];
+    submit: string[];
+    wait: (since: Date) => Promise<OtpResult>;
+  };
 }
 
 const CAPTCHA = /g-recaptcha|hcaptcha|captcha-container|cf-challenge|verify you are human/i;
@@ -285,6 +317,21 @@ export async function runApplyFlow(page: BrowserPage, draft: ApplicationDraft, o
   const at = new Date().toISOString();
   if (!o.submitForReal) return { dryRun: true, submitted: false, confirmation: null, screenshots, at };
 
+  return submitAndConfirm(page, o, screenshots, shot);
+}
+
+/**
+ * Click submit, answer an emailed verification code if the ATS asks for one,
+ * and wait for the confirmation. Shared by single-page forms (runApplyFlow)
+ * and multi-step ones that reach their submit button themselves.
+ */
+export async function submitAndConfirm(
+  page: BrowserPage,
+  o: Pick<ApplyFlowOptions, 'submit' | 'confirmation' | 'confirmTimeoutMs' | 'otp'>,
+  screenshots: string[],
+  shot: (name: string) => string,
+): Promise<ApplicationResult> {
+  const at = new Date().toISOString();
   let clicked = false;
   for (const s of o.submit) {
     if (await page.isVisible(s)) {
@@ -294,12 +341,32 @@ export async function runApplyFlow(page: BrowserPage, draft: ApplicationDraft, o
     }
   }
   if (!clicked) throw new Error('no submit button found');
-  const deadline = Date.now() + (o.confirmTimeoutMs ?? 20_000);
+  const submittedAt = new Date();
+  let deadline = Date.now() + (o.confirmTimeoutMs ?? 20_000);
   let html = '';
+  let otpUsed = false;
   for (;;) {
     await page.waitForTimeout(1000);
     html = await page.content();
     if (o.confirmation.test(html) || o.confirmation.test(page.url())) break;
+    if (o.otp && !otpUsed && o.otp.prompt.test(html)) {
+      otpUsed = true;
+      screenshots.push(shot('code-requested'));
+      await page.screenshot({ path: screenshots.at(-1)!, fullPage: true });
+      const got = await o.otp.wait(submittedAt); // throws OtpTimeoutError after its own timeout
+      if (got.code) {
+        const input = await firstVisible(page, o.otp.input);
+        if (!input) throw new Error('the form asked for a verification code but the code field was not found');
+        await page.fill(input, got.code);
+        const btn = await firstVisible(page, o.otp.submit);
+        if (!btn) throw new Error('no button to submit the verification code');
+        await page.click(btn);
+      } else if (got.link) {
+        await page.goto(got.link, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      }
+      deadline = Date.now() + (o.confirmTimeoutMs ?? 20_000);
+      continue;
+    }
     if (Date.now() > deadline) break;
   }
   screenshots.push(shot('after-submit'));

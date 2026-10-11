@@ -23,6 +23,23 @@ export interface BrowserPage {
     wheel(deltaX: number, deltaY: number): Promise<void>;
   };
   close(): Promise<void>;
+  /**
+   * Phase 19: the visible form fields on the page, open shadow roots included
+   * (web-component forms like SmartRecruiters'). Optional: read-only.
+   */
+  describeForm?(): Promise<DiscoveredField[]>;
+}
+
+export interface DiscoveredField {
+  /** A CSS selector that reaches the element (Playwright CSS pierces open shadow DOM). */
+  selector: string;
+  label: string;
+  kind: 'text' | 'textarea' | 'file' | 'select' | 'checkbox' | 'radio';
+  required: boolean;
+  options?: string[];
+  maxLength?: number;
+  /** Current value (prefilled fields). */
+  value?: string;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { DomainNotAllowedError, hostAllowed, type BrowserHandle, type BrowserPage, type PluginManifest } from '@jobforge/plugin-sdk';
+import { DomainNotAllowedError, hostAllowed, type BrowserHandle, type BrowserPage, type DiscoveredField, type PluginManifest } from '@jobforge/plugin-sdk';
 import type { Logger } from '@jobforge/shared';
 import type { BrowserContextOptions } from 'playwright';
 import type { DomainRateLimiter } from './rate-limiter.js';
@@ -56,6 +56,7 @@ export function scopeBrowser(raw: RawBrowser, manifest: PluginManifest, limiter:
         waitForTimeout: (ms) => page.waitForTimeout(ms),
         screenshot: (o) => page.screenshot(o),
         close: () => page.close(),
+        ...(page.describeForm ? { describeForm: () => page.describeForm!() } : {}),
       };
       return scoped;
     },
@@ -100,6 +101,7 @@ export async function launchBrowser(o: LaunchOptions = {}): Promise<RawBrowser> 
         screenshot: (opts) => p.screenshot(opts),
         mouse: { move: (x, y, opts) => p.mouse.move(x, y, opts), wheel: (dx, dy) => p.mouse.wheel(dx, dy) },
         close: () => p.close(),
+        describeForm: () => p.evaluate(DESCRIBE_FORM) as Promise<DiscoveredField[]>,
       };
     },
     storageState: () => context.storageState(),
@@ -109,3 +111,47 @@ export async function launchBrowser(o: LaunchOptions = {}): Promise<RawBrowser> 
     },
   };
 }
+
+/**
+ * Runs in the page: every visible input/textarea/select, walking open shadow
+ * roots, with the best label it can find (aria-label, <label for>, the
+ * web-component host's `label` attribute, the enclosing <label>, placeholder).
+ * Kept as a string so it is shipped to the browser verbatim.
+ */
+export const DESCRIBE_FORM = `(() => {
+  const out = [];
+  const seen = new Set();
+  const textOf = (el) => (el && el.textContent ? el.textContent.replace(/\\s+/g, ' ').trim() : '');
+  const visible = (el) => { const r = el.getBoundingClientRect(); return (r.width > 0 && r.height > 0) || el.type === 'file'; };
+  const labelFor = (el, root) => {
+    if (el.getAttribute('aria-label')) return el.getAttribute('aria-label');
+    if (el.id) { const l = root.querySelector('label[for="' + CSS.escape(el.id) + '"]'); if (l && textOf(l)) return textOf(l); }
+    const host = root.host;
+    if (host && host.getAttribute && host.getAttribute('label')) return host.getAttribute('label');
+    const wrap = el.closest('label'); if (wrap && textOf(wrap)) return textOf(wrap);
+    const lb = el.getAttribute('aria-labelledby'); if (lb) { const t = root.getElementById ? root.getElementById(lb) : null; if (t) return textOf(t); }
+    return el.getAttribute('placeholder') || el.getAttribute('name') || '';
+  };
+  const walk = (root) => {
+    for (const el of root.querySelectorAll('*')) {
+      if (el.shadowRoot) walk(el.shadowRoot);
+      const tag = el.tagName;
+      if (!/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || !visible(el)) continue;
+      const type = (el.getAttribute('type') || '').toLowerCase();
+      if (['hidden', 'submit', 'button', 'search'].includes(type)) continue;
+      const kind = tag === 'TEXTAREA' ? 'textarea' : tag === 'SELECT' ? 'select' : type === 'file' ? 'file' : type === 'checkbox' ? 'checkbox' : type === 'radio' ? 'radio' : 'text';
+      const selector = el.id ? '#' + CSS.escape(el.id) : el.getAttribute('name') ? tag.toLowerCase() + '[name="' + el.getAttribute('name') + '"]' : null;
+      if (!selector || seen.has(selector + kind)) continue;
+      seen.add(selector + kind);
+      const host = root.host;
+      const required = el.required || el.getAttribute('aria-required') === 'true' || !!(host && host.hasAttribute && host.hasAttribute('required'));
+      const f = { selector, label: labelFor(el, root).slice(0, 300), kind, required };
+      if (tag === 'SELECT') f.options = [...el.options].map((o) => o.textContent.trim()).filter(Boolean);
+      if (el.maxLength > 0) f.maxLength = el.maxLength;
+      if (el.value && kind !== 'file') f.value = el.value;
+      out.push(f);
+    }
+  };
+  walk(document);
+  return out;
+})()`;

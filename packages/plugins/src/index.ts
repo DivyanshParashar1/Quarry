@@ -16,6 +16,7 @@ import deadlineEnricher from '@jobforge/enricher-deadline';
 import applyGreenhouse from '@jobforge/actor-apply-greenhouse';
 import applyLever from '@jobforge/actor-apply-lever';
 import applyAshby from '@jobforge/actor-apply-ashby';
+import applySmartRecruiters from '@jobforge/actor-apply-smartrecruiters';
 import matcherDefault from '@jobforge/matcher-default';
 import contactsPattern from '@jobforge/enricher-contacts-pattern';
 import gmailOutreach from '@jobforge/actor-gmail-outreach';
@@ -26,7 +27,7 @@ import linkedinManual from '@jobforge/actor-linkedin-manual';
 /** Every installed plugin (the one list the CLI and the server share), configured from config.yaml `plugins.<id>`. */
 export function createRegistry(config?: AppConfig): PluginRegistry {
   const registry = new PluginRegistry();
-  for (const p of [greenhouse, lever, ashby, workday, smartrecruiters, gmailAlerts, successfactors, taleo, linkedinEmployees, linkedinActor, linkedinTracker, deadlineEnricher, applyGreenhouse, applyLever, applyAshby, matcherDefault, contactsPattern, gmailOutreach, gmailTracker, tailorResume, linkedinManual]) {
+  for (const p of [greenhouse, lever, ashby, workday, smartrecruiters, gmailAlerts, successfactors, taleo, linkedinEmployees, linkedinActor, linkedinTracker, deadlineEnricher, applyGreenhouse, applyLever, applyAshby, applySmartRecruiters, matcherDefault, contactsPattern, gmailOutreach, gmailTracker, tailorResume, linkedinManual]) {
     registry.register(p, { ...pathDefaults(p.manifest.id), ...rootRelative(config?.plugins[p.manifest.id] ?? {}) });
   }
   return registry;

@@ -16,6 +16,7 @@
     "@jobforge/actor-apply-ashby": "workspace:*",
     "@jobforge/actor-apply-greenhouse": "workspace:*",
     "@jobforge/actor-apply-lever": "workspace:*",
+    "@jobforge/actor-apply-smartrecruiters": "workspace:*",
     "@jobforge/actor-gmail-outreach": "workspace:*",
     "@jobforge/actor-linkedin-manual": "workspace:*",
     "@jobforge/actor-linkedin-referral": "workspace:*",

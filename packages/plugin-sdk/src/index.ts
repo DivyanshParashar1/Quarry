@@ -38,3 +38,4 @@ export function defineTailorPlugin<C>(plugin: TailorPlugin<C>): TailorPlugin<C> 
 export function defineTrackerPlugin<C>(plugin: TrackerPlugin<C>): TrackerPlugin<C> {
   return plugin;
 }
+export * from './otp.js';

@@ -7,6 +7,7 @@ import {
   draftConfidence,
   mapAnswers,
   runApplyFlow,
+  waitForOtp,
   type ApplicationDraft,
   type ApplicationResult,
   type ApplyInput,
@@ -106,6 +107,12 @@ export function parseQuestions(body: unknown): FormQuestion[] {
   return out;
 }
 
+/** Greenhouse may email an 8-character security code after submit (newer boards). */
+export const OTP_PROMPT = /security code|verify (it'?s|that it'?s) you|enter the code (we|that was) (sent|emailed)/i;
+export const OTP_INPUT = ['#security_code', 'input[name="security_code"]', 'input[autocomplete="one-time-code"]', 'input[name*="code" i]', 'input[id*="code" i]'];
+export const OTP_SUBMIT = ['button:has-text("Verify")', 'button:has-text("Submit")', ...['#submit_app', 'button[type="submit"]']];
+export const OTP_DOMAINS = ['greenhouse-mail.io', 'greenhouse.io'];
+
 export const CONFIRMATION = /thank you for applying|application (has been )?(submitted|received)|we('|’)ve received your application|\/confirmation/i;
 export const SUBMIT = ['#submit_app', 'button[type="submit"]', 'input[type="submit"]'];
 
@@ -116,7 +123,8 @@ export default defineActorPlugin<GreenhouseApplyConfig, ApplyInput, ApplicationD
     stage: 'actor',
     description: 'Fills a Greenhouse application form from your profile and tailored resume; submits only after approval.',
     configSchema,
-    permissions: { domains: [API, 'boards.greenhouse.io', 'job-boards.greenhouse.io'], browser: true },
+    // gmail read: the security code Greenhouse may email after submit (Phase 19).
+    permissions: { domains: [API, 'boards.greenhouse.io', 'job-boards.greenhouse.io'], browser: true, gmail: ['read'] },
     rateLimit: { perDomain: { tokens: 1, intervalMs: 2000 } },
     sideEffects: 'external',
   },
@@ -168,6 +176,9 @@ export default defineActorPlugin<GreenhouseApplyConfig, ApplyInput, ApplicationD
         submitForReal: !ctx.dryRun,
         typingDelayMs: ctx.config.typingDelayMs,
         confirmTimeoutMs: ctx.config.confirmTimeoutMs,
+        ...(ctx.gmail?.search
+          ? { otp: { prompt: OTP_PROMPT, input: OTP_INPUT, submit: OTP_SUBMIT, wait: (since: Date) => waitForOtp(ctx.gmail!, { fromDomains: OTP_DOMAINS, since, want: 'code' }) } }
+          : {}),
       });
     } finally {
       await page.close();

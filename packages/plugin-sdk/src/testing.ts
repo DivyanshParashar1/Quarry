@@ -4,6 +4,7 @@ import { HttpError, DomainNotAllowedError } from './errors.js';
 import type { HttpRequestInit, PluginContext, ScopedHttp, SourceTarget } from './types.js';
 import { hostAllowed } from './manifest.js';
 import type { GmailHandle } from './capabilities.js';
+import type { DiscoveredField } from './browser.js';
 
 export interface FixtureRoute {
   status?: number;
@@ -329,8 +330,37 @@ export function fakeBrowser(opts: FakeBrowserOptions) {
         wheel: async () => {},
       },
       close: async () => {},
+      /** Fixture fields are marked with data-label: <input id="q1" data-label="…" type="…" required maxlength="…">. */
+      async describeForm() {
+        return describeFixtureForm(state.html);
+      },
     };
     return page;
   };
   return { kind: 'browser' as const, newPage, actions };
+}
+
+/** fakeBrowser's describeForm(): fields in fixture HTML that carry a data-label attribute. */
+export function describeFixtureForm(html: string): DiscoveredField[] {
+  const out: DiscoveredField[] = [];
+  const attr = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}="([^"]*)"`, 'i'))?.[1];
+  for (const m of html.matchAll(/<(input|textarea|select)\b([^>]*)>([\s\S]*?<\/select>)?/gi)) {
+    const tag = m[0];
+    const label = attr(tag, 'data-label');
+    const id = attr(tag, 'id');
+    if (!label || !id) continue;
+    const el = m[1]!.toLowerCase();
+    const type = (attr(tag, 'type') ?? '').toLowerCase();
+    const kind = el === 'textarea' ? 'textarea' : el === 'select' ? 'select' : type === 'file' ? 'file' : type === 'checkbox' ? 'checkbox' : type === 'radio' ? 'radio' : 'text';
+    const max = attr(tag, 'maxlength');
+    out.push({
+      selector: `#${id}`,
+      label,
+      kind,
+      required: /\brequired\b/i.test(m[2] ?? ''),
+      ...(el === 'select' ? { options: [...(m[3] ?? '').matchAll(/<option[^>]*>([^<]*)<\/option>/gi)].map((o) => o[1]!.trim()).filter(Boolean) } : {}),
+      ...(max ? { maxLength: Number(max) } : {}),
+    });
+  }
+  return out;
 }

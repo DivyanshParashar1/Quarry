@@ -355,6 +355,9 @@ importers:
       '@jobforge/actor-apply-greenhouse':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-greenhouse
+      '@jobforge/actor-apply-smartrecruiters':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-smartrecruiters
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
@@ -476,6 +479,9 @@ importers:
       '@jobforge/actor-apply-lever':
         specifier: workspace:*
         version: link:../../plugins/actor-apply-lever
+      '@jobforge/actor-apply-smartrecruiters':
+        specifier: workspace:*
+        version: link:../../plugins/actor-apply-smartrecruiters
       '@jobforge/actor-gmail-outreach':
         specifier: workspace:*
         version: link:../../plugins/actor-gmail-outreach
@@ -593,6 +599,22 @@ importers:
         version: 5.9.3
 
   plugins/actor-apply-lever:
+    dependencies:
+      '@jobforge/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  plugins/actor-apply-smartrecruiters:
     dependencies:
       '@jobforge/plugin-sdk':
         specifier: workspace:*
