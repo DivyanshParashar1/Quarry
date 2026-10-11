@@ -145,7 +145,7 @@ Outreach (nothing is sent without an approved review item; dry run unless --live
   jf outreach track               Check Gmail for replies and bounces.
   jf outreach threads
 
-Applications (Phase 11; Greenhouse, Lever, Ashby — others stay manual):
+Applications (Greenhouse, Lever, Ashby, SmartRecruiters, Workday — others stay manual):
   jf apply draft <jobId> [--no-preview]
       Map the form's questions from preferences.yaml \`application\` + the tailored
       resume; opens the form once to screenshot it filled (never submits).

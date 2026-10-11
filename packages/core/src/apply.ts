@@ -38,8 +38,8 @@ import { buildContext } from './plugins.js';
 import { coreApprovedDraft, isCoreApproved, loadJobForOutreach, OutreachError, type OutreachDeps } from './outreach.js';
 import type { RawBrowser } from './browser.js';
 
-// Phase 11: ATS auto-apply (Greenhouse, Lever, Ashby; SmartRecruiters since Phase 19).
-// Workday / SuccessFactors / Taleo stay manual until Phases 20–21.
+// Phase 11: ATS auto-apply (Greenhouse, Lever, Ashby; SmartRecruiters since Phase 19,
+// Workday since Phase 20). SuccessFactors / Taleo stay manual until Phase 21.
 // Phase 19: blank questions are answered from the answer bank, then the LLM
 // (grounded, guardrailed); an emailed verification code is read from Gmail;
 // questions that only appear after "Next" send the item back for review.
@@ -49,6 +49,7 @@ export const APPLY_ACTORS = {
   lever: 'actor-apply-lever',
   ashby: 'actor-apply-ashby',
   smartrecruiters: 'actor-apply-smartrecruiters',
+  workday: 'actor-apply-workday',
 } as const;
 const APPLY_PLUGIN_IDS = Object.values(APPLY_ACTORS);
 const MAX_ATTEMPTS = 2;
@@ -72,7 +73,7 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
   const { db } = deps;
   const job = await loadJobForOutreach(db, jobId);
   const target = await applyTargetForJob(db, jobId);
-  if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever, Ashby and SmartRecruiters postings only; apply to this one by hand', 'invalid_state');
+  if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever, Ashby, SmartRecruiters and Workday postings only; apply to this one by hand', 'invalid_state');
   const profile = await getActiveProfile(db);
   if (!profile) throw new OutreachError('no profile loaded; run `jf profile load`', 'no_profile');
   const applicant = profile.preferences.application;
