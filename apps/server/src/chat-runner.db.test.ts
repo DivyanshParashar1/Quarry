@@ -91,8 +91,8 @@ describe.skipIf(!adminUrl)('chatbot runner (postgres + git)', () => {
 
     const args = fake.calls[0]!.args;
     const flag = (f: string) => args[args.indexOf(f) + 1]!;
-    expect(flag('--disallowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__jobforge__approve', 'Bash(curl:*)', 'Bash(git commit:*)']));
-    expect(flag('--allowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__jobforge', 'WebFetch', 'WebSearch', 'Edit', 'Bash(pnpm:*)']));
+    expect(flag('--disallowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__jobforge__approve', 'Bash(curl:*)', 'Bash(git commit:*)', 'Bash(sudo:*)', 'Bash(rm -rf:*)']));
+    expect(flag('--allowedTools').split(',')).toEqual(expect.arrayContaining(['mcp__jobforge', 'WebFetch', 'WebSearch', 'Edit', 'Bash']));
     expect(flag('--append-system-prompt')).toMatch(/never approve, send, submit or publish/);
     expect(args).not.toContain('--resume');
     const mcp = JSON.parse(readFileSync(flag('--mcp-config'), 'utf8'));
@@ -137,6 +137,17 @@ describe.skipIf(!adminUrl)('chatbot runner (postgres + git)', () => {
     await (await r.send(s.id, 'Change a')).done;
     expect(readFileSync(join(repo, 'src/a.ts'), 'utf8')).toBe('export const a = 1;\n');
     expect((await listChatMessages(t.db, s.id)).at(-1)!.content).toMatch(/NOT merged — gate "node -e .*" failed[\s\S]*2 tests failed/);
+  });
+
+  it('a gate that fails once (a flaky run) is retried before the change is refused', async () => {
+    const repo = makeRepo();
+    const marker = join(mkdtempSync(join(tmpdir(), 'chat-flaky-')), 'ran-once');
+    const flaky = `const fs = require('fs'); if (!fs.existsSync(${JSON.stringify(marker)})) { fs.writeFileSync(${JSON.stringify(marker)}, '1'); console.log('FAIL timed out'); process.exit(1); }`;
+    const r = runner(repo, { gates: [['node', '-e', flaky]], spawnClaude: scripted("require('fs').writeFileSync('src/b.ts', 'export const b = 1;\\n');").spawnClaude });
+    const s = await createChatSession(t.db, 'flaky');
+    await (await r.send(s.id, 'Add b')).done;
+    expect(existsSync(join(repo, 'src/b.ts'))).toBe(true);
+    expect((await listChatMessages(t.db, s.id)).at(-1)!.content).toMatch(/^Code change merged/);
   });
 
   it('one request at a time per chat; the API starts runs and reports progress', async () => {

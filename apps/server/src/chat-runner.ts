@@ -11,9 +11,9 @@ import type { Logger } from '@jobforge/shared';
 //   - the JobForge MCP tools (the whole product through the HTTP API) — except
 //     `approve`: the chatbot drafts, you approve in the Review tab;
 //   - web search / fetch (e.g. reading a job description from a link);
-//   - Read/Edit/Write in its worktree and an allowlist of shell commands to run
-//     its own scripts (scratch files go in .chat-scratch/, which git ignores);
-//   - no curl/wget, no git history changes.
+//   - Read/Edit/Write and any shell command, to run its own scripts (scratch
+//     files go in .chat-scratch/, which git ignores) — except a deny list: no
+//     curl/wget/ssh, no git history changes, no sudo / rm -rf / chmod / keychain.
 // When the run ends, any code it changed goes through the gated pipeline:
 // protected paths refused → typecheck, lint, tests → commit → merge into a clean
 // main (or the branch is kept and you're told why). The conversation resumes
@@ -43,7 +43,7 @@ export const CHAT_RULES = `You are the JobForge assistant, running inside the us
 You can:
 - operate the product through the jobforge MCP tools: search jobs, add a job from a link (fetch the page with WebFetch first, then add_job with the full description), tailor resumes, draft referral asks / outreach / applications, check the pipeline, health and incidents, run the orchestrator, import contacts, discover companies;
 - read the web (WebSearch, WebFetch);
-- read and change the codebase in this working copy, and run scripts (pnpm, node, npx tsx, python3). Put throwaway scripts and notes in .chat-scratch/ (ignored by git).
+- read and change the codebase in this working copy, and run shell commands and your own scripts (pnpm, pnpm jf …, node, npx tsx, python3, …). Put throwaway scripts and notes in .chat-scratch/ (ignored by git). You are in your own working copy; the user's main checkout is the repository root you came from. No curl/wget (use WebFetch), no git commands that change history, no sudo.
 
 Hard rules:
 - You never approve, send, submit or publish anything. Drafts go to the review queue; tell the user what is waiting for them in the Review tab. Never try to reach the approve endpoints another way.
@@ -62,34 +62,38 @@ const ALLOWED = [
   'Glob',
   'Grep',
   'TodoWrite',
-  'Bash(pnpm:*)',
-  'Bash(node:*)',
-  'Bash(npx:*)',
-  'Bash(tsx:*)',
-  'Bash(python3:*)',
-  'Bash(ls:*)',
-  'Bash(cat:*)',
-  'Bash(head:*)',
-  'Bash(tail:*)',
-  'Bash(grep:*)',
-  'Bash(wc:*)',
-  'Bash(mkdir:*)',
-  'Bash(git diff:*)',
-  'Bash(git status:*)',
-  'Bash(git log:*)',
-  'Bash(git show:*)',
+  // Any shell command (it runs its own scripts, cd, pipes, …) — minus the deny list below, which wins.
+  // Claude Code checks each part of a compound command (a; b | c) separately.
+  'Bash',
 ];
 const DISALLOWED = [
   'mcp__jobforge__approve',
+  // Network clients outside the MCP tools (the approve endpoints must stay out of reach).
   'Bash(curl:*)',
   'Bash(wget:*)',
+  'Bash(nc:*)',
+  'Bash(ssh:*)',
+  'Bash(scp:*)',
+  // History stays the server's job (the gated merge).
   'Bash(git commit:*)',
   'Bash(git push:*)',
   'Bash(git reset:*)',
   'Bash(git checkout:*)',
+  'Bash(git switch:*)',
   'Bash(git merge:*)',
   'Bash(git rebase:*)',
+  'Bash(git branch:*)',
+  'Bash(git worktree:*)',
+  'Bash(git config:*)',
+  // Machine-level changes.
+  'Bash(sudo:*)',
   'Bash(rm -rf:*)',
+  'Bash(rm -fr:*)',
+  'Bash(chmod:*)',
+  'Bash(chown:*)',
+  'Bash(security:*)',
+  'Bash(launchctl:*)',
+  'Bash(crontab:*)',
 ];
 
 export function chatClaudeArgs(o: { mcpConfig: string; resume: string | null; model?: string | undefined }): string[] {
@@ -320,7 +324,7 @@ export class ChatRunner {
     await addChatMessage(this.o.db, {
       sessionId,
       role: 'system',
-      content: `Code change NOT merged — ${r.reason ?? r.status}. Kept on branch ${parked} (${r.files.join(', ')}).${r.gateLog?.length ? `\n\n${r.gateLog.at(-1)!.cmd}:\n${r.gateLog.at(-1)!.tail.slice(-800)}` : ''}`,
+      content: `Code change NOT merged — ${r.reason ?? r.status}. Kept on branch ${parked} (${r.files.join(', ')}).${r.gateLog?.length ? `\n\n${r.gateLog.at(-1)!.cmd}:\n${r.gateLog.at(-1)!.tail.slice(-1200)}${r.gateLog.at(-1)!.logFile ? `\n(full output: ${r.gateLog.at(-1)!.logFile})` : ''}` : ''}`,
       meta: { kind: 'code_change', ...r, parked },
     });
   }

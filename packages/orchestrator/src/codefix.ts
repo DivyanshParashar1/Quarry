@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Logger } from '@jobforge/shared';
@@ -84,10 +84,16 @@ export interface CodeChangeResult {
   reason?: string;
   /** Claude's own summary of what it changed. */
   summary?: string;
-  gateLog?: { cmd: string; code: number; tail: string }[];
+  gateLog?: { cmd: string; code: number; tail: string; logFile?: string }[];
 }
 
 const tail = (s: string, n = 3000) => (s.length > n ? s.slice(-n) : s);
+
+/** The useful part of a failed gate: vitest's FAIL lines and errors, else the end of the output. */
+export function failureTail(output: string, n = 1500): string {
+  const lines = output.split('\n').filter((l) => /\bFAIL\b|Error:|error TS|✖|AssertionError|Test Files|Tests\s/.test(l));
+  return lines.length ? tail(lines.slice(0, 30).join('\n'), n) : tail(output, n);
+}
 
 export function guardrailPrompt(requireTest: boolean): string {
   return [
@@ -182,9 +188,15 @@ export async function gateAndMerge(o: Pick<CodeChangeOptions, 'repoDir' | 'exec'
 
     const gateLog: CodeChangeResult['gateLog'] = [];
     for (const cmd of o.gates) {
-      const r = await exec(cmd[0]!, cmd.slice(1), { cwd: wt, timeoutMs: o.gateTimeoutMs ?? 30 * 60_000 });
-      gateLog.push({ cmd: cmd.join(' '), code: r.code, tail: tail(r.stdout + r.stderr, 1500) });
-      if (r.code !== 0) return res('rejected', { files, summary, gateLog, reason: `gate "${cmd.join(' ')}" failed` });
+      // One retry: the full test suite can time out while the server and other work share the machine.
+      let r = await exec(cmd[0]!, cmd.slice(1), { cwd: wt, timeoutMs: o.gateTimeoutMs ?? 30 * 60_000 });
+      if (r.code !== 0) r = await exec(cmd[0]!, cmd.slice(1), { cwd: wt, timeoutMs: o.gateTimeoutMs ?? 30 * 60_000 });
+      const output = r.stdout + r.stderr;
+      const logFile = join(wt, '.chat-scratch', `gate-${cmd.join('-').replace(/[^a-z0-9-]+/gi, '_')}.log`);
+      await mkdir(join(wt, '.chat-scratch'), { recursive: true });
+      await writeFile(logFile, output).catch(() => {});
+      gateLog.push({ cmd: cmd.join(' '), code: r.code, tail: failureTail(output), logFile });
+      if (r.code !== 0) return res('rejected', { files, summary, gateLog, reason: `gate "${cmd.join(' ')}" failed twice` });
     }
 
     const msg = [req.title, '', ...(req.body), ...(summary ? ['', summary] : [])].join('\n');

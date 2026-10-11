@@ -9,7 +9,9 @@ What it can do
   and application drafts, contacts, discovery, pipeline, health/incidents, the orchestrator).
 - The web (WebSearch / WebFetch) — e.g. "here's a link, tailor my resume and draft referrals": it fetches the JD,
   adds the job, tailors, fans out referral drafts.
-- Read and change the code, and run its own scripts (pnpm, node, npx/tsx, python3; scratch files in `.chat-scratch/`).
+- Read and change the code, and run shell commands / its own scripts (any command, compound commands included;
+  scratch files in `.chat-scratch/`) — except a deny list: curl/wget/nc/ssh/scp, git commands that change history,
+  sudo, `rm -rf`, chmod/chown, the macOS keychain (`security`), launchctl, crontab.
 
 What it can't do
 - Approve, send, submit or publish: the MCP `approve` tool is withheld, curl/wget are blocked, and its instructions
@@ -18,7 +20,8 @@ What it can't do
 
 Code changes
 After each message, whatever it changed is checked like an orchestrator fix: protected paths refused
-(`packages/orchestrator/src/protected.ts`), then `pnpm typecheck`, `pnpm lint`, `pnpm test`; if all pass it is
+(`packages/orchestrator/src/protected.ts`), then `pnpm typecheck`, `pnpm lint`, `pnpm test` (a failing gate is run once more before the change is refused; the full output is kept in the chat's
+`.chat-scratch/gate-*.log`); if all pass it is
 committed ("chat: <your request>", no AI trailer) and merged into a clean `main`. Otherwise it is kept on a
 `chat/<id>-parked-*` branch and the chat tells you why. Restart the server to load server-side changes.
 `chat.mergeCodeChanges: false` in config.yaml keeps every change on a branch instead.
