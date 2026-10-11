@@ -4,7 +4,7 @@ import type { Embedder, LLMClient, Logger, Profile } from '@jobforge/shared';
 export type { Embedder, LLMClient, LLMRequest, LLMResponse, LLMTask, Profile, ProfileFact, Preferences } from '@jobforge/shared';
 export { factSchema, preferencesSchema } from '@jobforge/shared';
 import type { PluginManifest } from './manifest.js';
-import type { DnsResolver, GmailHandle } from './capabilities.js';
+import type { CredentialStore, DnsResolver, GmailHandle } from './capabilities.js';
 import type { Company, Enrichment } from './outreach.js';
 
 // ---------------------------------------------------------------------------
@@ -42,6 +42,8 @@ export interface PluginContext<C> {
   gmail?: GmailHandle;
   /** Present only when the manifest declares `permissions.dns`. */
   dns?: DnsResolver;
+  /** Present only when the manifest declares `permissions.credentials`. */
+  credentials?: CredentialStore;
   log: Logger;
   signal: AbortSignal;
   dryRun: boolean;

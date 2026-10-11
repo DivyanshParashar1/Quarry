@@ -1,10 +1,9 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { execFile } from 'node:child_process';
 import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { promisify } from 'node:util';
+import { keychainGet, keychainSet } from './keychain.js';
 
 // Encrypted-at-rest browser session (LinkedIn storageState). The file is
 // AES-256-GCM encrypted, mode 600; the key comes from (in order):
@@ -13,8 +12,6 @@ import { promisify } from 'node:util';
 //   3. a key file in ~/.config/jobforge/session.key (mode 600) — weakest, warned about.
 // Cookies never touch the disk in plaintext.
 
-const run = promisify(execFile);
-const SERVICE = 'jobforge';
 const MAGIC = 'JFSESS1';
 
 export type KeySource = 'env' | 'keychain' | 'keyfile';
@@ -22,40 +19,6 @@ export type KeySource = 'env' | 'keychain' | 'keyfile';
 export interface SessionKey {
   key: Buffer;
   source: KeySource;
-}
-
-async function keychainGet(account: string): Promise<string | null> {
-  try {
-    if (platform() === 'darwin') {
-      const { stdout } = await run('security', ['find-generic-password', '-s', SERVICE, '-a', account, '-w']);
-      return stdout.trim() || null;
-    }
-    if (platform() === 'linux') {
-      const { stdout } = await run('secret-tool', ['lookup', 'service', SERVICE, 'account', account]);
-      return stdout.trim() || null;
-    }
-  } catch {
-    /* not present / no keychain */
-  }
-  return null;
-}
-
-async function keychainSet(account: string, secret: string): Promise<boolean> {
-  try {
-    if (platform() === 'darwin') {
-      await run('security', ['add-generic-password', '-U', '-s', SERVICE, '-a', account, '-w', secret]);
-      return true;
-    }
-    if (platform() === 'linux') {
-      const child = execFile('secret-tool', ['store', '--label', `JobForge ${account}`, 'service', SERVICE, 'account', account]);
-      child.stdin?.end(secret);
-      await new Promise<void>((res, rej) => child.on('exit', (c) => (c === 0 ? res() : rej(new Error(`secret-tool exited ${c}`)))).on('error', rej));
-      return true;
-    }
-  } catch {
-    /* fall through */
-  }
-  return false;
 }
 
 export async function resolveSessionKey(

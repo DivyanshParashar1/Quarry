@@ -3,7 +3,7 @@ import pino from 'pino';
 import { HttpError, DomainNotAllowedError } from './errors.js';
 import type { HttpRequestInit, PluginContext, ScopedHttp, SourceTarget } from './types.js';
 import { hostAllowed } from './manifest.js';
-import type { GmailHandle } from './capabilities.js';
+import type { CredentialStore, GmailHandle } from './capabilities.js';
 import type { DiscoveredField } from './browser.js';
 
 export interface FixtureRoute {
@@ -80,7 +80,7 @@ export function fixtureHttp(routes: Record<string, FixtureRouteSpec>, domains: r
 export function testContext<C>(
   config: C,
   http: ScopedHttp = fixtureHttp({}, []),
-  extra: Partial<Pick<PluginContext<C>, 'llm' | 'embed' | 'gmail' | 'dns' | 'dryRun' | 'emit' | 'browser'>> = {},
+  extra: Partial<Pick<PluginContext<C>, 'llm' | 'embed' | 'gmail' | 'dns' | 'dryRun' | 'emit' | 'browser' | 'credentials'>> = {},
 ): PluginContext<C> {
   return {
     config,
@@ -363,4 +363,23 @@ export function describeFixtureForm(html: string): DiscoveredField[] {
     });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// In-memory credential store (Phase 20)
+// ---------------------------------------------------------------------------
+
+/** A CredentialStore over a Map; `create` returns deterministic test passwords. */
+export function fakeCredentials(initial: Record<string, string> = {}): CredentialStore & { saved: Map<string, string> } {
+  const saved = new Map(Object.entries(initial));
+  let n = 0;
+  return {
+    saved,
+    get: async (account) => saved.get(account) ?? null,
+    async create(account) {
+      const pw = `Test-Passw0rd!${++n}`;
+      saved.set(account, pw);
+      return pw;
+    },
+  };
 }

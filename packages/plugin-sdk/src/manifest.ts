@@ -39,6 +39,8 @@ export const pluginManifestSchema = z
       dns: z.boolean().optional(),
       browser: z.boolean().optional(),
       gmail: z.array(z.enum(['read', 'send'])).optional(),
+      /** Phase 20: per-account passwords the plugin generates, kept in the OS keychain. */
+      credentials: z.boolean().optional(),
     }),
     rateLimit: z
       .object({

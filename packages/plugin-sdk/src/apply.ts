@@ -9,7 +9,7 @@ import type { OtpResult } from './otp.js';
 // answers them only from the user's own preferences.yaml `application`
 // section, and submits only with a core-built ApprovedDraft.
 
-export type ApplyAts = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters';
+export type ApplyAts = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'workday';
 
 /** What the core hands an apply actor's prepare(). */
 export interface ApplyInput {
@@ -80,7 +80,7 @@ export type ApplicationField = z.infer<typeof applicationFieldSchema>;
 export const applicationDraftSchema = z
   .object({
     channel: z.literal('apply'),
-    ats: z.enum(['greenhouse', 'lever', 'ashby', 'smartrecruiters']),
+    ats: z.enum(['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'workday']),
     title: z.string(),
     company: z.string(),
     jobUrl: z.string().url(),

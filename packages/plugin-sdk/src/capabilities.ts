@@ -49,3 +49,16 @@ export interface GmailHandle {
   /** Full decoded body (read scope). Used by the job-alert source to parse alert emails. */
   getMessageBody?(id: string): Promise<GmailMessageBody>;
 }
+
+/**
+ * Requires `permissions.credentials` (Phase 20). Passwords for accounts the
+ * plugin creates on third-party portals (one per Workday tenant). The core
+ * keeps them in the OS keychain, namespaced by plugin id; they never reach the
+ * DB, events or logs. Plugins must not log or emit what `get`/`create` return.
+ */
+export interface CredentialStore {
+  /** The stored password for `account`, or null when none was created yet. */
+  get(account: string): Promise<string | null>;
+  /** Generate a strong password, store it, and return it. Throws when no keychain is available. */
+  create(account: string): Promise<string>;
+}

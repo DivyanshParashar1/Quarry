@@ -4,6 +4,7 @@ import {
   stageMethods,
   type ActorPlugin,
   type AnyPlugin,
+  type CredentialStore,
   type DnsResolver,
   type EnricherPlugin,
   type GmailHandle,
@@ -18,6 +19,7 @@ import {
 import { createScopedHttp } from './http.js';
 import { scopeGmail } from './capabilities.js';
 import { scopeBrowser, type RawBrowser } from './browser.js';
+import { keychainCredentials } from './credentials.js';
 import type { Clock, DomainRateLimiter } from './rate-limiter.js';
 
 export interface LoadedPlugin<P extends AnyPlugin = AnyPlugin> {
@@ -136,6 +138,8 @@ export interface ContextDeps {
   gmail?: GmailHandle;
   /** Unscoped browser; plugins declaring permissions.browser get a domain-scoped view. */
   browser?: RawBrowser;
+  /** Phase 20: credential store for plugins declaring permissions.credentials (defaults to the OS keychain). */
+  credentials?: (pluginId: string) => CredentialStore;
   /** Receives ctx.emit() calls; the runner persists them as events. */
   onEvent?: (kind: string, data: Record<string, unknown>) => void;
 }
@@ -151,7 +155,9 @@ export function buildContext<C>(loaded: LoadedPlugin, deps: ContextDeps): Plugin
   // No browser for calls that don't need one (e.g. an actor's prepare()); the
   // plugin fails if it tries to browse without it.
   const wantsBrowser = loaded.manifest.permissions.browser === true;
+  const wantsCredentials = loaded.manifest.permissions.credentials === true;
   return {
+    ...(wantsCredentials ? { credentials: (deps.credentials ?? keychainCredentials)(loaded.manifest.id) } : {}),
     ...(wantsDns && deps.dns ? { dns: deps.dns } : {}),
     ...(gmail ? { gmail } : {}),
     ...(wantsBrowser && deps.browser ? { browser: scopeBrowser(deps.browser, loaded.manifest, deps.limiter, log, deps.signal) } : {}),
