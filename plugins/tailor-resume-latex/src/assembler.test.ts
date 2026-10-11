@@ -8,7 +8,7 @@ import { loadResume } from './manifest-loader.js';
 import { deterministicSelection } from './index.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const MANIFEST = resolve(HERE, '../../../profile/resume/manifest.yaml');
+const MANIFEST = resolve(HERE, '../fixtures/resume/manifest.yaml');
 const ORIGINAL = resolve(HERE, '../../../my_resume.tex');
 
 describe('assembler', () => {

@@ -5,7 +5,7 @@ import { enforceRules } from './selector.js';
 import { loadResume } from './manifest-loader.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const MANIFEST = resolve(HERE, '../../../profile/resume/manifest.yaml');
+const MANIFEST = resolve(HERE, '../fixtures/resume/manifest.yaml');
 
 describe('selector.enforceRules', () => {
   it('always prepends the header block and respects sections_order', async () => {

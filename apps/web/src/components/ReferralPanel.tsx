@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { getJson, send, type FanOutResponse, type ReferralItem, type ReferralPanelData } from '@/lib/api';
+import { LinkedInManualCard } from '@/components/LinkedInManualCard';
+import { getJson, LINKEDIN_MANUAL_ACTOR, send, type FanOutResponse, type LinkedInDraftEntry, type ReferralItem, type ReferralPanelData } from '@/lib/api';
 import { relativeDate } from '@/lib/format';
 
 const STATUS_TONE: Record<string, string> = {
@@ -17,9 +18,12 @@ const STATUS_TONE: Record<string, string> = {
   failed: 'bg-red-100 text-red-900',
 };
 
+const isManual = (i: ReferralItem) => i.pluginId === LINKEDIN_MANUAL_ACTOR;
+
 function itemLabel(i: ReferralItem): string {
   if (i.threadState === 'replied') return 'replied';
-  if (i.status === 'executed') return i.channel === 'linkedin' ? 'request sent' : 'sent';
+  if (i.status === 'executed') return isManual(i) ? 'sent by you' : i.channel === 'linkedin' ? 'request sent' : 'sent';
+  if (isManual(i) && (i.status === 'pending' || i.status === 'approved')) return 'for you to send';
   return i.status;
 }
 
@@ -28,19 +32,30 @@ export function ReferralPanel({ jobId, onOpenReview }: { jobId: string; onOpenRe
   const qc = useQueryClient();
   const key = ['job-referrals', jobId];
   const q = useQuery({ queryKey: key, queryFn: () => getJson<ReferralPanelData>(`/api/jobs/${jobId}/referrals`) });
+  const li = useQuery({
+    queryKey: ['linkedin-drafts', jobId],
+    queryFn: () => getJson<{ drafts: LinkedInDraftEntry[] }>(`/api/linkedin/drafts?jobId=${jobId}`),
+  });
+  const replied = useMutation({
+    mutationFn: (id: string) => send(`/api/linkedin/drafts/${id}/replied`, 'POST', {}),
+    onSuccess: () => done(),
+    onError: (e: Error) => setMsg(e.message),
+  });
   const [count, setCount] = useState('10');
   const [msg, setMsg] = useState<string | null>(null);
   const done = () => {
     void qc.invalidateQueries({ queryKey: key });
     void qc.invalidateQueries({ queryKey: ['review'] });
     void qc.invalidateQueries({ queryKey: ['job-outreach', jobId] });
+    void qc.invalidateQueries({ queryKey: ['linkedin-drafts'] });
   };
 
   const fanout = useMutation({
     mutationFn: () => send<FanOutResponse>(`/api/jobs/${jobId}/referrals/fanout`, 'POST', { count: Number(count) || 10 }),
     onSuccess: (r) => {
       const skipped = r.skipped.length ? ` ${r.skipped.length} skipped (${[...new Set(r.skipped.map((s) => s.reason))].slice(0, 2).join('; ')}).` : '';
-      setMsg(`${r.drafted.length} new ask(s) drafted${r.foundContacts ? `, ${r.foundContacts} people found on LinkedIn` : ''}.${r.shortBy ? ` Short by ${r.shortBy}: add contacts or enable LinkedIn.` : ''}${skipped}`);
+      const li = r.drafted.filter((d) => d.channel === 'linkedin_manual').length;
+      setMsg(`${r.drafted.length} new ask(s) drafted${li ? ` (${li} on LinkedIn for you to send)` : ''}.${r.shortBy ? ` Short by ${r.shortBy}: import more contacts (Contacts tab).` : ''}${skipped}`);
       done();
     },
     onError: (e: Error) => setMsg(e.message),
@@ -85,14 +100,31 @@ export function ReferralPanel({ jobId, onOpenReview }: { jobId: string; onOpenRe
               <Badge className={STATUS_TONE[i.threadState === 'replied' ? 'executed' : i.status] ?? ''}>{itemLabel(i)}</Badge>
               {i.decidedBy === 'autopilot' && <Badge variant="outline">autopilot</Badge>}
               {i.error && <span className="text-xs text-red-700">{i.error}</span>}
-              {i.status === 'pending' && (
+              {i.status === 'pending' && !isManual(i) && (
                 <Button size="sm" variant="ghost" onClick={() => approveAll.mutate([i.id])} disabled={approveAll.isPending}>
                   Approve
+                </Button>
+              )}
+              {isManual(i) && i.status === 'executed' && i.threadState === 'sent' && (
+                <Button size="sm" variant="ghost" onClick={() => replied.mutate(i.id)} disabled={replied.isPending}>
+                  They replied
                 </Button>
               )}
             </li>
           ))}
         </ul>
+      )}
+
+      {(li.data?.drafts.length ?? 0) > 0 && (
+        <div className="mb-3 flex flex-col gap-2">
+          <p className="text-xs font-medium text-muted-foreground">LinkedIn — send these yourself, then mark them sent</p>
+          {li.data!.drafts.map((d) => (
+            <LinkedInManualCard
+              key={d.id}
+              item={{ id: d.id, status: d.status, draft: d.linkedin, companyName: d.companyName, jobTitle: d.linkedin.jobTitle, createdAt: d.createdAt, resumePdf: d.resumePdf }}
+            />
+          ))}
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -108,7 +140,7 @@ export function ReferralPanel({ jobId, onOpenReview }: { jobId: string; onOpenRe
           <Button
             size="sm"
             onClick={() => {
-              if (window.confirm(`Approve ${pending.length} referral ask(s)? Emails and LinkedIn requests go out from your accounts once approved.`)) approveAll.mutate(undefined);
+              if (window.confirm(`Approve ${pending.length} referral ask(s)? Emails go out from your Gmail once approved; LinkedIn drafts still wait for you to send them by hand.`)) approveAll.mutate(undefined);
             }}
             disabled={approveAll.isPending}
           >

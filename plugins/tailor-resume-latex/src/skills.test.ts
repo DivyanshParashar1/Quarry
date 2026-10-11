@@ -64,7 +64,7 @@ describe('skills validator', () => {
 
 describe('skills rewrite v2', () => {
   const HERE = dirname(fileURLToPath(import.meta.url));
-  const MANIFEST = resolve(HERE, '../../../profile/resume/manifest.yaml');
+  const MANIFEST = resolve(HERE, '../fixtures/resume/manifest.yaml');
   const JOB: Job = {
     id: 'j1',
     companyId: 'c1',

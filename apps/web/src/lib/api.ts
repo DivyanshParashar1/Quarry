@@ -138,9 +138,25 @@ export interface AttentionDraft {
   url: string | null;
 }
 
-export type AnyDraft = EmailDraft | LinkedInNoteDraft | AttentionDraft | Record<string, unknown>;
+/** Phase 17: a LinkedIn message (to a connection) or connection note the user sends by hand. */
+export interface LinkedInManualDraft {
+  channel: 'linkedin_manual';
+  kind: 'message' | 'note';
+  profileUrl: string;
+  toName: string;
+  text: string;
+  jobTitle: string | null;
+  jobUrl: string | null;
+  resumeVariantId: string | null;
+  resumeBulletId: string | null;
+  confidence: number | null;
+}
+
+export type AnyDraft = EmailDraft | LinkedInNoteDraft | LinkedInManualDraft | AttentionDraft | Record<string, unknown>;
 
 export const isLinkedInDraft = (d: AnyDraft): d is LinkedInNoteDraft => (d as LinkedInNoteDraft).channel === 'linkedin';
+export const isLinkedInManualDraft = (d: AnyDraft): d is LinkedInManualDraft => (d as LinkedInManualDraft).channel === 'linkedin_manual';
+export const LINKEDIN_MANUAL_ACTOR = 'actor-linkedin-manual';
 export const isEmailDraft = (d: AnyDraft): d is EmailDraft => typeof (d as EmailDraft).to === 'string' && typeof (d as EmailDraft).body === 'string';
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'executed' | 'failed' | 'cancelled';
@@ -534,7 +550,7 @@ export interface ReferralPanelData {
 }
 
 export interface FanOutResponse {
-  drafted: { reviewItemId: string; contactId: string; channel: 'email' | 'linkedin' }[];
+  drafted: { reviewItemId: string; contactId: string; channel: 'email' | 'linkedin_manual'; kind?: 'message' | 'note' }[];
   skipped: { contactId: string; name: string; reason: string }[];
   shortBy: number;
   foundContacts: number;
@@ -593,4 +609,101 @@ export interface DiscoveredPage {
   alertThreshold: number;
   alert: boolean;
   running: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 17: contact import + manual LinkedIn
+// ---------------------------------------------------------------------------
+
+export type ImportColumnType =
+  | 'full_name' | 'first_name' | 'last_name' | 'email' | 'linkedin_url' | 'company' | 'title' | 'phone' | 'location' | 'connected_on' | 'notes' | 'ignore';
+
+export interface ImportColumn {
+  index: number;
+  header: string;
+  type: ImportColumnType;
+  via: 'header' | 'values' | 'llm' | 'none';
+  fillRate: number;
+  distinct: number;
+  sample: string[];
+}
+
+export interface ImportRow {
+  line: number;
+  name: string;
+  email: string | null;
+  linkedinUrl: string | null;
+  company: string | null;
+  title: string | null;
+  phone: string | null;
+  location: string | null;
+  connectedOn: string | null;
+  notes: string | null;
+  fixes: string[];
+  problems: string[];
+  action: 'import' | 'skip';
+}
+
+export interface EdaReport {
+  format: 'linkedin_connections' | 'generic';
+  sheets: Array<{ name: string; rows: number; columns: number; mergedRanges: number }>;
+  sheet: string;
+  headerRow: number;
+  groupHeaderRows: number[];
+  columns: ImportColumn[];
+  rows: { total: number; importable: number; skipped: number };
+  duplicates: { byLinkedin: number; byEmail: number; byNameCompany: number };
+  invalidEmails: { count: number; examples: string[] };
+  nameFormats: { firstLast: number; lastCommaFirst: number; singleWord: number; allCaps: number; splitColumns: number };
+  missing: { company: number; email: number; linkedin: number; reachable: number };
+  companies: { distinct: number; top: Array<{ name: string; count: number }> };
+  warnings: string[];
+}
+
+export interface CompanyMatch {
+  name: string;
+  companyId: string | null;
+  matchedName: string | null;
+  via: 'name' | 'email_domain' | null;
+  rows: number;
+}
+
+export interface ImportPreview {
+  importId: string;
+  filename: string;
+  report: EdaReport;
+  companies: CompanyMatch[];
+  sample: ImportRow[];
+  problems: ImportRow[];
+}
+
+export interface ImportResult {
+  contactsCreated: number;
+  contactsUpdated: number;
+  companiesCreated: number;
+  skipped: Array<{ line: number; reason: string }>;
+}
+
+export interface ContactImportSummary {
+  id: string;
+  filename: string;
+  format: string;
+  status: 'preview' | 'committed' | 'discarded';
+  report: EdaReport;
+  result: ImportResult | null;
+  createdAt: string;
+  committedAt: string | null;
+}
+
+export interface LinkedInDraftEntry {
+  id: string;
+  status: ReviewStatus;
+  jobId: string | null;
+  contactId: string | null;
+  contactName: string | null;
+  companyName: string | null;
+  createdAt: string;
+  linkedin: LinkedInManualDraft;
+  resumePdf: string | null;
+  job: { title: string; company: string; resumePdf: string | null } | null;
 }

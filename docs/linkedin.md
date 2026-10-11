@@ -1,4 +1,30 @@
-# LinkedIn referrals (Phases 8–9)
+# LinkedIn referrals
+
+## Since Phase 17: manual, by default and in fan-out
+
+Referral fan-out **never automates LinkedIn**. Nothing logs into your account.
+
+1. Export your connections: LinkedIn → Settings → Data privacy → *Get a copy of your data* →
+   **Connections**. You get `Connections.csv` by email.
+2. Import it (Contacts tab → Upload, or `pnpm jf contacts import Connections.csv --yes`). Everyone
+   in it is recorded as a 1st-degree connection. Hand-made `.xlsx`/`.csv` lists import the same way.
+3. When a job is fanned out (`jf referrals fanout <jobId>` or the job page), imported people are
+   asked first:
+   - a **connection** at the company gets a full tailored message (role, job link, one resume
+     bullet, "resume attached");
+   - someone with a LinkedIn profile but no usable email gets a **connection-request note**
+     (≤ 300 characters);
+   - everyone else gets an email as before.
+4. You send them yourself: the dashboard (Contacts tab, job page, review queue) has **Copy text**,
+   **Open profile**, **Download resume PDF**, then **I sent it** — or `jf linkedin drafts`,
+   `jf linkedin sent <id>`. When they answer, **They replied** / `jf linkedin replied <id>`.
+   Marking sent keeps the 30-day per-person cooldown, the job's referral batch and the
+   apply-after-reply timing correct.
+
+The official LinkedIn API can't read your connections (closed to non-partners since 2015),
+which is why the export is used.
+
+## The older automation (Phases 8–9; dormant)
 
 LinkedIn automation is **off by default** and runs only on a **dedicated LinkedIn
 account** you create for this. LinkedIn's terms forbid automation; the ban risk is

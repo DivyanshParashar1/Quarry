@@ -7,13 +7,31 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { ReviewCard } from '@/components/ReviewCard';
 import { ApplicationCard } from '@/components/ApplicationCard';
-import { send, isEmailDraft, isLinkedInDraft, type AttentionDraft, type LinkedInNoteDraft, type ReviewItem, type ReviewItemAny } from '@/lib/api';
+import { LinkedInManualCard } from '@/components/LinkedInManualCard';
+import { send, isEmailDraft, isLinkedInDraft, isLinkedInManualDraft, type AttentionDraft, type LinkedInNoteDraft, type ReviewItem, type ReviewItemAny } from '@/lib/api';
 import { relativeDate } from '@/lib/format';
 
 /** Picks the right card for a review item's draft (email, LinkedIn note, attention, application). */
 export function ReviewItemCard({ item }: { item: ReviewItemAny }) {
   if (item.kind === 'attention') return <AttentionCard item={item} />;
   if (item.kind === 'application') return <ApplicationCard item={item} />;
+  if (isLinkedInManualDraft(item.draft)) {
+    const d = item.draft;
+    return (
+      <LinkedInManualCard
+        item={{
+          id: item.id,
+          status: item.status,
+          draft: d,
+          companyName: item.companyName,
+          jobTitle: item.jobTitle,
+          createdAt: item.createdAt,
+          resumePdf: d.resumeVariantId ? `/api/resume-variants/${d.resumeVariantId}/pdf` : null,
+          error: item.error,
+        }}
+      />
+    );
+  }
   if (isLinkedInDraft(item.draft)) return <LinkedInCard item={item} />;
   if (isEmailDraft(item.draft)) return <ReviewCard item={item as ReviewItem} />;
   return (

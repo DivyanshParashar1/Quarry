@@ -20,7 +20,7 @@ import {
 } from './fit.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const MANIFEST = resolve(HERE, '../../../profile/resume/manifest.yaml');
+const MANIFEST = resolve(HERE, '../fixtures/resume/manifest.yaml');
 const log = createLogger({ level: 'silent' });
 
 /**

@@ -7,7 +7,7 @@ import { comboKey, listBaseResumes, listProjectCombos, subsets } from './combos.
 import { loadResume } from './manifest-loader.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const RESUME_DIR = resolve(HERE, '../../../profile/resume');
+const RESUME_DIR = resolve(HERE, '../fixtures/resume');
 
 describe('subsets', () => {
   it('lists k-subsets in input order', () => {
@@ -56,7 +56,7 @@ describe('listProjectCombos (real manifest: 3 projects)', () => {
 });
 
 describe('listBaseResumes', () => {
-  it('reads profile/resume/base/default.yaml', async () => {
+  it('reads base/default.yaml', async () => {
     const resume = await loadResume(join(RESUME_DIR, 'manifest.yaml'));
     const bases = await listBaseResumes(resume);
     expect(bases).toHaveLength(1);

@@ -1,0 +1,14 @@
+# Base resume: a fixed block selection, rendered once with your original
+# Technical Skills (no LLM). Part of the resume library next to the project
+# combos. Add more files here for other fixed selections; the header block is
+# always included.
+label: "Base: all blocks"
+blocks:
+  - edu.rgipt
+  - exp.screenify
+  - exp.orangecat
+  - proj.flashseat
+  - proj.crdt
+  - proj.drillmirror
+  - skills.default
+  - extra.tpc
