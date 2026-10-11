@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lte, or, sql, type SQL } from 'drizzle-orm';
 import type { DB } from './client.js';
-import { actions, appState, companies, contacts, events, jobs, outreachThreads, reviewItems } from './schema.js';
+import { actions, answerBank, appState, companies, contacts, events, jobs, outreachThreads, reviewItems } from './schema.js';
 
 export type ReviewItemRow = typeof reviewItems.$inferSelect;
 export type ReviewStatus = ReviewItemRow['status'];
@@ -475,4 +475,41 @@ export async function recordThreadMessage(db: DB, threadId: string, messageId: s
       updatedAt: new Date(),
     })
     .where(eq(outreachThreads.id, threadId));
+}
+
+// ---------------------------------------------------------------------------
+// Phase 19: answer bank
+// ---------------------------------------------------------------------------
+
+export type AnswerBankRow = typeof answerBank.$inferSelect;
+
+export async function listAnswerBank(db: DB): Promise<AnswerBankRow[]> {
+  return db.select().from(answerBank).orderBy(desc(answerBank.updatedAt));
+}
+
+/** Insert or replace the answer for a normalised question. */
+export async function upsertBankAnswer(
+  db: DB,
+  a: { question: string; questionKey: string; answer: string; kind: 'text' | 'choice'; origin: string },
+): Promise<AnswerBankRow> {
+  const now = new Date();
+  const [row] = await db
+    .insert(answerBank)
+    .values({ ...a, updatedAt: now })
+    .onConflictDoUpdate({ target: [answerBank.questionKey, answerBank.kind], set: { question: a.question, answer: a.answer, updatedAt: now } })
+    .returning();
+  return row!;
+}
+
+export async function updateBankAnswer(db: DB, id: string, answer: string): Promise<AnswerBankRow | null> {
+  const [row] = await db.update(answerBank).set({ answer, updatedAt: new Date() }).where(eq(answerBank.id, id)).returning();
+  return row ?? null;
+}
+
+export async function deleteBankAnswer(db: DB, id: string): Promise<boolean> {
+  return (await db.delete(answerBank).where(eq(answerBank.id, id)).returning({ id: answerBank.id })).length > 0;
+}
+
+export async function noteBankAnswerUsed(db: DB, id: string): Promise<void> {
+  await db.update(answerBank).set({ uses: sql`${answerBank.uses} + 1`, lastUsedAt: new Date() }).where(eq(answerBank.id, id));
 }

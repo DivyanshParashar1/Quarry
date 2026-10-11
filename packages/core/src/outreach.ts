@@ -9,6 +9,7 @@ import {
   linkedinNoteDraftSchema,
   applicationDraftPatchSchema,
   applicationDraftSchema,
+  type ApplicationDraft,
   type ApprovedDraft,
   type EmailAttachment,
   type EmailDraft,
@@ -65,6 +66,7 @@ import {
 import { requireGmail } from './capabilities.js';
 import { loadCompanyRef } from './contacts-runner.js';
 import { emitStage } from './triggers.js';
+import { rememberAnswers } from './answers.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
 // Outreach engine (PLAN.md §8 Phase 3, §9 safety rules):
@@ -283,7 +285,7 @@ export async function approveReviewItem(
   db: DB,
   policy: OutreachPolicy,
   id: string,
-  opts: { overrideCompanyCap?: boolean; note?: string; now?: Date } = {},
+  opts: { overrideCompanyCap?: boolean; note?: string; now?: Date; /** Phase 19: store the application's answers in the bank (human approvals). */ rememberAnswers?: boolean } = {},
 ): Promise<ReviewItemRow> {
   const item = await getReviewItem(db, id);
   if (!item) throw new OutreachError(`review item ${id} not found`, 'not_found');
@@ -320,6 +322,9 @@ export async function approveReviewItem(
   });
   if (!approved) throw new OutreachError('item changed state while approving', 'invalid_state');
   await appendEvent(db, { kind: 'review.approved', subjectType: 'review_item', subjectId: id, payload: { overrideCompanyCap: override } });
+  if (item.kind === 'application' && opts.rememberAnswers !== false) {
+    await rememberAnswers(db, parsedDraft as ApplicationDraft);
+  }
   return approved;
 }
 

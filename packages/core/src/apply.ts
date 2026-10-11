@@ -1,11 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import {
   applicationDraftSchema,
+  draftConfidence,
+  mapAnswers,
+  OtpTimeoutError,
   SessionBlockedError,
+  UnansweredQuestionsError,
   type ApplicationDraft,
   type ApplicationResult,
   type ApplyInput,
+  type FormQuestion,
+  type Job,
 } from '@jobforge/plugin-sdk';
+import type { Profile } from '@jobforge/shared';
+import { answerOpenFields, draftConfidenceWithLlm } from './answers.js';
 import {
   appendEvent,
   applyTargetForJob,
@@ -30,10 +38,18 @@ import { buildContext } from './plugins.js';
 import { coreApprovedDraft, isCoreApproved, loadJobForOutreach, OutreachError, type OutreachDeps } from './outreach.js';
 import type { RawBrowser } from './browser.js';
 
-// Phase 11: ATS auto-apply (Greenhouse, Lever, Ashby). Workday / SuccessFactors /
-// Taleo stay manual — their forms vary too much per tenant.
+// Phase 11: ATS auto-apply (Greenhouse, Lever, Ashby; SmartRecruiters since Phase 19).
+// Workday / SuccessFactors / Taleo stay manual until Phases 20–21.
+// Phase 19: blank questions are answered from the answer bank, then the LLM
+// (grounded, guardrailed); an emailed verification code is read from Gmail;
+// questions that only appear after "Next" send the item back for review.
 
-export const APPLY_ACTORS = { greenhouse: 'actor-apply-greenhouse', lever: 'actor-apply-lever', ashby: 'actor-apply-ashby' } as const;
+export const APPLY_ACTORS = {
+  greenhouse: 'actor-apply-greenhouse',
+  lever: 'actor-apply-lever',
+  ashby: 'actor-apply-ashby',
+  smartrecruiters: 'actor-apply-smartrecruiters',
+} as const;
 const APPLY_PLUGIN_IDS = Object.values(APPLY_ACTORS);
 const MAX_ATTEMPTS = 2;
 
@@ -56,7 +72,7 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
   const { db } = deps;
   const job = await loadJobForOutreach(db, jobId);
   const target = await applyTargetForJob(db, jobId);
-  if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever and Ashby postings only; apply to this one by hand', 'invalid_state');
+  if (!target) throw new OutreachError('auto-apply supports Greenhouse, Lever, Ashby and SmartRecruiters postings only; apply to this one by hand', 'invalid_state');
   const profile = await getActiveProfile(db);
   if (!profile) throw new OutreachError('no profile loaded; run `jf profile load`', 'no_profile');
   const applicant = profile.preferences.application;
@@ -80,7 +96,8 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
   };
   const log = deps.log.child({ plugin: pluginId, jobId });
   const ctx = buildContext(actor, { ...deps, log, signal: AbortSignal.timeout(2 * 60_000) });
-  const draft = applicationDraftSchema.parse({ ...(await actor.plugin.prepare(ctx, input)), profileVersion: profile.version });
+  const prepared = applicationDraftSchema.parse({ ...(await actor.plugin.prepare(ctx, input)), profileVersion: profile.version });
+  const draft = await answerDraft(deps, prepared, job, profile);
   let item = await createReviewItem(db, { kind: 'application', pluginId, jobId, contactId: null, companyId: job.companyId, draft });
   await appendEvent(db, { kind: 'review.created', subjectType: 'review_item', subjectId: item.id, payload: { kind: 'application', ats: target.ats, missingRequired: draft.missingRequired } });
 
@@ -94,6 +111,17 @@ export async function draftApplication(deps: ApplyDeps, jobId: string, opts: { p
     }
   }
   return item;
+}
+
+/** Fill blank questions from the answer bank / LLM; recompute what's missing and the confidence. */
+async function answerDraft(deps: ApplyDeps, draft: ApplicationDraft, job: Job, profile: Profile): Promise<ApplicationDraft> {
+  const { fields, summary } = await answerOpenFields({ db: deps.db, log: deps.log, ...(deps.llm ? { llm: deps.llm } : {}) }, draft.fields, job, profile);
+  const missingRequired = fields.filter((f) => f.required && !f.value).map((f) => f.label);
+  const base = draftConfidence(fields);
+  if (summary.fromBank || summary.fromLlm || summary.rejected.length) {
+    await appendEvent(deps.db, { kind: 'application.answered', subjectType: 'job', subjectId: job.id, payload: { ...summary } });
+  }
+  return applicationDraftSchema.parse({ ...draft, fields, missingRequired, confidence: draftConfidenceWithLlm(base, fields) });
 }
 
 export interface ApplyTickResult {
@@ -169,8 +197,29 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     await finishAction(db, claim.action.id, { status: 'failed', error, at: now });
+    if (err instanceof UnansweredQuestionsError) {
+      // Nothing was submitted: add the new questions, answer what we can, and send it back for review.
+      await reopenWithQuestions(deps, item, draft, err.questions);
+      return { ...base, ok: false, error };
+    }
     if (!deps.dryRun) {
-      if (err instanceof SessionBlockedError) {
+      if (err instanceof OtpTimeoutError) {
+        await transitionReviewItem(db, item.id, ['approved'], 'failed', { error: `verification email never arrived: finish this application by hand` });
+        await createReviewItem(db, {
+          kind: 'attention',
+          pluginId: item.pluginId,
+          jobId: item.jobId,
+          contactId: null,
+          companyId: item.companyId,
+          draft: {
+            title: `Finish the application to ${draft.company} by hand`,
+            message: `The form asked for an emailed verification code after submitting, and no email from ${err.fromDomains.join(', ')} arrived within ${Math.round(err.waitedMs / 60_000)} minutes. Open the form, enter the code from your inbox, and confirm. Approve this item when done.`,
+            reason: 'otp_timeout',
+            url: draft.applyUrl,
+          },
+        });
+        await appendEvent(db, { kind: 'application.otp_timeout', subjectType: 'review_item', subjectId: item.id, payload: { fromDomains: err.fromDomains } });
+      } else if (err instanceof SessionBlockedError) {
         // No captcha solving: hand it to the human.
         await transitionReviewItem(db, item.id, ['approved'], 'failed', { error: `needs a manual application: ${err.message}` });
         await appendEvent(db, { kind: 'application.blocked', subjectType: 'review_item', subjectId: item.id, payload: { reason: err.reason } });
@@ -185,6 +234,34 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
     log.warn({ err: error }, 'application failed');
     return { ...base, ok: false, error };
   }
+}
+
+async function reopenWithQuestions(deps: ApplyDeps, item: ReviewItemRow, draft: ApplicationDraft, questions: FormQuestion[]): Promise<void> {
+  const { db } = deps;
+  const profile = await getActiveProfile(db);
+  const job = item.jobId ? await loadJobForOutreach(db, item.jobId).catch(() => null) : null;
+  if (!profile?.preferences.application || !job) {
+    await transitionReviewItem(db, item.id, ['approved'], 'failed', { error: `the form asked new questions: ${questions.map((q) => q.label).join('; ')}` });
+    return;
+  }
+  const known = new Set(draft.fields.map((f) => f.key));
+  const input: ApplyInput = {
+    job,
+    ats: draft.ats,
+    boardToken: '',
+    postingId: '',
+    applyUrl: draft.applyUrl,
+    profile,
+    applicant: profile.preferences.application,
+    resume: { path: draft.resumePath, resumeVariantId: draft.resumeVariantId },
+  };
+  const added = mapAnswers(questions.filter((q) => !known.has(q.key)), input).fields;
+  const answered = await answerDraft(deps, applicationDraftSchema.parse({ ...draft, fields: [...draft.fields, ...added] }), job, profile);
+  const reopened = await transitionReviewItem(db, item.id, ['approved'], 'pending', {
+    error: `the form asked ${added.length} more question(s) after "Next"; review the answers and approve again`,
+  });
+  if (reopened) await updatePendingDraft(db, item.id, answered);
+  await appendEvent(db, { kind: 'application.more_questions', subjectType: 'review_item', subjectId: item.id, payload: { questions: added.map((f) => f.label) } });
 }
 
 async function finalize(deps: ApplyDeps, item: ReviewItemRow, r: ApplicationResult, replay: boolean): Promise<void> {

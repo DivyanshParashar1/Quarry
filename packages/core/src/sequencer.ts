@@ -27,6 +27,7 @@ import {
 import { applicationDraftSchema } from '@jobforge/plugin-sdk';
 import { loadMatchConfidence } from './autopilot.js';
 import { draftApplication, type ApplyDeps } from './apply.js';
+import { llmAnswersConfident } from './answers.js';
 import { isDeadlineImminent } from './deadline-runner.js';
 import { approveReviewItem, OUTREACH_ACTOR, OutreachError, referralLimitProblem } from './outreach.js';
 import { fanOutReferrals, type FanOutDeps } from './referrals.js';
@@ -201,8 +202,9 @@ async function queueApplications(deps: SequencerDeps, steps: SequencerStep[], on
       const item = await draftApplication(deps.applyDeps, row.jobId);
       await updatePipelineMetadata(deps.db, row.jobId, { applyReviewItemId: item.id, applyError: null });
       const draft = applicationDraftSchema.parse(item.draft);
-      if (deps.policy.autoApproveApplications && !draft.missingRequired.length) {
-        await approveReviewItem(deps.db, deps.outreachPolicy, item.id, { note: 'autopilot' });
+      // Phase 19: a draft with LLM-written answers only when every one of them is confident enough.
+      if (deps.policy.autoApproveApplications && !draft.missingRequired.length && llmAnswersConfident(draft)) {
+        await approveReviewItem(deps.db, deps.outreachPolicy, item.id, { note: 'autopilot', rememberAnswers: false });
         await transitionReviewItem(deps.db, item.id, ['approved'], 'approved', { decidedBy: 'autopilot' });
       }
       steps.push({ jobId: row.jobId, from: 'ready_to_apply', to: 'ready_to_apply', reason: 'application_queued', ...(draft.missingRequired.length ? { note: `needs: ${draft.missingRequired.join(', ')}` } : {}) });

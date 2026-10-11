@@ -359,6 +359,30 @@ export const contacts = pgTable(
 );
 
 /**
+ * Phase 19: answers to application questions the user approved (or wrote), reused
+ * first for a similar question on a later form. preferences.yaml answers still win.
+ */
+export const answerBank = pgTable(
+  'answer_bank',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    question: text('question').notNull(),
+    /** Normalised question (lower case, no punctuation): the lookup key. */
+    questionKey: text('question_key').notNull(),
+    answer: text('answer').notNull(),
+    /** text | choice */
+    kind: text('kind').notNull(),
+    /** Where the approved answer first came from: llm | human | bank. */
+    origin: text('origin').notNull(),
+    uses: integer('uses').notNull().default(0),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ keyUniq: uniqueIndex('answer_bank_key_uniq').on(t.questionKey, t.kind) }),
+);
+
+/**
  * Phase 17: one uploaded contact sheet. `preview` holds the analysis (EDA report +
  * normalised rows) until the user confirms; `committed` records what was written.
  */
