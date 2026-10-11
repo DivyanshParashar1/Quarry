@@ -50,6 +50,7 @@ Short, operational rules. Full context lives in `PLAN.md`.
 - Contacts (Phase 17): `jf contacts import <file.xlsx|.csv> [--yes]` (LinkedIn Connections.csv too), `jf linkedin drafts [--job] | sent <id> | replied <id>`; dashboard Contacts tab
 - Resumes (Phase 16): `jf resumes generate [--retire] | list | bench [--pick]`, `jf tailor <jobId> [--force]` (selector: best library combo + skills-only rewrite); dashboard Resumes tab
 - Sweeper (Phase 18): `jf sweep [--live]` runs the server's hourly pass (also on server start); LLM steps only with `autopilot.enabled`; stage events trigger the next stage when autopilot is on
+- Applications (Phase 19): Greenhouse/Lever/Ashby/SmartRecruiters auto-apply; emailed verification codes read from Gmail; blank questions answered from the answer bank then the LLM (never salary/notice/visa/authorization/EEO); `jf answers [list] | delete <id>`
 - Discovery: `jf discover_ats <domain|name> [--save] | --missing`, `jf discover_companies --list yc|gcc-journal|…` (Phase 6)
 - MCP: `.mcp.json` registers `apps/mcp` (needs `pnpm server` running). Never allowlist the `approve` tool.
 - DB tests need Postgres up; they skip with a warning otherwise (`JOBFORGE_REQUIRE_DB=1` makes that a failure)

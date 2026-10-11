@@ -200,6 +200,16 @@ state, so a missed event only costs latency, never a lost job.
 ### Done when
 - Fixture flows: OTP email arrives → code typed → submission confirmed; a free-text question is answered and an invented fact is rejected.
 
+### Decided with the user before implementation (2026-10-11)
+- The LLM answers unanswered **free-text and choice** questions (text/textarea, and select/radio with a factual
+  basis), grounded only in facts.yaml + the JD + `application.answers`. **Never** EEO, work authorization,
+  sponsorship, salary or notice period (those come from preferences.yaml or stay blank).
+- **Answer bank**: answers the user approves are stored and reused first for similar questions (editable on the
+  Profile page); preferences.yaml answers still win.
+- Auto-approval (only when `autoApproveApplications` is on): a draft with LLM answers is auto-approved only when
+  every LLM answer's confidence ≥ 0.85; otherwise it waits for review.
+- SmartRecruiters: one real public posting is inspected read-only (nothing submitted) and saved as a fixture.
+
 ---
 
 ## Phase 20 — Workday apply
