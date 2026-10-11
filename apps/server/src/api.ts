@@ -14,6 +14,7 @@ import {
 } from '@jobforge/db';
 import { ConfigError, parseAppConfig, type AppConfig, type LLMClient, type Logger } from '@jobforge/shared';
 import { OutreachError, type SequencerDeps, type ApplyDeps, type DeadlineDeps, type LinkedInDeps, type PageFetcher, type AutopilotRunDeps, type OutreachDeps, type OutreachErrorCode, type TailorRunDeps } from '@jobforge/core';
+import { registerContactRoutes } from './routes-contacts.js';
 import { registerLibraryRoutes } from './routes-library.js';
 import { registerOutreachRoutes } from './routes-outreach.js';
 import { registerProfileRoutes } from './routes-profile.js';
@@ -219,6 +220,12 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
   });
 
   registerLibraryRoutes(app, { db, ...(opts.tailorDeps ? { tailorDeps: opts.tailorDeps } : {}) });
+
+  registerContactRoutes(app, {
+    db,
+    policy: opts.policy ?? parseAppConfig({}).outreach,
+    ...(opts.llm ? { llm: opts.llm } : {}),
+  });
 
   registerReferralRoutes(app, {
     db,

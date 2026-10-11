@@ -3,6 +3,9 @@ import { findUp } from '@jobforge/shared';
 import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@jobforge/db';
 import {
   advanceJob,
+  listLinkedInDrafts,
+  markLinkedInReplied,
+  markLinkedInSent,
   approveBatch,
   draftApplication,
   expireJob,
@@ -28,6 +31,7 @@ import { outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, type CmdCtx } from './outreach-cmds.js';
 
 export interface ReferralValues {
+  job?: string | undefined;
   watch?: boolean | undefined;
   count?: string | undefined;
   live?: boolean | undefined;
@@ -130,7 +134,34 @@ export async function referralsCommand(sub: string | undefined, arg: string | un
   throw new CmdError('usage: jf referrals fanout|show|approve <jobId>');
 }
 
-export async function linkedinCommand(sub: string | undefined, v: ReferralValues, c: CmdCtx): Promise<number> {
+export async function linkedinCommand(sub: string | undefined, v: ReferralValues, c: CmdCtx, arg?: string): Promise<number> {
+  // Phase 17: LinkedIn referral messages are sent by hand.
+  if (sub === 'drafts') {
+    const drafts = await listLinkedInDrafts(c.db, v.job ? { jobId: await resolveIdPrefix(c.db, 'jobs', v.job) } : {});
+    if (!drafts.length) c.out('no LinkedIn drafts waiting (fan out a job with `jf referrals fanout <jobId>`)');
+    for (const d of drafts) {
+      c.out(`── ${d.id.slice(0, 8)} · ${d.status} · ${d.linkedin.kind} to ${d.linkedin.toName} (${d.companyName ?? ''})${d.linkedin.jobTitle ? ` · ${d.linkedin.jobTitle}` : ''}`);
+      c.out(`   profile: ${d.linkedin.profileUrl}`);
+      if (d.linkedin.kind === 'message' && d.linkedin.resumeVariantId) c.out(`   attach: resume variant ${d.linkedin.resumeVariantId.slice(0, 8)} (dashboard → Download PDF)`);
+      c.out('');
+      c.out(d.linkedin.text);
+      c.out('');
+    }
+    if (drafts.length) c.out('After sending one on LinkedIn: `jf linkedin sent <id>`; when they answer: `jf linkedin replied <id>`.');
+    return 0;
+  }
+  if (sub === 'sent' || sub === 'replied') {
+    if (!arg) throw new CmdError(`usage: jf linkedin ${sub} <reviewItemId>`);
+    const id = await resolveIdPrefix(c.db, 'review_items', arg);
+    if (sub === 'sent') {
+      const r = await markLinkedInSent(c.db, c.config.outreach, id);
+      c.out(`recorded as sent (thread ${r.thread.id.slice(0, 8)}); the 30-day cooldown and the job's batch are updated.`);
+    } else {
+      await markLinkedInReplied(c.db, id);
+      c.out('recorded the reply; the job\'s referral batch is marked replied.');
+    }
+    return 0;
+  }
   if (sub === 'login') {
     const store = await linkedinSessionStore(c.env, repoRoot());
     c.out(`Opening a browser. Log in to your dedicated LinkedIn account; the session is saved encrypted to ${store.path} (key: ${store.keySource}).`);
@@ -213,7 +244,7 @@ export async function linkedinCommand(sub: string | undefined, v: ReferralValues
       await li.closeBrowser();
     }
   }
-  throw new CmdError('usage: jf linkedin login|status|resume|employees|send|track');
+  throw new CmdError('usage: jf linkedin drafts [--job <id>] | sent <id> | replied <id>  (automation, off by default: login|status|resume|employees|send|track)');
 }
 
 export async function applyCommand(sub: string | undefined, arg: string | undefined, v: ReferralValues & { 'no-preview'?: boolean | undefined }, c: CmdCtx): Promise<number> {

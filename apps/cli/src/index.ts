@@ -127,6 +127,10 @@ Usage:
 Outreach (nothing is sent without an approved review item; dry run unless --live or MODE=live):
   jf gmail auth | status         Connect your Gmail (OAuth, local) / show the connected account.
   jf contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]
+  jf contacts import <file.xlsx|file.csv> [--yes]
+      Any contact sheet, or LinkedIn's Connections.csv export (Settings → Data privacy →
+      Get a copy of your data): EDA report + column mapping first; --yes writes it.
+      Imported people are asked first; LinkedIn connections get a direct message.
   jf contacts list [--company <name>]
   jf contacts enrich [--company <name>]    Infer emails from the company pattern (MX-checked).
   jf outreach draft --contact <id> [--job <id>] [--force]
@@ -153,6 +157,10 @@ Referrals (Phase 8; no global send cap — a person is asked at most once per co
       more engineers on LinkedIn first when the company has too few contacts.
   jf referrals show <jobId>        Batch status: each ask, its channel, send/reply state.
   jf referrals approve <jobId>     Approve every pending ask in the job's batch.
+  jf linkedin drafts [--job <id>]  LinkedIn messages/notes to send BY HAND (copy, attach the PDF).
+  jf linkedin sent <id> | replied <id>
+      Record that you sent one (cooldown + batch updated) / that they answered.
+  Automated LinkedIn (off by default; LINKEDIN_ENABLED=true + --live; fan-out never uses it):
   jf linkedin login | status | resume
       Save the dedicated account's session (headed browser, encrypted at rest) /
       show health / clear a pause after fixing a checkpoint.
@@ -206,6 +214,7 @@ async function main(argv: string[]): Promise<number> {
       live: { type: 'boolean' },
       watch: { type: 'boolean' },
       force: { type: 'boolean' },
+      yes: { type: 'boolean', short: 'y' },
       retire: { type: 'boolean' },
       pick: { type: 'boolean' },
       list: { type: 'string' },
@@ -402,10 +411,10 @@ async function main(argv: string[]): Promise<number> {
     }
 
     const cmdCtx = { env, config, db, log, out: (s: string) => console.log(s) };
-    if (cmd === 'contacts') return await contactsCommand(sub, values, cmdCtx);
+    if (cmd === 'contacts') return await contactsCommand(sub, values, cmdCtx, arg);
     if (cmd === 'referrals') return await referralsCommand(sub, arg, values, cmdCtx);
     if (cmd === 'apply') return await applyCommand(sub, arg, values, cmdCtx);
-    if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx);
+    if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx, arg);
     if (cmd === 'review') return await reviewCommand(sub, arg, values, cmdCtx);
     if (cmd === 'outreach') return await outreachCommand(sub, values, cmdCtx);
     if (cmd === 'gmail' && sub === 'auth') {

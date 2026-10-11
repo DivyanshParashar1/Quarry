@@ -23,8 +23,13 @@ import {
   pollTracker,
   rejectReviewItem,
   runSendTick,
+  commitContactImport,
+  llmColumnClassifier,
+  previewContactImport,
+  type ImportPreview,
   type SendTickResult,
 } from '@jobforge/core';
+import { createLLMFromConfig } from '@jobforge/llm';
 import { fmtDate, table } from './format.js';
 import { outreachDeps } from './runtime.js';
 
@@ -46,6 +51,7 @@ export interface CmdValues {
   watch?: boolean | undefined;
   force?: boolean | undefined;
   all?: boolean | undefined;
+  yes?: boolean | undefined;
 }
 
 export interface CmdCtx {
@@ -58,9 +64,42 @@ export interface CmdCtx {
 
 export class CmdError extends Error {}
 
+function printImportReport(p: ImportPreview, out: (s: string) => void): void {
+  const r = p.report;
+  out(`${p.filename}: ${r.format === 'linkedin_connections' ? 'LinkedIn Connections export' : 'contact sheet'} · sheet "${r.sheet}" · header on row ${r.headerRow}${r.groupHeaderRows.length ? ` (group header row ${r.groupHeaderRows.join(', ')})` : ''}`);
+  out(`rows: ${r.rows.total} · importable ${r.rows.importable} · skipped ${r.rows.skipped}`);
+  out('columns:');
+  for (const col of r.columns) {
+    out(`  ${(col.header || `#${col.index + 1}`).slice(0, 24).padEnd(24)} → ${col.type.padEnd(12)} (${col.via}, ${Math.round(col.fillRate * 100)}% filled)${col.sample.length ? `  e.g. ${col.sample.slice(0, 2).join(' | ').slice(0, 60)}` : ''}`);
+  }
+  out(`duplicates merged: ${r.duplicates.byLinkedin} by LinkedIn, ${r.duplicates.byEmail} by email, ${r.duplicates.byNameCompany} by name+company`);
+  out(`invalid emails: ${r.invalidEmails.count}${r.invalidEmails.examples.length ? ` (e.g. ${r.invalidEmails.examples.slice(0, 3).join(', ')})` : ''}`);
+  out(`names: ${r.nameFormats.splitColumns} from first/last columns, ${r.nameFormats.firstLast} "First Last", ${r.nameFormats.lastCommaFirst} "Last, First", ${r.nameFormats.singleWord} single word, ${r.nameFormats.allCaps} ALL CAPS`);
+  out(`missing: ${r.missing.company} without company · ${r.missing.email} without email · ${r.missing.linkedin} without LinkedIn · ${r.missing.reachable} importable but unreachable`);
+  out(`companies: ${p.companies.filter((m) => m.companyId).length} matched, ${p.companies.filter((m) => !m.companyId).length} new`);
+  for (const m of p.companies.slice(0, 10)) out(`  ${m.name} (${m.rows})${m.companyId ? ` → ${m.matchedName} [${m.via}]` : ' → new'}`);
+  for (const w of r.warnings) out(`warning: ${w}`);
+  for (const row of p.problems.slice(0, 10)) out(`  row ${row.line}: ${row.problems.join('; ')}`);
+}
+
 const pct = (n: number | null) => (n === null ? '' : `${Math.round(n * 100)}%`);
 
-export async function contactsCommand(sub: string | undefined, v: CmdValues, c: CmdCtx): Promise<number> {
+export async function contactsCommand(sub: string | undefined, v: CmdValues, c: CmdCtx, arg?: string): Promise<number> {
+  if (sub === 'import') {
+    if (!arg) throw new CmdError('usage: jf contacts import <file.xlsx|file.csv> [--yes]');
+    const path = resolve(arg);
+    const llm = createLLMFromConfig(c.env, c.config, { log: c.log });
+    const p = await previewContactImport(c.db, { data: readFileSync(path), filename: path }, { classify: llmColumnClassifier(llm) });
+    printImportReport(p, c.out);
+    if (!v.yes) {
+      c.out(`\nNothing written yet. Re-run with --yes to import, or review it in the dashboard (Contacts tab). Preview id ${p.importId.slice(0, 8)}.`);
+      return 0;
+    }
+    const r = await commitContactImport(c.db, p.importId);
+    c.out(`\nimported: ${r.contactsCreated} new, ${r.contactsUpdated} updated contacts · ${r.companiesCreated} new companies · ${r.skipped.length} rows skipped`);
+    for (const s of r.skipped.slice(0, 15)) c.out(`  - row ${s.line}: ${s.reason}`);
+    return 0;
+  }
   if (sub === 'add') {
     if (!v.company || !v.name) throw new CmdError('usage: jf contacts add --company <name> --name <full name> [--role] [--email] [--linkedin] [--domain]');
     let company = await findCompanyByName(c.db, v.company);
