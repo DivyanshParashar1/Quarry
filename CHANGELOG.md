@@ -488,3 +488,28 @@ Decided with the user (recorded in `PLAN-phases-15-23.md` §19): the LLM answers
 - **Health tab** on the dashboard (LLM spend vs budget, open / escalated incidents, fixes merged / reverted, paused plugins with Resume, incident log, Run checks now); `GET /api/incidents[/:id]`, `POST /api/incidents/:id/resolve`, `GET /api/orchestrator`, `POST /api/orchestrator/run`, `POST /api/ops/plugins/:id/resume`, `POST /api/ops/llm/resume`, `DELETE /api/ops/tenant-overrides/:pluginId/:tenant`; `jf orchestrator run`, `jf incidents [--all]`; MCP `health_status`, `list_incidents`, `run_orchestrator`, `resolve_incident`, `resume_plugin`.
 - Tests (injected faults, Postgres + a temporary git repo with a scripted Claude CLI): a board returning 404s → Sources expert pauses it → resolved; a stuck `referral_pending` job → playbook advances it → resolved; a selector change in an apply flow → Apply expert → patch merged (commit names the incident, no trailer) → verified over the window → resolved; a deliberately bad patch → the failure recurs → reverted automatically, escalated and notified; a patch touching CLAUDE.md → refused before any gate; LLM budget exceeded → LLM steps paused without asking an expert, guarded client refuses calls; a captcha → escalated + notified, no plan; with no code-change pipeline a proposed fix escalates with the suggestion. Health API: list/filter/resolve, status, lifting pauses, run.
 
+## [Phase 23] — Live verification (read-only part)
+
+Decided with the user: only read-only live checks while they are away — no logins, account creation, form submits,
+emails or LinkedIn actions. Those parts wait for the user (listed below).
+
+- **`pnpm live:sources`** (`apps/cli/src/live-sources.ts`): runs every source plugin once against a real public board
+  through the server's scoped HTTP and rate limits, nothing written to the DB; `--save <dir>` keeps sample postings.
+  Result: Greenhouse (airbnb), Lever (spotify), Ashby (linear), SmartRecruiters (BoschGroup), Workday (workday.wd5 and
+  Wells Fargo on myworkdaysite) all parse with descriptions and locations.
+- **Fixed — Taleo**: the source assumed every career section exposes the REST job board (a portal id on the page). The
+  live tenant `aa224` is a classic section without one, so fetching failed. It now falls back to the section's own list
+  pager (`moresearch.ajax`, `!|!`-delimited), recorded from the real tenant: 25 per page, 753 jobs, ids/titles/contest
+  numbers/locations. Live: 40+ postings, 0 invalid. (Descriptions are still not fetched for Taleo.)
+- **Fixed — SuccessFactors RMK parser**: real RMK sites now render results as tiles; the parser read 0 rows from Cargill's
+  live page. It now reads both layouts (recorded fixture: 25 rows, total 1826).
+- **Found, not fixed — SuccessFactors reach**: RMK career sites run on employers' own domains (jobs.cargill.com), but the
+  source plugin's manifest only allows SAP hosts, so those boards can't be fetched. Fixing it needs a core change (board
+  hosts granted per company source); left for review.
+- Checked live and fine: `discover_ats` (linear.app → Ashby, stripe.com → Greenhouse with robots.txt respected,
+  razorpay.com → Greenhouse), the YC list (`--dry-run`: 776 candidates, boards detected), job-alert emails from Gmail
+  (read-only: 74 postings, 0 parse failures).
+- **Still to run with you** (they log in, submit, send or cost money): one real application per ATS, Gmail send / reply
+  tracking / OTP, LinkedIn (dedicated account), deadline inference (paid web-search LLM calls), apply-flow selector
+  verification for Workday / SuccessFactors / Taleo / SmartRecruiters step 2, and a full unattended day.
+

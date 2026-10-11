@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { HttpError, pluginManifestSchema, rawPostingSchema, sanitizeHtml } from '@jobforge/plugin-sdk';
 import { collect, fixtureHttp, testContext, testTarget, type FixtureRouteSpec } from '@jobforge/plugin-sdk/testing';
-import plugin, { classicFeedUrl, configSchema, rmkSearchUrl } from './index.js';
+import plugin, { classicFeedUrl, configSchema, parseRmkJobPage, parseRmkSearch, rmkSearchUrl } from './index.js';
 
 const fixture = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));
 const domains = plugin.manifest.permissions.domains;
@@ -70,6 +70,21 @@ describe('source-successfactors', () => {
     });
     expect(postings[0]!.descriptionHtml).toBe("<p><b>What you'll build</b></p><p>HANA services in Go and Java.</p><ul><li>Kubernetes</li></ul>");
     expect(postings.some((p) => p.title === 'Intern - Development (2027)')).toBe(true);
+  });
+
+  it('parses the newer RMK tile layout (recorded from jobs.cargill.com)', () => {
+    const r = parseRmkSearch(readFileSync(fixture('cargill-search-tiles.html'), 'utf8'));
+    expect(r.total).toBe(1826);
+    expect(r.rows).toHaveLength(25);
+    expect(r.rows[0]).toMatchObject({
+      id: '1366896057',
+      path: '/job/Fort-Dodge-Food-Safety-Quality-Associate-Chemist-Iowa-50501/1366896057/',
+      title: 'Food Safety Quality Associate Chemist',
+      location: 'Fort Dodge, Iowa, US United States, 50501',
+    });
+    // The recorded Cargill job page from the apply actor's fixtures has a description the job-page parser reads.
+    const job = readFileSync(fileURLToPath(new URL('../../actor-apply-successfactors/fixtures/cargill-job.html', import.meta.url)), 'utf8');
+    expect(parseRmkJobPage(job)?.length ?? 0).toBeGreaterThan(200);
   });
 
   it('rejects malformed tokens permanently and unknown layouts loudly', async () => {

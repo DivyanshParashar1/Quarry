@@ -42,6 +42,44 @@ export function findPortalId(html: string): string | null {
   );
 }
 
+/** Classic career sections (no REST portal): the list page's own ajax pager. */
+export function classicListUrl(b: TaleoBoard): string {
+  return `https://${b.host}/careersection/${encodeURIComponent(b.section)}/moresearch.ajax`;
+}
+
+export function classicListBody(page: number): string {
+  return new URLSearchParams({
+    lang: 'en',
+    ftlinterfaceid: 'requisitionListInterface',
+    ftlcompid: 'rlPager',
+    jsfCmdId: 'rlPager',
+    ftlcompclass: 'PagerComponent',
+    ftlcallback: 'ftlPager_processResponse',
+    'rlPager.currentPage': String(page),
+  }).toString();
+}
+
+/**
+ * The classic pager's "!|!"-delimited answer (recorded from aa224, 2026-10-11): each requisition
+ * starts with jobId, title, jobId, title, jobId, contest number, location; the list size and
+ * total follow "listRequisition.size" / "listRequisition.nbElements".
+ */
+export function parseClassicList(text: string): { requisitions: Requisition[]; total: number | null; pageSize: number | null } {
+  const unescape = (v: string) => v.replace(/%5C(.)/g, '$1');
+  const requisitions: Requisition[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(/!\|!(\d+)!\|!([^!]+)!\|!\1!\|!\2!\|!\1!\|!([A-Za-z0-9_-]+)!\|!([^!]*)!\|!/g)) {
+    if (seen.has(m[1]!)) continue;
+    seen.add(m[1]!);
+    requisitions.push({ jobId: m[1]!, contestNo: m[3]!, column: [unescape(m[2]!), m[4] ? JSON.stringify([unescape(m[4])]) : null, null] });
+  }
+  const num = (key: string) => {
+    const v = text.match(new RegExp(`${key.replace('.', '\\.')}!\\|!(\\d+)`))?.[1];
+    return v ? Number(v) : null;
+  };
+  return { requisitions, total: num('listRequisition.nbElements'), pageSize: num('listRequisition.size') };
+}
+
 export function searchBody(pageNo: number): string {
   return JSON.stringify({
     multilineEnabled: false,
@@ -104,7 +142,7 @@ export default defineSourcePlugin<TaleoConfig>({
     id: 'source-taleo',
     version: '0.1.0',
     stage: 'source',
-    description: 'Best-effort fetch of Oracle Taleo career sections (*.taleo.net) via the job board search endpoint.',
+    description: 'Best-effort fetch of Oracle Taleo career sections (*.taleo.net): the REST job board search, or the classic list pager.',
     configSchema,
     permissions: { domains: ['*.taleo.net'] },
     rateLimit: { perDomain: { tokens: 1, intervalMs: 1000 } },
@@ -123,20 +161,35 @@ export default defineSourcePlugin<TaleoConfig>({
     const opts = { ...ctx.config, ...Object.fromEntries(Object.entries(o.data).filter(([, v]) => v !== undefined)) };
 
     const portal = opts.portal ?? findPortalId(await ctx.http.getText(searchPageUrl(board)));
-    if (!portal) {
-      throw new PluginError(`could not find the Taleo portal id on ${searchPageUrl(board)}; set company_sources.config.portal`);
-    }
     let yielded = 0;
     let seen = 0;
     for (let page = 1; page <= opts.maxPages; page++) {
-      const body = await ctx.http.getJson(searchApiUrl(board, portal), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', tz: 'GMT+05:30' },
-        body: searchBody(page),
-      });
-      const parsed = searchResponse.safeParse(body);
-      if (!parsed.success) throw new PluginError(`unexpected Taleo response for ${board.tenant}/${board.section}: ${parsed.error.message}`);
-      const list = parsed.data.requisitionList;
+      let list: Requisition[];
+      let total: number | undefined;
+      if (portal) {
+        const body = await ctx.http.getJson(searchApiUrl(board, portal), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', tz: 'GMT+05:30' },
+          body: searchBody(page),
+        });
+        const parsed = searchResponse.safeParse(body);
+        if (!parsed.success) throw new PluginError(`unexpected Taleo response for ${board.tenant}/${board.section}: ${parsed.error.message}`);
+        list = parsed.data.requisitionList;
+        total = parsed.data.pagingData?.totalCount;
+      } else {
+        // Classic career section (no REST portal on the page): its own list pager.
+        const text = await ctx.http.getText(classicListUrl(board), {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: classicListBody(page),
+        });
+        const parsed = parseClassicList(text);
+        if (page === 1 && !parsed.requisitions.length && parsed.total === null) {
+          throw new PluginError(`neither a REST portal id nor the classic job list was found for ${board.tenant}/${board.section}; set company_sources.config.portal`);
+        }
+        list = parsed.requisitions;
+        total = parsed.total ?? undefined;
+      }
       for (const r of list) {
         if (yielded >= opts.maxPostings) return;
         const p = toRawPosting(board, r);
@@ -145,7 +198,6 @@ export default defineSourcePlugin<TaleoConfig>({
         yield p;
       }
       seen += list.length;
-      const total = parsed.data.pagingData?.totalCount;
       if (!list.length || (total !== undefined && seen >= total)) break;
     }
   },

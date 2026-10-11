@@ -12,3 +12,8 @@
   job pages with `span.jobdescription`).
 
 Re-record against real tenants before trusting either parser.
+
+**Recorded 2026-10-11 (Phase 23, read-only):** `cargill-search-tiles.html` — `jobs.cargill.com/search/?q=&…&startrow=0`
+(scripts/styles stripped). Newer RMK sites render results as tiles (`li.job-tile.job-id-N`, `a.jobTitle-link`,
+`div#job-N-desktop-section-location-value`, "Showing 1 to 25 of 1826 Jobs"), which the parser now reads alongside
+the table layout. Cargill's site is on its own domain, which the plugin's manifest can't reach (see CHANGELOG Phase 23).

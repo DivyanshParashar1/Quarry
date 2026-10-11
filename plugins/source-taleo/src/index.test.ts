@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { pluginManifestSchema, rawPostingSchema, parseTaleoToken, type HttpRequestInit } from '@jobforge/plugin-sdk';
 import { collect, fixtureHttp, testContext, testTarget } from '@jobforge/plugin-sdk/testing';
-import plugin, { configSchema, findPortalId, searchApiUrl, searchPageUrl } from './index.js';
+import plugin, { classicListUrl, configSchema, findPortalId, parseClassicList, searchApiUrl, searchPageUrl } from './index.js';
 
+const fx = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));
 const fixture = (f: string) => fileURLToPath(new URL(`../fixtures/${f}`, import.meta.url));
 const domains = plugin.manifest.permissions.domains;
 const board = parseTaleoToken('sbi/ex');
@@ -55,8 +57,32 @@ describe('source-taleo', () => {
     expect(http.calls.some((u) => u.endsWith('jobsearch.ftl?lang=en'))).toBe(false);
   });
 
-  it('explains a missing portal id', async () => {
-    const http = fixtureHttp({ [searchPageUrl(board)]: { text: '<html>no portal</html>' } }, domains);
-    await expect(collect(plugin.fetch(testContext(configSchema.parse({}), http), testTarget('sbi/ex')))).rejects.toThrow(/portal id/);
+  it('explains when neither a portal id nor the classic list is there', async () => {
+    const http = fixtureHttp({ [searchPageUrl(board)]: { text: '<html>no portal</html>' }, [`POST ${classicListUrl(board)}`]: { text: '<html>not a list</html>' } }, domains);
+    await expect(collect(plugin.fetch(testContext(configSchema.parse({}), http), testTarget('sbi/ex')))).rejects.toThrow(/neither a REST portal id nor the classic job list/);
+  });
+
+  it('classic career sections (recorded from aa224): no portal on the page → the list pager', async () => {
+    const aa = parseTaleoToken('aa224/ex');
+    expect(findPortalId(readFileSync(fx('aa224-moresearch.html'), 'utf8'))).toBeNull();
+    const page1 = readFileSync(fx('aa224-moresearch-page1.txt'), 'utf8');
+    const http = fixtureHttp(
+      {
+        [searchPageUrl(aa)]: { file: fx('aa224-moresearch.html') },
+        [`POST ${classicListUrl(aa)}`]: (init) => ({ text: String(init.body).includes('rlPager.currentPage=1') ? page1 : '?!|!ftlPager_processResponse!$!' }),
+      },
+      domains,
+    );
+    const postings = await collect(plugin.fetch(testContext(configSchema.parse({}), http), testTarget('aa224/ex', 'American Airlines')));
+    expect(postings).toHaveLength(25);
+    expect(postings[0]).toMatchObject({
+      externalId: '12765379',
+      title: 'CDL A Delivery Truck Driver',
+      url: 'https://aa224.taleo.net/careersection/ex/jobdetail.ftl?job=JR108790&lang=en',
+      locations: ['United States, South Carolina, Columbia'],
+    });
+    const parsed = parseClassicList(page1);
+    expect(parsed).toMatchObject({ total: 753, pageSize: 25 });
+    expect(http.bodies.filter(Boolean).map((b) => new URLSearchParams(b).get('rlPager.currentPage'))).toEqual(['1', '2']);
   });
 });

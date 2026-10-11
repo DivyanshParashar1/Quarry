@@ -92,22 +92,20 @@ export interface RmkRow {
 export function parseRmkSearch(html: string): { rows: RmkRow[]; total: number | null } {
   const rows: RmkRow[] = [];
   const seen = new Set<string>();
-  // Each row: <tr class="data-row"> … <a class="jobTitle-link" href="/job/City-Title/123456789/">Title</a> … jobLocation … jobDate
-  for (const tr of html.split(/<tr\b[^>]*class="[^"]*data-row/i).slice(1)) {
-    const a = tr.match(/<a\b[^>]*href="(\/job\/[^"]*?\/(\d{5,})\/?)"[^>]*>([\s\S]*?)<\/a>/i);
+  const text = (v: string | undefined) => (v ? decodeEntities(v.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim() || null : null);
+  // Two layouts: the table (<tr class="data-row"> … a.jobTitle-link … span.jobLocation … span.jobDate) and,
+  // on newer sites (recorded from jobs.cargill.com, 2026-10-11), tiles (<li class="job-tile job-id-N"> …
+  // a.jobTitle-link … div#job-N-desktop-section-location-value … -date-value).
+  for (const block of html.split(/<(?:tr|li)\b[^>]*class="[^"]*(?:data-row|job-tile\b)/i).slice(1)) {
+    const a = block.match(/<a\b[^>]*href="(\/job\/[^"]*?\/(\d{5,})\/?)"[^>]*>([\s\S]*?)<\/a>/i);
     if (!a || seen.has(a[2]!)) continue;
     seen.add(a[2]!);
-    const loc = tr.match(/class="[^"]*jobLocation[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1];
-    const date = tr.match(/class="[^"]*jobDate[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1];
-    rows.push({
-      id: a[2]!,
-      path: a[1]!,
-      title: decodeEntities(a[3]!.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim(),
-      location: loc ? decodeEntities(loc.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim() || null : null,
-      date: date ? decodeEntities(date.replace(/<[^>]+>/g, '')).trim() || null : null,
-    });
+    const loc =
+      block.match(/id="job-\d+-desktop-section-location-value"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? block.match(/class="[^"]*jobLocation[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1];
+    const date = block.match(/id="job-\d+-desktop-section-date-value"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ?? block.match(/class="[^"]*jobDate[^"]*"[^>]*>([\s\S]*?)<\/span>/i)?.[1];
+    rows.push({ id: a[2]!, path: a[1]!, title: text(a[3]) ?? '', location: text(loc), date: text(date) });
   }
-  const total = html.match(/paginationLabel[\s\S]{0,200}?of\s*(?:<b>)?\s*([\d,]+)/i)?.[1];
+  const total = html.match(/paginationLabel[\s\S]{0,200}?of\s*(?:<b>)?\s*([\d,]+)/i)?.[1] ?? html.match(/Showing\s+[\d,]+\s+to\s+[\d,]+\s+of\s+([\d,]+)/i)?.[1];
   return { rows, total: total ? Number(total.replace(/,/g, '')) : null };
 }
 
