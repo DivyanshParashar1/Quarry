@@ -60,7 +60,7 @@ import { createRegistry } from '@jobforge/plugins';
 import { createEmbedder, createGmail, createLLM, outreachDeps, tailorDeps } from './runtime.js';
 import { CmdError, contactsCommand, outreachCommand, reviewCommand } from './outreach-cmds.js';
 import { gmailAuth } from './gmail-auth.js';
-import { applyCommand, sweepCommand, linkedinCommand, pipelineCommand, referralsCommand, sequencerDeps } from './referral-cmds.js';
+import { applyCommand, sweepCommand, linkedinCommand, orchestratorCommand, pipelineCommand, referralsCommand, sequencerDeps } from './referral-cmds.js';
 
 const HELP = `jf — JobForge CLI
 
@@ -166,6 +166,9 @@ Referrals (Phase 8; no global send cap — a person is asked at most once per co
   jf answers [list] | delete <id>
       Application answers you approved (reused first for similar questions; edit them on the
       dashboard's Profile → answers tab).
+  jf orchestrator run              One orchestrator pass now: health checks → incidents → expert plan →
+                                   ops actions (no code changes from the CLI). The server runs it every 15 min.
+  jf incidents [--all]             Open incidents (with --all: resolved ones too); see the dashboard's Health tab.
   jf sweep [--live]
       One sweeper pass now (the server runs it on start and hourly): alerts, reply tracking,
       deadline expiry; with autopilot.enabled also match, resume, fan-out, the single 24 h
@@ -426,6 +429,8 @@ async function main(argv: string[]): Promise<number> {
     if (cmd === 'apply') return await applyCommand(sub, arg, values, cmdCtx);
     if (cmd === 'linkedin') return await linkedinCommand(sub, values, cmdCtx, arg);
     if (cmd === 'sweep') return await sweepCommand(values, cmdCtx);
+    if (cmd === 'orchestrator') return await orchestratorCommand(sub, values, cmdCtx);
+    if (cmd === 'incidents') return await orchestratorCommand('list', values, cmdCtx);
     if (cmd === 'answers') {
       // Phase 19: application answers you approved, reused for similar questions.
       if (sub === 'delete') {

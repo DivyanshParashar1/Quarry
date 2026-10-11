@@ -2,7 +2,7 @@ import type { AppConfig, Env, LLMClient, Logger } from '@jobforge/shared';
 import { recordLlmCall, type DB } from '@jobforge/db';
 import { createLazyEmbedder } from '@jobforge/embeddings';
 import { createLLMFromConfig } from '@jobforge/llm';
-import { createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
+import { budgetGuardedLlm, createDnsResolver, createGmailClient, type AutopilotRunDeps, type DomainRateLimiter, type OutreachDeps, type PluginRegistry, type TailorRunDeps } from '@jobforge/core';
 import type { GmailHandle } from '@jobforge/plugin-sdk';
 
 export async function createGmail(env: Env, limiter: DomainRateLimiter): Promise<GmailHandle | undefined> {
@@ -87,5 +87,6 @@ export function lazyAutopilotDeps(o: {
 export function lazyLLM(o: { env: Env; config: AppConfig; db: DB; log: Logger }): () => Promise<LLMClient> {
   let cached: LLMClient | null = null;
   return async () =>
-    (cached ??= createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }));
+    // Phase 22: every LLM call checks the orchestrator's budget pause first.
+    (cached ??= budgetGuardedLlm(createLLMFromConfig(o.env, o.config, { log: o.log, onCall: (rec) => recordLlmCall(o.db, rec) }), o.db));
 }

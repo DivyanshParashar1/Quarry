@@ -1,7 +1,7 @@
 import { createLazyEmbedder } from '@jobforge/embeddings';
 import { dirname } from 'node:path';
 import { findUp } from '@jobforge/shared';
-import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@jobforge/db';
+import { findCompanyByName, getBatchForJob, jobTimeline, listApplications, listIncidents, pipelineStateCounts, resolveIdPrefix, type PipelineState } from '@jobforge/db';
 import {
   advanceJob,
   embedPending,
@@ -29,7 +29,9 @@ import {
   runLinkedInSendTick,
   type LinkedInDeps,
   type SequencerDeps,
+  budgetGuardedLlm,
 } from '@jobforge/core';
+import { runOrchestratorTick } from '@jobforge/orchestrator';
 import { DomainRateLimiter } from '@jobforge/core';
 import { table } from './format.js';
 import { createRegistry } from '@jobforge/plugins';
@@ -43,6 +45,7 @@ export interface ReferralValues {
   live?: boolean | undefined;
   company?: string | undefined;
   limit?: string | undefined;
+  all?: boolean | undefined;
 }
 
 export function repoRoot(): string {
@@ -404,4 +407,33 @@ export async function pipelineCommand(sub: string | undefined, arg: string | und
     return 0;
   }
   throw new CmdError('usage: jf pipeline list [--state s1,s2] [--company] | show <jobId> | advance <jobId> | expire <jobId> --reason <text>');
+}
+
+/** Phase 22: one orchestrator pass from the CLI (ops actions only), or the incident list. */
+export async function orchestratorCommand(sub: string | undefined, v: ReferralValues, c: CmdCtx): Promise<number> {
+  if (sub === 'run') {
+    const seq = await sequencerDeps(c, false);
+    try {
+      const r = await runOrchestratorTick({
+        db: c.db,
+        log: c.log,
+        config: c.config.orchestrator,
+        registry: seq.fanOutDeps.registry,
+        llm: async () => (seq.fanOutDeps.llm ? budgetGuardedLlm(seq.fanOutDeps.llm, c.db) : undefined),
+        advanceJob: (jobId) => advanceJob(seq, jobId),
+        expireJob: (jobId, reason) => expireJob(c.db, jobId, reason),
+        topUpReferrals: (jobId) => fanOutReferrals(seq.fanOutDeps, jobId),
+      });
+      if (r.skipped) c.out(`skipped: ${r.skipped}`);
+      c.out(`${r.findings} finding(s) · opened ${r.opened.length} · acted ${r.acted.length} · resolved ${r.resolved.length} · escalated ${r.escalated.length}`);
+      for (const a of r.acted) c.out(`  ${a.incidentId.slice(0, 8)}  ${a.actions.map((x) => `${x.type}:${x.ok ? 'ok' : `FAIL (${x.detail})`}`).join(', ') || '(no ops actions)'}${a.codeFix ? `  code fix: ${a.codeFix.status}${a.codeFix.reason ? ` (${a.codeFix.reason})` : ''}` : ''}`);
+      return 0;
+    } finally {
+      await seq.close();
+    }
+  }
+  const rows = await listIncidents(c.db, v.all ? {} : { status: ['open', 'acting', 'verifying', 'escalated'] });
+  if (!rows.length) c.out(v.all ? 'No incidents yet.' : 'No open incidents: all checks pass.');
+  for (const i of rows) c.out(`${i.id.slice(0, 8)}  ${i.status.padEnd(9)} ${i.checkId.padEnd(15)} ${i.summary}${i.diagnosis ? `\n          ${i.diagnosis}` : ''}`);
+  return 0;
 }

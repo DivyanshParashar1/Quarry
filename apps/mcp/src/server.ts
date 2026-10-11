@@ -409,5 +409,55 @@ export function createJobForgeMcp(api: ApiClient, opts: { version?: string } = {
     ({ id, ...patch }) => run(() => api.send('PUT', `/api/profile/facts/${encodeURIComponent(id)}`, patch)),
   );
 
+  // Phase 22: the orchestrator.
+  server.registerTool(
+    'health_status',
+    { title: 'Health status', description: "The orchestrator's view: LLM spend today vs budget (and whether LLM steps are paused), incident counts, code fixes in 7 days, paused plugins, tenant overrides.", annotations: readOnly },
+    () => run(() => api.get('/api/orchestrator')),
+  );
+
+  server.registerTool(
+    'list_incidents',
+    {
+      title: 'List incidents',
+      description: 'Problems the monitor found (board errors, failing applications, stuck jobs, LLM budget, bounces, captchas/login walls), with the expert diagnosis and the action log.',
+      inputSchema: { status: z.array(z.enum(['open', 'acting', 'verifying', 'resolved', 'escalated'])).optional(), limit: z.number().int().min(1).max(200).default(50) },
+      annotations: readOnly,
+    },
+    ({ status, limit }) => run(() => api.get(`/api/incidents?${new URLSearchParams({ ...(status?.length ? { status: status.join(',') } : {}), limit: String(limit) })}`)),
+  );
+
+  server.registerTool(
+    'run_orchestrator',
+    {
+      title: 'Run the orchestrator',
+      description: 'One orchestrator pass now: health checks → incidents → expert plan → ops actions (pause/resume a board or plugin, requeue, advance/expire stuck jobs, budget pause, attention items). Never sends or submits.',
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    () => run(() => api.send('POST', '/api/orchestrator/run')),
+  );
+
+  server.registerTool(
+    'resolve_incident',
+    {
+      title: 'Resolve an incident',
+      description: 'Mark an incident resolved (after you or the user fixed it by hand).',
+      inputSchema: { id: z.string().uuid(), note: z.string().max(500).optional() },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    ({ id, note }) => run(() => api.send('POST', `/api/incidents/${id}/resolve`, note ? { note } : {})),
+  );
+
+  server.registerTool(
+    'resume_plugin',
+    {
+      title: 'Resume a paused plugin',
+      description: 'Clear the pause the orchestrator put on a plugin (e.g. actor-apply-workday, actor-gmail-outreach).',
+      inputSchema: { pluginId: z.string().min(1) },
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    ({ pluginId }) => run(() => api.send('POST', `/api/ops/plugins/${encodeURIComponent(pluginId)}/resume`)),
+  );
+
   return server;
 }

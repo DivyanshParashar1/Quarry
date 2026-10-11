@@ -24,6 +24,8 @@ import { registerDiscoveryRoutes } from './routes-discovery.js';
 import { registerReferralRoutes } from './routes-referrals.js';
 import { registerApplyRoutes } from './routes-apply.js';
 import { registerPipelineRoutes } from './routes-pipeline.js';
+import { registerHealthRoutes } from './routes-health.js';
+import type { TickResult } from '@jobforge/orchestrator';
 
 // Read-only dashboard API (Phase 2). Nothing here causes an external side effect.
 
@@ -84,6 +86,8 @@ export interface ApiOptions {
   screenshotRoot?: string;
   /** Failed apply steps captured by the wizard actors (Phase 21; served read-only on attention items). */
   failureRoot?: string;
+  /** Phase 22: one orchestrator pass. */
+  runOrchestrator?: () => Promise<TickResult>;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -264,6 +268,12 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     ...(opts.pages ? { pages: opts.pages } : {}),
     ...(opts.llm ? { llm: opts.llm } : {}),
     ...(opts.enqueueFetch ? { enqueueFetch: opts.enqueueFetch } : {}),
+  });
+
+  registerHealthRoutes(app, {
+    db,
+    budgetUsd: (opts.config ?? parseAppConfig({})).orchestrator.dailyLlmBudgetUsd,
+    ...(opts.runOrchestrator ? { runOrchestrator: opts.runOrchestrator } : {}),
   });
 
   app.all('/api/*', async (_req, reply) => reply.status(404).send({ error: 'not_found' }));

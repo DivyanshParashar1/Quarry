@@ -9,6 +9,7 @@ import { buildApi } from './api.js';
 import { createRegistry } from '@jobforge/plugins';
 import { createLazyEmbedder } from '@jobforge/embeddings';
 import { createGmail, lazyAutopilotDeps, lazyLLM, lazyOutreachDeps, lazyTailorDeps } from './runtime.js';
+import { createOrchestrator } from './orchestrator.js';
 
 export async function bootstrap() {
   const env = loadEnv();
@@ -19,6 +20,11 @@ export async function bootstrap() {
   const limiter = new DomainRateLimiter();
   const boss = await startBoss(env.DATABASE_URL);
   await registerSourceWorker(boss, { db, registry, log, limiter, dryRun: env.MODE !== 'live' });
+  // Phase 22: failures queue an early orchestrator pass (one at a time; the 15-minute schedule covers the rest).
+  const triggerOrchestrator = async (why: string) => {
+    if (!config.orchestrator.enabled) return;
+    await boss.send('orchestrator.tick', { why }, { singletonKey: 'orchestrator', singletonSeconds: 300 }).catch(() => null);
+  };
 
   const gmail = await createGmail(env, limiter).catch((err: unknown) => {
     log.warn({ err: err instanceof Error ? err.message : String(err) }, 'Gmail login failed; outreach loops disabled');
@@ -95,6 +101,7 @@ export async function bootstrap() {
     await boss.work('apply.send', { localConcurrency: 1, batchSize: 1 }, async () => {
       const r = await runApplyTick(await applyDeps());
       if (r.outcomes.length) log.info({ apply: r }, 'apply loop ran');
+      if (r.outcomes.some((x) => !x.ok)) await triggerOrchestrator('apply failure');
       return r;
     });
   } else {
@@ -188,6 +195,24 @@ export async function bootstrap() {
     for (const name of ['discovery.nightly', 'discovery.recheck']) await boss.unschedule(name).catch(() => {});
   }
 
+  // Phase 22: the orchestrator — monitor every intervalMinutes and after failures; ops actions only
+  // (automatic code fixes are not wired into the server; see orchestrator.ts).
+  const orchestrator = await createOrchestrator({
+    boss,
+    db,
+    log,
+    env,
+    config,
+    registry,
+    llm: llmLazy,
+    enqueueFetch: (ids: string[]) => enqueueSourceFetches(boss, ids),
+    sweep: () => runSweep(sweepDeps, { reason: 'orchestrator' }),
+    match: () => match(),
+    apply: async () => runApplyTick(await applyDeps()),
+    deadlines: async () => runDeadlines(await deadlineDeps()),
+    sequencerDeps,
+  });
+
   const facts = findUp('profile/facts.yaml');
   const resumeManifest = findUp('profile/resume/manifest.yaml');
   const api = await buildApi({
@@ -210,6 +235,7 @@ export async function bootstrap() {
     linkedinDeps,
     linkedinEnabled: env.LINKEDIN_ENABLED,
     sweep: () => runSweep(sweepDeps, { reason: 'dashboard' }),
+    runOrchestrator: orchestrator.run,
     ...(facts ? { profileDir: dirname(facts) } : {}),
     ...(resumeManifest ? { resumeDir: dirname(resumeManifest) } : {}),
   });

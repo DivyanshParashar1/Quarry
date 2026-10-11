@@ -86,6 +86,9 @@ importers:
       '@jobforge/matcher-default':
         specifier: workspace:*
         version: link:../../plugins/matcher-default
+      '@jobforge/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator
       '@jobforge/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
@@ -205,6 +208,9 @@ importers:
       '@jobforge/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      '@jobforge/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator
       '@jobforge/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
@@ -457,6 +463,28 @@ importers:
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  packages/orchestrator:
+    dependencies:
+      '@jobforge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@jobforge/db':
+        specifier: workspace:*
+        version: link:../db
+      '@jobforge/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@jobforge/llm':
+        specifier: workspace:*
+        version: link:../llm
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
