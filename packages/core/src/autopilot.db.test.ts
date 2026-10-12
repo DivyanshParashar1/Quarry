@@ -113,7 +113,7 @@ describe.skipIf(!adminUrl)('autopilot (postgres)', () => {
         pluginId: 'tailor-resume-latex',
         templateId: 'jakes-resume',
         factIds: [],
-        bullets: { selectedBlockIds: ['header', 'exp.screenify'], texPath: '/tmp/fake.tex', pages: 1 },
+        bullets: { selectedBlockIds: ['header', 'exp.hooli'], texPath: '/tmp/fake.tex', pages: 1 },
         header: { rewrites: [], techStackRewrites: [], skillsReorder: [], rationale: 'test' },
         validationReport: [],
         status: 'rendered',

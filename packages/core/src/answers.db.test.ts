@@ -102,8 +102,8 @@ describe.skipIf(!adminUrl)('application answers (postgres)', () => {
     };
     await loadProfileData(
       t.db,
-      [{ id: 'exp-ledger', kind: 'experience', content: 'Built a Go ledger service handling 2M tx/day at Screenify', metrics: {}, tags: [] }],
-      preferencesSchema.parse({ roles: ['Backend Engineer'], application: { first_name: 'Divyansh', last_name: 'Parashar', email: 'me@example.com' } }),
+      [{ id: 'exp-ledger', kind: 'experience', content: 'Built a Go ledger service handling 2M tx/day at Hooli', metrics: {}, tags: [] }],
+      preferencesSchema.parse({ roles: ['Backend Engineer'], application: { first_name: 'Jane', last_name: 'Doe', email: 'me@example.com' } }),
     );
     ids.company = (await upsertCompany(t.db, { name: 'Acme' })).id;
     ids.source = (await upsertCompanySource(t.db, { companyId: ids.company, atsType: 'greenhouse', boardToken: 'acme' })).id;
@@ -116,7 +116,7 @@ describe.skipIf(!adminUrl)('application answers (postgres)', () => {
     const item = await draftApplication(deps, ids.job1!, { preview: false });
     const d = applicationDraftSchema.parse(item.draft);
     const f = Object.fromEntries(d.fields.map((x) => [x.key, x]));
-    expect(f.first_name).toMatchObject({ value: 'Divyansh', source: 'profile' });
+    expect(f.first_name).toMatchObject({ value: 'Jane', source: 'profile' });
     expect(f.why).toMatchObject({ source: 'llm', confidence: 0.9 });
     expect(f.why!.value).toMatch(/Go ledger service/);
     expect(f.years_go).toMatchObject({ value: '1-2', source: 'llm' });
@@ -130,7 +130,7 @@ describe.skipIf(!adminUrl)('application answers (postgres)', () => {
   });
 
   it('your approval stores the answers (not salary) in the bank; the next form reuses them without the LLM', async () => {
-    await editDraft(t.db, ids.item1!, { fields: [{ key: 'achievement', value: 'Shipped the Go ledger service at Screenify.' }, { key: 'salary', value: '12 LPA' }] });
+    await editDraft(t.db, ids.item1!, { fields: [{ key: 'achievement', value: 'Shipped the Go ledger service at Hooli.' }, { key: 'salary', value: '12 LPA' }] });
     await approveReviewItem(t.db, config.outreach, ids.item1!);
     // Out of the way of the apply ticks below (they take the oldest approval first).
     await transitionReviewItem(t.db, ids.item1!, ['approved'], 'cancelled');
@@ -146,7 +146,7 @@ describe.skipIf(!adminUrl)('application answers (postgres)', () => {
     const f = Object.fromEntries(applicationDraftSchema.parse(item.draft).fields.map((x) => [x.key, x]));
     expect(f.why).toMatchObject({ source: 'bank', confidence: 1 });
     expect(f.years_go).toMatchObject({ source: 'bank', value: '1-2' });
-    expect(f.achievement).toMatchObject({ source: 'bank', value: 'Shipped the Go ledger service at Screenify.' });
+    expect(f.achievement).toMatchObject({ source: 'bank', value: 'Shipped the Go ledger service at Hooli.' });
     expect(prompts.length).toBe(before); // every open question came from the bank
     expect((await listAnswerBank(t.db)).find((b) => b.kind === 'choice')!.uses).toBe(1);
     ids.item2 = item.id;

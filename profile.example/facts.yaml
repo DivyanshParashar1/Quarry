@@ -1,0 +1,35 @@
+# Fact bank for grounded tailoring and matching. See PLAN.md section 7.
+# Load into the DB with `pnpm quarry profile load` (re-run after every edit).
+#
+# Every fact becomes a row in `profile_facts`. The tailor may only select,
+# reorder, and rephrase these facts, and every bullet cites its fact `id`, so:
+#   - ids are stable: never reuse an id for a different fact (rename = new id)
+#   - put numbers in `metrics` as well as in `content` so they can be validated
+#
+# kind: project | experience | education | skill | achievement
+#
+# Example:
+#   - id: exp-acme-backend
+#     kind: experience
+#     content: Backend engineer at Acme (2022-2024). Built the payments ledger service in Go on Postgres, handling 2M transactions/day.
+#     metrics: { transactions_per_day: 2000000, years: 2 }
+#     tags: [go, postgres, payments]
+#   - id: skill-go
+#     kind: skill
+#     content: Go (3 years, production services)
+#     tags: [go]
+facts:
+- id: edu-northfield-cs
+  kind: education
+  content: B.Tech in Computer Science at Northfield Institute of Technology, graduating May 2027.
+  metrics: { cpi: 8.5, start_year: 2023, end_year: 2027 }
+  tags: [computer science, B.Tech]
+- id: exp-hooli-backend
+  kind: experience
+  content: Backend Engineer Intern at Hooli Technologies (2026). Cut agent response time from ~15s to 2-3s by running agents asynchronously.
+  metrics: { latency_before_s: 15, latency_after_s: 3 }
+  tags: [backend, typescript, llm]
+- id: skill-typescript
+  kind: skill
+  content: TypeScript (Node.js, Fastify, React)
+  tags: [typescript]

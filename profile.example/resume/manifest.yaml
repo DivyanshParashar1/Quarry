@@ -6,7 +6,7 @@
 # The LLM only ever (a) picks `included_block_ids` and (b) rewrites bullets
 # or the tech_stack_line of a project. It never writes LaTeX structure.
 
-sections_order: [ education, experience, projects, skills, extras ]
+sections_order: [education, experience, projects, skills, extras]
 
 # Section wrappers. The assembler emits:
 #   {header}
@@ -26,9 +26,7 @@ sections:
     inner_end: "\\resumeSubHeadingListEnd"
     separator: ""
   projects:
-    header: "\\section{Projects}
-
-      \    \\vspace{-5pt}"
+    header: "\\section{Projects}\n    \\vspace{-5pt}"
     inner_start: "\\resumeSubHeadingListStart"
     inner_end: "\\resumeSubHeadingListEnd"
     # Between adjacent projects the original resume adds \vspace{-13pt}; the
@@ -55,106 +53,79 @@ blocks:
     section: header
     always_include: true
 
-  - id: edu.rgipt
-    file: blocks/edu.rgipt.tex
+  - id: edu.northfield
+    file: blocks/edu.northfield.tex
     section: education
-    title: RGIPT — B.Tech CSD
+    title: NIT — B.Tech CSD
     always_include: true
 
-  - id: exp.screenify
-    file: blocks/exp.screenify.tex
+  - id: exp.hooli
+    file: blocks/exp.hooli.tex
     section: experience
-    title: Screenify (Founding Engineer Intern)
+    title: Hooli (Founding Engineer Intern)
     always_include: true
-    tags:
-      [
-        backend,
-        multi-agent,
-        llm,
-        gcp,
-        cloud-run,
-        docker,
-        jwt,
-        rbac,
-        vue,
-        vertex-ai
-      ]
+    tags: [backend, multi-agent, llm, gcp, cloud-run, docker, jwt, rbac, vue, vertex-ai]
     bullets:
-      - id: exp.screenify.b1
-        tags: [ perf, multi-agent, async, firestore ]
-      - id: exp.screenify.b2
-        tags: [ backend, multi-agent, vertex-ai, auth, rbac ]
-      - id: exp.screenify.b3
-        tags: [ docker, cloud-run, vue, frontend ]
+      - id: exp.hooli.b1
+        tags: [perf, multi-agent, async, firestore]
+      - id: exp.hooli.b2
+        tags: [backend, multi-agent, vertex-ai, auth, rbac]
+      - id: exp.hooli.b3
+        tags: [docker, cloud-run, vue, frontend]
 
-  - id: exp.orangecat
-    file: blocks/exp.orangecat.tex
+  - id: exp.umbrella
+    file: blocks/exp.umbrella.tex
     section: experience
-    title: Orangecat (SWE Intern)
+    title: Umbrella (SWE Intern)
     always_include: true
-    tags: [ backend, rest, llm, agents, tree-sitter, react, streaming ]
+    tags: [backend, rest, llm, agents, tree-sitter, react, streaming]
     bullets:
-      - id: exp.orangecat.b1
-        tags: [ backend, rest, llm, tree-sitter, sql ]
-      - id: exp.orangecat.b2
-        tags: [ multi-agent, react, streaming, frontend ]
+      - id: exp.umbrella.b1
+        tags: [backend, rest, llm, tree-sitter, sql]
+      - id: exp.umbrella.b2
+        tags: [multi-agent, react, streaming, frontend]
 
   - id: proj.flashseat
     file: blocks/proj.flashseat.tex
     section: projects
     title: FlashSeat
-    tags:
-      [
-        backend,
-        concurrency,
-        postgres,
-        redis,
-        docker,
-        k6,
-        payments,
-        cloud-run,
-        sse
-      ]
+    tags: [backend, concurrency, postgres, redis, docker, k6, payments, cloud-run, sse]
     tech_stack_line: TypeScript, Fastify, PostgreSQL, Redis, Docker, k6
     bullets:
       - id: proj.flashseat.b1
-        tags: [ concurrency, postgres, locking, k6, performance ]
+        tags: [concurrency, postgres, locking, k6, performance]
       - id: proj.flashseat.b2
-        tags: [ payments, webhooks, hmac, idempotency ]
+        tags: [payments, webhooks, hmac, idempotency]
       - id: proj.flashseat.b3
-        tags: [ redis, sse, cloud-run, realtime ]
+        tags: [redis, sse, cloud-run, realtime]
 
   - id: proj.crdt
     file: blocks/proj.crdt.tex
     section: projects
     title: CRDT Collaborative Editor
-    tags: [ typescript, crdt, websockets, realtime, distributed, protocol-design ]
+    tags: [typescript, crdt, websockets, realtime, distributed, protocol-design]
     tech_stack_line: TypeScript, Node.js, WebSockets
     bullets:
       - id: proj.crdt.b1
-        tags: [ crdt, distributed, algorithms ]
+        tags: [crdt, distributed, algorithms]
       - id: proj.crdt.b2
-        tags: [ websockets, realtime, networking ]
+        tags: [websockets, realtime, networking]
       - id: proj.crdt.b3
-        tags: [ typescript, architecture, type-safety ]
+        tags: [typescript, architecture, type-safety]
+
   - id: proj.drillmirror
     file: blocks/proj.drillmirror.tex
     section: projects
     title: DrillMirror
-    tags:
-      - python
-      - ml
-      - ontology
-      - owl
-      - scikit-learn
-      - groq
-      - agents
-      - anomaly-detection
+    tags: [python, ml, ontology, owl, scikit-learn, groq, agents, anomaly-detection]
     tech_stack_line: Python, OWL, Scikit-learn, Groq
     bullets:
       - id: proj.drillmirror.b1
+        tags: [ml, anomaly-detection, scikit-learn]
       - id: proj.drillmirror.b2
+        tags: [ontology, owl, llm, agents]
       - id: proj.drillmirror.b3
+        tags: [agents, product]
 
   - id: skills.default
     file: blocks/skills.default.tex
@@ -167,19 +138,10 @@ blocks:
     section: extras
     title: Training & Placement Coordinator
     always_include: true
-  - id: proj.quarry
-    file: blocks/proj.quarry.tex
-    section: projects
-    title: Quarry
-    tech_stack_line: TypeScript, Playwright, PostgreSQL, LLMs, MCP
-    bullets:
-      - id: proj.quarry.b1
-      - id: proj.quarry.b2
-      - id: proj.quarry.b3
 
 # Soft budget the selector targets; the shrink loop prunes further if the
 # compiled PDF exceeds one page.
 budget:
   experience_blocks: { min: 1, max: 3 }
-  project_blocks: { min: 2, max: 3 }
+  project_blocks:    { min: 2, max: 3 }
   total_bullets_hint: 14

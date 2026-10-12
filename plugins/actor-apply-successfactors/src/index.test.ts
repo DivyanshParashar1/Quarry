@@ -42,7 +42,7 @@ const input = (): ApplyInput => ({
   postingId: '1372916957',
   applyUrl: JOB,
   profile: { version: 'v1', preferences: preferencesSchema.parse({}), facts: [], summary: '', embedding: null },
-  applicant: preferencesSchema.parse({ application: { first_name: 'Divyansh', last_name: 'Parashar', email: 'me@gmail.com', phone: '7976398973', location: 'Bengaluru' } }).application!,
+  applicant: preferencesSchema.parse({ application: { first_name: 'Jane', last_name: 'Doe', email: 'me@gmail.com', phone: '5551234567', location: 'Bengaluru' } }).application!,
   resume: { path: '/tmp/resume.pdf', resumeVariantId: null },
 });
 
@@ -101,7 +101,7 @@ describe('actor-apply-successfactors', () => {
     const d = await plugin.prepare(testContext(config(), h), input());
     expect(h.calls).toEqual([JOB]);
     expect(d).toMatchObject({ ats: 'successfactors', jobUrl: JOB, applyUrl: APPLY, missingRequired: [expect.stringMatching(/consent/)] });
-    expect(Object.fromEntries(d.fields.map((f) => [f.key, f.value]))).toMatchObject({ resume: '/tmp/resume.pdf', 'application:first_name': 'Divyansh', 'application:phone': '7976398973' });
+    expect(Object.fromEntries(d.fields.map((f) => [f.key, f.value]))).toMatchObject({ resume: '/tmp/resume.pdf', 'application:first_name': 'Jane', 'application:phone': '5551234567' });
     await expect(plugin.prepare(testContext(config(), fixtureHttp({ [JOB]: { file: fx('agfa-job-filled.html') } }, DOMAINS)), input())).rejects.toThrow(/filled/);
   });
 
@@ -118,9 +118,9 @@ describe('actor-apply-successfactors', () => {
     expect(filled('#fbclc_userName')).toEqual(['me@gmail.com']);
     expect(filled('#fbclc_emailConf')).toEqual(['me@gmail.com']);
     expect(filled('#fbclc_pwdConf')).toEqual([pw]);
-    expect(filled('#fbclc_fName')).toEqual(['Divyansh']);
+    expect(filled('#fbclc_fName')).toEqual(['Jane']);
     expect(filled('#password')).toEqual([pw]); // the sign-in after activation
-    expect(filled('#lastName')).toEqual(['Parashar']);
+    expect(filled('#lastName')).toEqual(['Doe']);
     expect(browser.actions.filter((a) => a.type === 'goto').map((a) => a.url)).toEqual([APPLY, `https://${HOST}/talentcommunity/verify/abc?token=1`, APPLY]);
     expect(browser.actions.filter((a) => a.type === 'check').map((a) => a.selector)).toEqual(['#dataPrivacyId']);
     expect(browser.actions.filter((a) => a.type === 'select')).toEqual([expect.objectContaining({ selector: '#q-previous', value: 'No' })]);

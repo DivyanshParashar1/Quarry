@@ -4,9 +4,9 @@
 # always included.
 label: "Base: all blocks"
 blocks:
-  - edu.rgipt
-  - exp.screenify
-  - exp.orangecat
+  - edu.northfield
+  - exp.hooli
+  - exp.umbrella
   - proj.flashseat
   - proj.crdt
   - proj.drillmirror

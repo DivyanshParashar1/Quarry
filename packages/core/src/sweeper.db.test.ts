@@ -175,7 +175,7 @@ describe.skipIf(!adminUrl)('sweeper + triggers (postgres)', () => {
     await loadProfileData(
       t.db,
       [{ id: 'exp-ledger', kind: 'experience', content: 'Built a Go ledger service handling 2M tx/day', metrics: {}, tags: [] }],
-      preferencesSchema.parse({ roles: ['Backend Engineer'], application: { first_name: 'Divyansh' } }),
+      preferencesSchema.parse({ roles: ['Backend Engineer'], application: { first_name: 'Jane' } }),
     );
     ids.acme = (await upsertCompany(t.db, { name: 'Acme', domain: 'acme.com' })).id;
     ids.acmeSource = (await upsertCompanySource(t.db, { companyId: ids.acme, atsType: 'greenhouse', boardToken: 'acme' })).id;

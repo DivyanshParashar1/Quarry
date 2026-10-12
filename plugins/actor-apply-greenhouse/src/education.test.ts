@@ -26,8 +26,8 @@ describe('Greenhouse education block', () => {
       return { items: [] };
     };
     const input = {
-      applicant: applicationSchema.parse({ university: 'Rajiv Gandhi Institute of Petroleum Technology', degree: 'B.Tech, Computer Science and Design' }),
-      profile: { preferences: { graduation_year: 2027 }, facts: [{ id: 'edu', kind: 'education', content: 'B.Tech at RGIPT, graduating May 2027.', metrics: { start_year: 2023, end_year: 2027 }, tags: [] }] },
+      applicant: applicationSchema.parse({ university: 'Northfield Institute of Technology', degree: 'B.Tech, Computer Science and Design' }),
+      profile: { preferences: { graduation_year: 2027 }, facts: [{ id: 'edu', kind: 'education', content: 'B.Tech at NIT, graduating May 2027.', metrics: { start_year: 2023, end_year: 2027 }, tags: [] }] },
     } as never;
     const fields = await educationFields(get, 'acme', 'education_required', input);
     expect(Object.fromEntries(fields.map((f) => [f.key, f.value]))).toEqual({

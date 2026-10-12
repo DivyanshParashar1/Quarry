@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { extractOtp, OtpTimeoutError, waitForOtp } from './otp.js';
 import { fakeGmail } from './testing.js';
 
-const GREENHOUSE_HTML = `<html><body><p>Hi Divyansh,</p><p>Copy and paste this security code into the application form:</p>
+const GREENHOUSE_HTML = `<html><body><p>Hi Jane,</p><p>Copy and paste this security code into the application form:</p>
 <p style="font-size:24px"><strong>8pKz2QxR</strong></p><p>This code expires in 10 minutes. © 2026 Greenhouse</p></body></html>`;
 
 describe('extractOtp', () => {

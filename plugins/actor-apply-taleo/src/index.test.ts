@@ -39,7 +39,7 @@ const input = (): ApplyInput => ({
   postingId: 'JR111341',
   applyUrl: JOB,
   profile: { version: 'v1', preferences: preferencesSchema.parse({}), facts: [], summary: '', embedding: null },
-  applicant: preferencesSchema.parse({ application: { first_name: 'Divyansh', last_name: 'Parashar', email: 'me@gmail.com', phone: '7976398973', location: 'Bengaluru' } }).application!,
+  applicant: preferencesSchema.parse({ application: { first_name: 'Jane', last_name: 'Doe', email: 'me@gmail.com', phone: '5551234567', location: 'Bengaluru' } }).application!,
   resume: { path: '/tmp/resume.pdf', resumeVariantId: null },
 });
 
@@ -100,9 +100,9 @@ describe('actor-apply-taleo', () => {
     expect(d.missingRequired).toEqual([expect.stringMatching(/I accept American Airlines's Taleo candidate account terms/)]);
     expect(Object.fromEntries(d.fields.map((f) => [f.key, f.value]))).toMatchObject({
       resume: '/tmp/resume.pdf',
-      'general-profile:first_name': 'Divyansh',
+      'general-profile:first_name': 'Jane',
       'general-profile:email': 'me@gmail.com',
-      'general-profile:phone': '7976398973',
+      'general-profile:phone': '5551234567',
     });
   });
 
@@ -124,7 +124,7 @@ describe('actor-apply-taleo', () => {
     expect(filled('#dialogTemplate-dialogForm-passwordConfirm')).toEqual([pw]);
     expect(filled('#dialogTemplate-dialogForm-emailConfirm')).toEqual(['me@gmail.com']);
     expect(filled('#dialogTemplate-dialogForm-verificationCode')).toEqual(['731942']);
-    expect(filled('input[id$="personal_info_LastName"]')).toEqual(['Parashar']);
+    expect(filled('input[id$="personal_info_LastName"]')).toEqual(['Doe']);
     expect(browser.actions.filter((a) => a.type === 'check').map((a) => a.selector)).toEqual(['#dialogTemplate-dialogForm-privacyAgreementAccepted']);
     expect(browser.actions.filter((a) => a.type === 'upload')).toEqual([expect.objectContaining({ selector: 'input[type="file"]', value: '/tmp/resume.pdf' })]);
     expect(browser.actions.filter((a) => a.type === 'select')).toEqual([expect.objectContaining({ selector: '#q-shift', value: 'Yes' })]);

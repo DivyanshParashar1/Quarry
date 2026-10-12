@@ -12,13 +12,13 @@ const input = (degree: number | null, notes: string | null = null): OutreachActi
   job: { id: 'j1', companyId: 'c1', company: 'Walmart', title: 'Software Engineer III', normalizedTitle: 'software engineer iii', locations: ['Bengaluru'], remotePolicy: null, seniority: null, descriptionMd: 'Payments platform', applyUrl: 'https://walmart.wd5.myworkdayjobs.com/x', postedAt: null, embedding: null },
   company: { id: 'c1', name: 'Walmart Global Tech', domain: 'walmart.com', tags: [], emailDomain: null, emailPattern: null, contacts: [] },
   contact: { id: 'p1', name: 'Ananya Sharma', role: 'Senior Software Engineer', email: '', emailConfidence: null, emailSource: null, status: 'active', linkedinUrl: PROFILE, department: 'Payments', linkedinDegree: degree, notes },
-  profile: { version: 'v1', preferences: preferencesSchema.parse({ application: { first_name: 'Divyansh' } }), facts: [], summary: '', embedding: null },
+  profile: { version: 'v1', preferences: preferencesSchema.parse({ application: { first_name: 'Jane' } }), facts: [], summary: '', embedding: null },
   resumeBullets: [{ id: 'b1', text: 'Built a Go ledger service handling 2M tx/day' }],
   attachments: [{ filename: 'resume.pdf', contentType: 'application/pdf', path: '/tmp/r.pdf', resumeVariantId: RESUME }],
 });
 
 const MESSAGE =
-  'Hi Ananya, good to reconnect since our college days! I am applying for Software Engineer III on the payments team (https://walmart.wd5.myworkdayjobs.com/x). I built a Go ledger service handling 2M transactions a day. I have attached my resume; would you be open to referring me, or pointing me to the right person? Thanks, Divyansh';
+  'Hi Ananya, good to reconnect since our college days! I am applying for Software Engineer III on the payments team (https://walmart.wd5.myworkdayjobs.com/x). I built a Go ledger service handling 2M transactions a day. I have attached my resume; would you be open to referring me, or pointing me to the right person? Thanks, Jane';
 
 function llmReturning(...outs: unknown[]) {
   const provider = createFakeProvider((_r: ProviderRequest, i: number) => outs[Math.min(i, outs.length - 1)]);
@@ -50,7 +50,7 @@ describe('actor-linkedin-manual', () => {
     const prompt = provider.calls[0]!.prompt;
     expect(prompt).toContain('1st-degree LinkedIn connection of the candidate; context: college senior');
     expect(prompt).toContain('Posting URL: https://walmart.wd5.myworkdayjobs.com/x');
-    expect(prompt).toContain('Sign off as "Divyansh"');
+    expect(prompt).toContain('Sign off as "Jane"');
     expect(provider.calls[0]!.system).toMatch(/resume is attached/);
   });
 

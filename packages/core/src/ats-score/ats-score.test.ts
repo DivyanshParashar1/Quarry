@@ -20,17 +20,17 @@ import {
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
 // Shaped like pdf-parse output of a one-page Jake's-template resume.
-const RESUME = `Divyansh Parashar
-+91 7976398973 divyanshdp1212@gmail.com linkedin.com/in/divyansh1212 github.com/DivyanshParashar1
+const RESUME = `Jane Doe
++1 555 123 4567 jane.doe@example.com linkedin.com/in/janedoe github.com/janedoe
 Education
-Rajiv Gandhi Institute of Petroleum Technology Nov 2022 – May 2026
+Northfield Institute of Technology Nov 2022 – May 2026
 B.Tech in Computer Science and Design Amethi, India
 Experience
 Founding Engineer Intern Jun 2025 – Aug 2025
-Screenify Remote
+Hooli Remote
 Built a multi-agent screening backend on Google Cloud Run with Docker, JWT auth and RBAC.
 Software Engineer Intern Jan 2025 – Apr 2025
-Orangecat Remote
+Umbrella Remote
 Shipped REST APIs in TypeScript and Node.js with PostgreSQL; streamed LLM output to a React UI.
 Projects
 FlashSeat | TypeScript, Fastify, PostgreSQL, Redis, Docker, k6

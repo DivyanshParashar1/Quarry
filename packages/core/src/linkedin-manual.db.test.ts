@@ -27,7 +27,7 @@ describe.skipIf(!adminUrl)('manual LinkedIn referrals (postgres)', () => {
     const first = /Recipient\n(\S+)/.exec(req.prompt)?.[1] ?? 'there';
     if (/direct message/.test(req.system ?? '')) {
       return {
-        text: `Hi ${first}, we connected a while back. I'm applying for the Backend Engineer role (https://boards.greenhouse.io/acme/jobs/b1) and built a Go ledger service handling 2M transactions a day. My resume is attached; would you be open to referring me? Thanks, Divyansh`,
+        text: `Hi ${first}, we connected a while back. I'm applying for the Backend Engineer role (https://boards.greenhouse.io/acme/jobs/b1) and built a Go ledger service handling 2M transactions a day. My resume is attached; would you be open to referring me? Thanks, Jane`,
         bullet_id: 'exp-ledger',
         confidence: 0.9,
       };
@@ -63,7 +63,7 @@ describe.skipIf(!adminUrl)('manual LinkedIn referrals (postgres)', () => {
     await loadProfileData(
       t.db,
       [{ id: 'exp-ledger', kind: 'experience', content: 'Built a Go ledger service handling 2M tx/day', metrics: {}, tags: [] }],
-      preferencesSchema.parse({ roles: ['Backend Engineer'], application: { first_name: 'Divyansh' } }),
+      preferencesSchema.parse({ roles: ['Backend Engineer'], application: { first_name: 'Jane' } }),
     );
     // Found earlier by other means: an engineer with a good email, and one with only a LinkedIn profile.
     ids.emailOnly = (await upsertContact(t.db, { companyId: ids.company, name: 'Emma Mail', email: 'emma@acme.com' })).contact.id;

@@ -81,7 +81,7 @@ const RESULT: TailoredResume = {
   pdf: PDF_BYTES,
   pages: 1,
   selection: {
-    included_block_ids: ['header', 'exp.screenify', 'proj.flashseat'],
+    included_block_ids: ['header', 'exp.hooli', 'proj.flashseat'],
     bullet_rewrites: [],
     tech_stack_rewrites: [],
     skills_reorder: [],
@@ -134,7 +134,7 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
     const header = r.variant.header as { rewrites: unknown[] };
     expect(header.rewrites).toEqual([]);
     const meta = r.variant.bullets as { selectedBlockIds: string[]; pages: number | null };
-    expect(meta.selectedBlockIds).toEqual(['header', 'exp.screenify', 'proj.flashseat']);
+    expect(meta.selectedBlockIds).toEqual(['header', 'exp.hooli', 'proj.flashseat']);
     expect(meta.pages).toBe(1);
 
     const roundTrip = await getResumeVariant(t.db, r.variant.id);
@@ -156,7 +156,7 @@ describe.skipIf(!adminUrl)('tailor runner (postgres)', () => {
 
   it('keeps an overflowing variant out of use and raises an attention item', async () => {
     const before = await latestRenderedResumeForJob(t.db, jobId);
-    const fit = { fontPt: 9, linespread: 0.94, shortenedBullets: ['exp.screenify.b1'], rounds: 2, compiles: 7, pages: 2 };
+    const fit = { fontPt: 9, linespread: 0.94, shortenedBullets: ['exp.hooli.b1'], rounds: 2, compiles: 7, pages: 2 };
     const overflowRegistry = new PluginRegistry();
     overflowRegistry.register(stubTailorPlugin({ ...RESULT, pages: 2, status: 'overflow', error: 'resume is 2 pages after every fit step', fit }));
     const r = await runTailor({ ...deps, registry: overflowRegistry }, { jobId });

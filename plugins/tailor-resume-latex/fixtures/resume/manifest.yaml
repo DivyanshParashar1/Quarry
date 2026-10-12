@@ -53,36 +53,36 @@ blocks:
     section: header
     always_include: true
 
-  - id: edu.rgipt
-    file: blocks/edu.rgipt.tex
+  - id: edu.northfield
+    file: blocks/edu.northfield.tex
     section: education
-    title: RGIPT — B.Tech CSD
+    title: NIT — B.Tech CSD
     always_include: true
 
-  - id: exp.screenify
-    file: blocks/exp.screenify.tex
+  - id: exp.hooli
+    file: blocks/exp.hooli.tex
     section: experience
-    title: Screenify (Founding Engineer Intern)
+    title: Hooli (Founding Engineer Intern)
     always_include: true
     tags: [backend, multi-agent, llm, gcp, cloud-run, docker, jwt, rbac, vue, vertex-ai]
     bullets:
-      - id: exp.screenify.b1
+      - id: exp.hooli.b1
         tags: [perf, multi-agent, async, firestore]
-      - id: exp.screenify.b2
+      - id: exp.hooli.b2
         tags: [backend, multi-agent, vertex-ai, auth, rbac]
-      - id: exp.screenify.b3
+      - id: exp.hooli.b3
         tags: [docker, cloud-run, vue, frontend]
 
-  - id: exp.orangecat
-    file: blocks/exp.orangecat.tex
+  - id: exp.umbrella
+    file: blocks/exp.umbrella.tex
     section: experience
-    title: Orangecat (SWE Intern)
+    title: Umbrella (SWE Intern)
     always_include: true
     tags: [backend, rest, llm, agents, tree-sitter, react, streaming]
     bullets:
-      - id: exp.orangecat.b1
+      - id: exp.umbrella.b1
         tags: [backend, rest, llm, tree-sitter, sql]
-      - id: exp.orangecat.b2
+      - id: exp.umbrella.b2
         tags: [multi-agent, react, streaming, frontend]
 
   - id: proj.flashseat

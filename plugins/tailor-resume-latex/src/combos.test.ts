@@ -29,14 +29,14 @@ describe('listProjectCombos (real manifest: 3 projects)', () => {
     expect(combos.map((c) => c.label)).toEqual(['FlashSeat + CRDT Collaborative Editor', 'FlashSeat + DrillMirror', 'CRDT Collaborative Editor + DrillMirror']);
     for (const c of combos) {
       expect(c.includedBlockIds[0]).toBe('header');
-      expect(c.includedBlockIds).toEqual(expect.arrayContaining(['edu.rgipt', 'exp.screenify', 'exp.orangecat', 'skills.default', 'extra.tpc']));
+      expect(c.includedBlockIds).toEqual(expect.arrayContaining(['edu.northfield', 'exp.hooli', 'exp.umbrella', 'skills.default', 'extra.tpc']));
       expect(c.includedBlockIds.filter((id) => id.startsWith('proj.'))).toHaveLength(2);
       expect(c.key).toBe(comboKey(c.includedBlockIds));
       expect(c).toMatchObject({ kind: 'combo', skills: 'projects' });
     }
     // Section order: projects come after experience, skills after projects.
     const ids = combos[0]!.includedBlockIds;
-    expect(ids.indexOf('exp.orangecat')).toBeLessThan(ids.indexOf('proj.flashseat'));
+    expect(ids.indexOf('exp.umbrella')).toBeLessThan(ids.indexOf('proj.flashseat'));
     expect(ids.indexOf('proj.crdt')).toBeLessThan(ids.indexOf('skills.default'));
   });
 

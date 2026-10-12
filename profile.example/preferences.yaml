@@ -41,7 +41,7 @@ remote_policy: [remote, hybrid, onsite]
 stack: [TypeScript, Node.js, Fastify, Express.js, PostgreSQL, Redis, Docker, React, LLMs, Multi-Agent Systems]
 
 # e.g. { amount: 2500000, currency: INR, period: year }. Used by the LLM rubric only.
-salary_floor: { amount: 40000, currency: INR, period: month }
+salary_floor: { amount: 2500000, currency: INR, period: year }
 
 # Years of professional experience. Jobs asking for much more are dropped.
 experience_years: 0
@@ -80,78 +80,34 @@ exclusions:
 
 # Anything else the matcher should weigh, in plain words.
 notes: >-
-  Final-year B.Tech student (batch 2027) looking for an internship starting
-  January 2027. Primary target is SDE (backend-leaning; full stack is fine);
-  SDE roles with AI / LLM / agent work are equally welcome. Strongest in
-  TypeScript backends. Based in Bengaluru, open to relocating anywhere in India.
-  Stipend at least 40,000 INR/month; prefer internships with a full-time
-  conversion (PPO) path paying at least 15 LPA.
+  Final-year student looking for a backend-leaning SDE internship. Strongest in
+  TypeScript backends; open to relocating.
 
 # Phase 11: what ATS application forms are filled with (Greenhouse / Lever / Ashby).
 # Nothing here is ever invented: a form question with no matching value is left
 # for you in the review queue. Editing this section does not trigger a re-match.
 application:
-  first_name: Divyansh
-  last_name: Parashar
-  email: divyanshdp1212@gmail.com
-  phone: "+91 7976398973"
+  first_name: Jane
+  last_name: Doe
+  email: jane.doe@example.com
+  phone: "+1 555 123 4567"
   location: Bengaluru, India
-  linkedin_url: https://www.linkedin.com/in/divyansh1212/
-  github_url: https://github.com/DivyanshParashar1
+  linkedin_url: https://www.linkedin.com/in/janedoe/
+  github_url: https://github.com/janedoe
   website_url: null
-  current_company: Screenify Technologies Pvt. Ltd.
-  current_title: Founding Engineer Intern
-  university: Rajiv Gandhi Institute of Petroleum Technology
-  degree: B.Tech, Computer Science and Design
-  # Eligible to work only in India (user, 2026-10-12): elsewhere needs sponsorship.
-  work_authorization:
-    India: yes
-    US: no
-    United States: no
-    UK: no
-    United Kingdom: no
-    Canada: no
-    Singapore: no
-    Germany: no
-    Ireland: no
-    Netherlands: no
-    Australia: no
-    UAE: no
-  requires_sponsorship: false   # for questions that name no country (target roles are in India)
+  current_company: null
+  current_title: null
+  university: Northfield Institute of Technology
+  degree: B.Tech, Computer Science
+  work_authorization: { India: yes, US: no }
+  requires_sponsorship: null      # true / false; null = ask me
   notice_period_days: null
-  answers:
-    - { match: WhatsApp, answer: "Yes" }
-    - { match: cohort dates, answer: January to June (6 months) }
-  eeo:
+  answers:                        # recurring custom questions (substring match on the label)
+    - { match: "hear about", answer: "Company careers page" }
+  eeo:                            # optional; null = leave for me, "decline" = pick the decline option
     gender: null
     race: null
     hispanic_latino: null
     veteran_status: null
     disability_status: null
     pronouns: null
-# Example:
-# application:
-#   first_name: Asha
-#   last_name: Rao
-#   email: asha@example.com
-#   phone: "+91 98xxxxxxx"
-#   location: Bengaluru, India
-#   linkedin_url: https://www.linkedin.com/in/asha/
-#   github_url: https://github.com/asha
-#   website_url: null
-#   current_company: null
-#   current_title: null
-#   university: Rajiv Gandhi Institute of Petroleum Technology
-#   degree: B.Tech, Computer Science
-#   work_authorization: { India: yes, US: no }
-#   requires_sponsorship: null      # true / false; null = ask me
-#   notice_period_days: null
-#   answers:                        # recurring custom questions (substring match on the label)
-#     - { match: "hear about", answer: "Company careers page" }
-#   eeo:                            # optional; null = leave for me, "decline" = pick the decline option
-#     gender: null
-#     race: null
-#     hispanic_latino: null
-#     veteran_status: null
-#     disability_status: null
-#     pronouns: null

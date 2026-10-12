@@ -53,12 +53,12 @@ const linkedinStub = defineActorPlugin<unknown, OutreachActionInput, z.infer<typ
 describe('latex bullets', () => {
   it('extracts \\resumeItem bullets as plain text', () => {
     const tex = [
-      '\\resumeItem{Built \\textbf{10+ REST APIs} for \\textbf{``Chanakya\'\'} with nested {braces}}',
+      '\\resumeItem{Built \\textbf{10+ REST APIs} for \\textbf{``Atlas\'\'} with nested {braces}}',
       '\\resumeItem{Short}',
       '\\resumeItem{Cut p95 latency by 40\\% using \\texttt{Redis} -- and caching}',
     ].join('\n');
     expect(bulletsFromTex(tex)).toEqual([
-      { id: 'b1', text: 'Built 10+ REST APIs for "Chanakya" with nested braces' },
+      { id: 'b1', text: 'Built 10+ REST APIs for "Atlas" with nested braces' },
       { id: 'b3', text: 'Cut p95 latency by 40% using Redis – and caching' },
     ]);
     expect(latexToText(String.raw`\href{https://x.y}{site} \& more`)).toBe('site & more');

@@ -28,7 +28,7 @@ describe('which questions the LLM may answer', () => {
 });
 
 describe('guardrail', () => {
-  const sources = 'Built a Go ledger service handling 2M tx/day at Screenify. Stack: TypeScript, PostgreSQL, Redis. Acme Payments builds payment APIs.';
+  const sources = 'Built a Go ledger service handling 2M tx/day at Hooli. Stack: TypeScript, PostgreSQL, Redis. Acme Payments builds payment APIs.';
 
   it('accepts an answer whose numbers and names come from the sources', () => {
     expect(inventedClaim('I built a Go ledger service handling 2M tx/day, and I would love to build payment APIs at Acme Payments with TypeScript.', sources)).toBeNull();

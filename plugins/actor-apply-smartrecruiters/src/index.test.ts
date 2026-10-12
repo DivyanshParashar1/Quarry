@@ -40,7 +40,7 @@ const input = (): ApplyInput => ({
   applyUrl: 'https://jobs.smartrecruiters.com/BoschGroup/744000154820678-sr-embedded-sw-developer-orc2-edc3',
   profile: { version: 'v1', preferences: preferencesSchema.parse({}), facts: [], summary: '', embedding: null },
   applicant: preferencesSchema.parse({
-    application: { first_name: 'Divyansh', last_name: 'Parashar', email: 'me@example.com', phone: '7976398973', linkedin_url: 'https://linkedin.com/in/divyansh1212', location: 'Bengaluru' },
+    application: { first_name: 'Jane', last_name: 'Doe', email: 'me@example.com', phone: '5551234567', linkedin_url: 'https://linkedin.com/in/janedoe', location: 'Bengaluru' },
   }).application!,
   resume: { path: '/tmp/resume.pdf', resumeVariantId: null },
 });
@@ -93,11 +93,11 @@ describe('actor-apply-smartrecruiters', () => {
     expect(h.calls).toEqual([postingUrl('BoschGroup', '744000154820678'), FORM, configUrl(CID, UUID)]);
     const v = Object.fromEntries(d.fields.map((f) => [f.key, f.value]));
     expect(v).toMatchObject({
-      's1:first_name': 'Divyansh',
-      's1:last_name': 'Parashar',
+      's1:first_name': 'Jane',
+      's1:last_name': 'Doe',
       's1:email': 'me@example.com',
       's1:email_confirm': 'me@example.com',
-      's1:phone': '7976398973',
+      's1:phone': '5551234567',
       's1:city': 'Bengaluru',
       's1:resume': '/tmp/resume.pdf',
       's1:message': null,
@@ -119,7 +119,7 @@ describe('actor-apply-smartrecruiters', () => {
     expect(r).toMatchObject({ dryRun: true, submitted: false });
     expect(browser.actions.filter((a) => a.type === 'click')).toEqual([]);
     expect(browser.actions.filter((a) => a.type === 'fill' || a.type === 'type').map((a) => a.value)).toEqual(
-      expect.arrayContaining(['Divyansh', 'Parashar', 'me@example.com', '7976398973']),
+      expect.arrayContaining(['Jane', 'Doe', 'me@example.com', '5551234567']),
     );
   });
 

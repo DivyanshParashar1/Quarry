@@ -5,7 +5,7 @@ import { fakeBrowser } from './testing.js';
 
 const applicant = applicationSchema.parse({
   location: 'Bengaluru, India',
-  current_company: 'Screenify',
+  current_company: 'Hooli',
   current_title: 'Founding Engineer Intern',
   work_authorization: { India: 'yes', US: 'no' },
   requires_sponsorship: false,
@@ -21,9 +21,9 @@ const answer = (question: FormQuestion) => mapAnswers([question], input).fields[
 
 describe('mapAnswers', () => {
   it('current or previous employer / title, and country of residence', () => {
-    expect(answer(q('Who is your current or previous employer?'))).toBe('Screenify');
+    expect(answer(q('Who is your current or previous employer?'))).toBe('Hooli');
     expect(answer(q('What is your current or previous job title?'))).toBe('Founding Engineer Intern');
-    expect(answer(q('Most recent company'))).toBe('Screenify');
+    expect(answer(q('Most recent company'))).toBe('Hooli');
     expect(answer(q('Please select the country where you currently reside.', { kind: 'select', options: ['India', 'US', 'Other'] }))).toBe('India');
   });
 

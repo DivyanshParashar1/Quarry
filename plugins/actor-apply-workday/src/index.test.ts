@@ -72,7 +72,7 @@ const input = (boardToken: string, applyUrl: string, title: string): ApplyInput 
   applyUrl,
   profile: { version: 'v1', preferences: preferencesSchema.parse({}), facts: [], summary: '', embedding: null },
   applicant: preferencesSchema.parse({
-    application: { first_name: 'Divyansh', last_name: 'Parashar', email: 'me@gmail.com', phone: '7976398973', location: 'Bengaluru', linkedin_url: 'https://linkedin.com/in/divyansh1212', eeo: { gender: 'Male' } },
+    application: { first_name: 'Jane', last_name: 'Doe', email: 'me@gmail.com', phone: '5551234567', location: 'Bengaluru', linkedin_url: 'https://linkedin.com/in/janedoe', eeo: { gender: 'Male' } },
   }).application!,
   resume: { path: '/tmp/resume.pdf', resumeVariantId: null },
 });
@@ -168,11 +168,11 @@ describe('actor-apply-workday', () => {
     expect(Object.fromEntries(d.fields.map((f) => [f.key, f.value]))).toEqual({
       resume: '/tmp/resume.pdf',
       [CONSENT_KEY]: null,
-      'my-information:first_name': 'Divyansh',
-      'my-information:last_name': 'Parashar',
+      'my-information:first_name': 'Jane',
+      'my-information:last_name': 'Doe',
       'my-information:city': 'Bengaluru',
-      'my-information:phone': '7976398973',
-      'my-experience:linkedin': 'https://linkedin.com/in/divyansh1212',
+      'my-information:phone': '5551234567',
+      'my-experience:linkedin': 'https://linkedin.com/in/janedoe',
     });
   });
 
@@ -213,7 +213,7 @@ describe('actor-apply-workday', () => {
     // The same generated password is typed for create, verify and the sign-in after verification.
     expect(fills.filter((a) => a.value === password).map((a) => a.selector)).toEqual(['input[data-automation-id="password"]', 'input[data-automation-id="verifyPassword"]', 'input[data-automation-id="password"]']);
     // Autofill is corrected: "Divyans" on the page is overwritten with the profile's name.
-    expect(fills.find((a) => a.selector === 'input[data-automation-id="legalNameSection_firstName"]')!.value).toBe('Divyansh');
+    expect(fills.find((a) => a.selector === 'input[data-automation-id="legalNameSection_firstName"]')!.value).toBe('Jane');
     expect(fills.find((a) => a.selector === '#q-years')!.value).toBe('2');
     // Resume uploaded once, on the autofill page.
     expect(browser.actions.filter((a) => a.type === 'upload')).toEqual([expect.objectContaining({ value: '/tmp/resume.pdf' })]);

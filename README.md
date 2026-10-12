@@ -97,7 +97,8 @@ docker compose up -d              # Postgres on :5432
 pnpm db:migrate
 ```
 
-**1. Describe yourself.** Edit the files in `profile/` (format: [docs/profile.md](docs/profile.md)):
+**1. Describe yourself.** Copy the template with `cp -R profile.example profile`, then edit the files in `profile/`
+(format: [docs/profile.md](docs/profile.md)). `profile/` is gitignored, so your details never get committed:
 
 - `profile/facts.yaml` — your fact bank: experience, projects, education, skills, achievements. The tailor may
   only select and rephrase these; it never invents experience.
@@ -248,7 +249,7 @@ packages/
   orchestrator/ health checks, experts, ops actions, gated code fixes
   shared/      zod schemas, config, logging, profile loading
 plugins/       source-*, enricher-*, matcher-*, tailor-*, actor-*, tracker-*
-profile/       facts.yaml, preferences.yaml, resume/ (your data)
+profile/       facts.yaml, preferences.yaml, resume/ (your data; gitignored — copy profile.example/)
 data/          seed CSVs; generated resumes, screenshots and session files (gitignored)
 docs/          user and reference documentation
 ```

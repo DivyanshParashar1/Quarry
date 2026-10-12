@@ -1,7 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { assembleTex, applySkillsReorder } from './assembler.js';
 import { loadResume } from './manifest-loader.js';
@@ -9,11 +8,11 @@ import { deterministicSelection } from './index.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MANIFEST = resolve(HERE, '../fixtures/resume/manifest.yaml');
-const ORIGINAL = resolve(HERE, '../../../my_resume.tex');
+// Anonymised copy of the original hand-written resume the fixture blocks were cut from.
+const ORIGINAL = resolve(HERE, '../fixtures/resume/expected.tex');
 
 describe('assembler', () => {
-  // my_resume.tex is the user's private original (gitignored); skip on a clean clone.
-  it.skipIf(!existsSync(ORIGINAL))('deterministic selection reproduces my_resume.tex modulo whitespace', async () => {
+  it('deterministic selection reproduces the original resume modulo whitespace', async () => {
     const resume = await loadResume(MANIFEST);
     const sel = deterministicSelection(resume);
     const tex = assembleTex({ resume, includedBlockIds: sel.included_block_ids });

@@ -1,6 +1,7 @@
 # Your profile
 
-Everything Quarry says about you comes from `profile/`. The system selects, reorders and (in narrow,
+Everything Quarry says about you comes from `profile/` (gitignored; create it with
+`cp -R profile.example profile`). The system selects, reorders and (in narrow,
 guardrailed ways) rephrases it, but never adds to it. After any edit:
 
 ```bash

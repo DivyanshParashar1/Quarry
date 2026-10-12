@@ -1,0 +1,227 @@
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,10pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=false, % header links will look black
+    urlcolor=blue,    % default color for urls (but disabled for now)
+    linkcolor=blue
+}
+
+\hypersetup{colorlinks=false}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{fontawesome5}
+\usepackage{multicol}
+\setlength{\multicolsep}{-3.0pt}
+\setlength{\columnsep}{-1pt}
+\input{glyphtounicode}
+
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.6in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1.19in}
+\addtolength{\topmargin}{-.7in}
+\addtolength{\textheight}{1.4in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large\bfseries
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\classesList}[4]{
+    \item\small{
+        {#1 #2 #3 #4 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{1.0\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & \textbf{\small #2} \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{1.001\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & \textbf{\small #2}\\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemi{$\vcenter{\hbox{\tiny$\bullet$}}$}
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.0in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+%----------HEADING----------
+
+\begin{center}
+    {\Huge \scshape Jane Doe} \\ \vspace{1pt}
+    \small \raisebox{-0.1\height}\faPhone\ +1 555 123 4567 ~
+    \href{mailto:jane.doe@example.com}{\raisebox{-0.2\height}\faEnvelope\  \underline{jane.doe@example.com}} ~
+    \href{https://linkedin.com/in/janedoe/}{\raisebox{-0.2\height}\faLinkedin\ \underline{janedoe}} ~
+    \href{https://github.com/janedoe/}{\raisebox{-0.2\height}\faGithub\ \underline{janedoe}}
+    \vspace{-8pt}
+\end{center}
+
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Northfield Institute of Technology}{Aug. 2023 -- May 2027}
+      {B.Tech. in Computer Science and Design}{CPI: 8.50}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Hooli Technologies Pvt. Ltd.}{April 2026 -- Present}
+      {Founding Engineer Intern}{}
+      \resumeItemListStart
+        \resumeItem{Cut AI agent response time from \textbf{$\sim$15s to 2--3s} by re-architecting the multi-agent system to run agents \textbf{asynchronously}, persisting structured outputs in \textbf{Firestore} and limiting synchronous execution to a few agents.}
+        \resumeItem{Architected the \textbf{backend} and a hierarchical \textbf{multi-agent system} for a DOOH advertising platform, integrating \textbf{Vertex AI Imagen} for AI-assisted creative editing, with \textbf{JWT} auth and \textbf{RBAC} securing the APIs.}
+        \resumeItem{Deployed \textbf{Dockerized} services on \textbf{Google Cloud Run} and contributed to the \textbf{Vue 3} frontend to ship the end-to-end advertiser/vendor platform.}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Umbrella Technologies}{May 2025 -- July 2025}
+      {Software Engineering Intern}{}
+      \resumeItemListStart
+        \resumeItem{Built \textbf{10+ REST APIs} and core backend modules for \textbf{``Atlas''}, an autonomous data-science agent, including a \textbf{Tree-sitter}-based validation layer that sanitized model-generated SQL to prevent execution errors.}
+        \resumeItem{Contributed to \textbf{multi-agent integration} and built a \textbf{React} streaming frontend rendering real-time LLM responses and interactive charts.}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+
+%-----------PROJECTS-----------
+\section{Projects}
+    \vspace{-5pt}
+    \resumeSubHeadingListStart
+
+      \resumeProjectHeading
+          {\textbf{FlashSeat - High-Concurrency Seat Booking System} $|$ \emph{TypeScript, Fastify, PostgreSQL, Redis, Docker, k6}}{\href{https://github.com/janedoe/FlashSeat}{Github}}
+          \resumeItemListStart
+            \resumeItem{Engineered a seat-booking API with dual concurrency strategies: pessimistic \texttt{SELECT ... FOR UPDATE} and \textbf{version-column optimistic locking}, benchmarked under \textbf{k6} (500 VUs, 10:1 contention) to sustain \textbf{0 double-bookings}, $\sim$\textbf{450 RPS}, and \textbf{p95 hold latency $<$180\,ms}.}
+            \resumeItem{Hardened the \textbf{Razorpay} payment flow with \textbf{HMAC-verified webhooks} and idempotency enforced by a composite unique constraint plus a processed-events ledger, verified across \textbf{1,000+ replayed webhook deliveries} and simulated hold-expiry race conditions.}
+            \resumeItem{Built a \textbf{Redis}-backed waiting-room queue and \textbf{Server-Sent Events} seat-update channel on a Dockerized \textbf{Cloud Run} service, admitting $\sim$\textbf{200 users/sec} into the booking flow and fanning out seat-state changes in \textbf{$<$100\,ms}.}
+          \resumeItemListEnd
+          \vspace{-13pt}
+
+      \resumeProjectHeading
+          {\textbf{CRDT Collaborative Editor - Real-Time Multi-User Text Sync} $|$ \emph{TypeScript, Node.js, WebSockets}}{\href{https://github.com/janedoe/crdt_based_editor}{Github}}
+          \resumeItemListStart
+            \resumeItem{Implemented a \textbf{CRDT} text-editing engine from scratch using the \textbf{Replicated Growable Array} algorithm with \textbf{Lamport clocks}, per-client identifiers, and tombstone deletion, yielding commutative operations that converge to identical state across replicas with \textbf{no server-side arbitration}.}
+            \resumeItem{Built a bidirectional \textbf{WebSocket} sync layer sustaining \textbf{50+ concurrent editors} at \textbf{$<$100ms} end-to-end latency, with envelope-based \textbf{protocol versioning} and a message queue that replays buffered operations on reconnect to survive network drops.}
+            \resumeItem{Designed a \textbf{transport-agnostic} architecture in strict \textbf{TypeScript}, isolating CRDT logic, protocol, and transport behind interfaces, with \textbf{discriminated unions} and runtime type guards validating \textbf{100\%} of deserialization paths.}
+          \resumeItemListEnd
+          \vspace{-13pt}
+
+      \resumeProjectHeading
+          {\textbf{DrillMirror - Digital Twin for Oil Drilling} $|$ \emph{Python, OWL, Scikit-learn, Groq}}{\href{https://github.com/janedoe/DrillMirror}{Github}}
+          \resumeItemListStart
+            \resumeItem{Architected an ontology-driven digital twin for offshore oil rigs, detecting \textbf{8 undesirable event types} from the multivariate \textbf{3W dataset} with \textbf{85\% precision} via an \textbf{Isolation Forest} anomaly model.}
+            \resumeItem{Modeled equipment and sensor variables in an \textbf{OWL} knowledge graph, and built a \textbf{Groq-powered} agent that queries it to translate raw sensor data into actionable maintenance context.}
+            \resumeItem{Implemented \textbf{2 dual-persona} agent modes (``Engineer'' for technical resolution, ``Manager'' for safety/downtime analysis) to tailor insights per stakeholder.}
+          \resumeItemListEnd
+
+    \resumeSubHeadingListEnd
+
+
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: JavaScript, TypeScript, Python, Java, SQL} \\
+     \textbf{Frameworks \& Libraries}{: React, Vue 3, Node.js, Express.js, Fastify, FastAPI, WebSockets, Server-Sent Events} \\
+     \textbf{AI \& ML}{: LLMs, Multi-Agent Systems, Vertex AI, Scikit-learn} \\
+     \textbf{Databases \& Cloud}{: PostgreSQL, Redis, MongoDB, Firestore, SQLite, Google Cloud (Cloud Run), AWS} \\
+     \textbf{Developer Tools}{: Git, GitHub, Docker, k6, REST APIs, JWT Auth, Postman}
+    }}
+ \end{itemize}
+
+
+
+%-----------INVOLVEMENT---------------
+\section{Extracurriculars}
+    \resumeSubHeadingListStart
+        \resumeSubheading
+            {Training and Placement Student Coordinator}{2024 -- Present}
+            {Northfield Institute of Technology}{}
+    \resumeSubHeadingListEnd
+
+
+\end{document}

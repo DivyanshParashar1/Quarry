@@ -13,7 +13,7 @@ describe('selector.enforceRules', () => {
     const out = enforceRules(r, ['proj.flashseat']);
     expect(out[0]).toBe('header');
     // education must come before projects (per sections_order).
-    const eduIdx = out.indexOf('edu.rgipt');
+    const eduIdx = out.indexOf('edu.northfield');
     const projIdx = out.indexOf('proj.flashseat');
     expect(eduIdx).toBeGreaterThan(-1);
     expect(eduIdx).toBeLessThan(projIdx);
@@ -21,9 +21,9 @@ describe('selector.enforceRules', () => {
 
   it('inserts always_include blocks even when the LLM omits them', async () => {
     const r = await loadResume(MANIFEST);
-    const out = enforceRules(r, ['proj.flashseat']); // omits exp.screenify
-    expect(out).toContain('exp.screenify');
-    expect(out).toContain('exp.orangecat');
+    const out = enforceRules(r, ['proj.flashseat']); // omits exp.hooli
+    expect(out).toContain('exp.hooli');
+    expect(out).toContain('exp.umbrella');
     expect(out).toContain('skills.default');
   });
 

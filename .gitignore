@@ -18,3 +18,6 @@ data/linkedin/
 data/screenshots/
 data/apply-failures/
 .chat-scratch/
+
+# Your personal profile (resume, contact details, preferences). Start from profile.example/.
+profile/
