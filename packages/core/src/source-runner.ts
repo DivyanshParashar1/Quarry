@@ -1,4 +1,4 @@
-import type { Logger } from '@quarry/shared';
+import { SOURCE_PLUGIN_FOR_ATS, type Logger } from '@quarry/shared';
 import { HttpError, rawPostingSchema, type SourceTarget } from '@quarry/plugin-sdk';
 import {
   appendEvent,
@@ -7,7 +7,6 @@ import {
   markSourceResult,
   recordPosting,
   startPluginRun,
-  type AtsType,
   type DB,
   type SourceTargetRow,
 } from '@quarry/db';
@@ -16,16 +15,8 @@ import { emitStage } from './triggers.js';
 import { isPluginPaused } from './ops-state.js';
 import { buildContext, type ContextDeps, type PluginRegistry } from './plugins.js';
 
-/** Which source plugin serves each ATS type. */
-export const SOURCE_PLUGIN_FOR_ATS: Partial<Record<AtsType, string>> = {
-  greenhouse: 'source-greenhouse',
-  lever: 'source-lever',
-  ashby: 'source-ashby',
-  workday: 'source-workday',
-  smartrecruiters: 'source-smartrecruiters',
-  successfactors: 'source-successfactors',
-  taleo: 'source-taleo',
-};
+/** Which source plugin serves each ATS type (lives in shared so the phone fetcher can use it). */
+export { SOURCE_PLUGIN_FOR_ATS };
 
 export interface SourceRunDeps extends Omit<ContextDeps, 'signal' | 'log'> {
   db: DB;

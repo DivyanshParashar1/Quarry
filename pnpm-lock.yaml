@@ -89,6 +89,9 @@ importers:
       '@quarry/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@quarry/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
       '@quarry/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins
@@ -132,15 +135,61 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      '@quarry/plugin-sdk':
-        specifier: workspace:*
-        version: link:../../packages/plugin-sdk
       pino:
         specifier: ^9.14.0
         version: 9.14.0
       tsx:
         specifier: ^4.19.2
         version: 4.23.15
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+
+  apps/fetcher:
+    dependencies:
+      '@quarry/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@quarry/matcher-default':
+        specifier: workspace:*
+        version: link:../../plugins/matcher-default
+      '@quarry/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+      '@quarry/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@quarry/source-ashby':
+        specifier: workspace:*
+        version: link:../../plugins/source-ashby
+      '@quarry/source-greenhouse':
+        specifier: workspace:*
+        version: link:../../plugins/source-greenhouse
+      '@quarry/source-lever':
+        specifier: workspace:*
+        version: link:../../plugins/source-lever
+      '@quarry/source-smartrecruiters':
+        specifier: workspace:*
+        version: link:../../plugins/source-smartrecruiters
+      '@quarry/source-successfactors':
+        specifier: workspace:*
+        version: link:../../plugins/source-successfactors
+      '@quarry/source-taleo':
+        specifier: workspace:*
+        version: link:../../plugins/source-taleo
+      '@quarry/source-workday':
+        specifier: workspace:*
+        version: link:../../plugins/source-workday
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      pino:
+        specifier: ^9.14.0
+        version: 9.14.0
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

@@ -18,3 +18,5 @@ data/linkedin/
 data/screenshots/
 data/apply-failures/
 .chat-scratch/
+# Phase 24: phone fetcher outbox + state
+data/fetcher/

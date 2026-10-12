@@ -549,3 +549,27 @@ emails or LinkedIn actions. Those parts wait for the user (listed below).
 - Preferences `keywords.title_any` / `keywords.description_any`: new hard filters (whole-word, case-insensitive) in both modes.
 - Sweeper runs the match step without `autopilot.enabled` when the matcher is in keyword mode (it costs nothing).
 - Location filter: a remote job no longer bypasses `locations` when it names another place ("Remote, US"); placeless locations ("Remote", "Worldwide") still pass.
+
+## [Phase 24, part 1] — Phone fetcher (fetch side)
+
+- `apps/fetcher` (`pnpm fetcher run|status`): fetches every company board with the existing source plugins on an
+  always-on device (Android/Termux), drops what fails your `preferences.yaml` hard filters (the matcher's own
+  filters), and writes one JSON batch per board fetch to `data/fetcher/outbox/` for the laptop to import. No
+  database, LLM, embeddings or browser: it loads `@quarry/core/fetch` (plugin host, scoped HTTP, rate limiter,
+  normalizer) and nothing else from the core.
+- Batch format (`@quarry/fetcher/batch`, versioned, zod-validated): board, timing, ok/error/permanent, counts,
+  new/changed postings in full, unchanged postings by id, and what the filter dropped with the reason. A failed
+  fetch still writes a batch (no postings) so the laptop sees the error.
+- Only new or changed postings travel in full (`data/fetcher/state.json` remembers content hashes per board,
+  advanced only after the batch is written); `--full` resends everything. `--every <hours>` keeps it running.
+- Board list: `data/fetcher/boards.json` (what the laptop will send) or any companies CSV (defaults to
+  `data/companies.seed.csv`, Workday/SmartRecruiters columns included).
+- Moved, no behaviour change: the CSV parser to `@quarry/shared`, `ATS_TYPES`/`SOURCE_PLUGIN_FOR_ATS` to
+  `@quarry/shared` (a db test keeps the enum in sync), the companies-CSV schema to `@quarry/plugin-sdk`;
+  `readPreferencesFile` added to shared.
+- Not yet: the laptop-side pull/import and the phone's sync endpoint (next part). `source-gmail-alerts` stays on
+  the laptop (needs the Gmail token).
+- Tests: board list parsing (CSV + JSON), new → unchanged → changed → `--full` round trip, preference filtering
+  with reasons, failed fetch leaves the state alone, batch ordering, corrupt state file. All against the recorded
+  Greenhouse fixture through the real scoped-HTTP path; a live run could not be made from this environment (its
+  network policy blocks the job boards).

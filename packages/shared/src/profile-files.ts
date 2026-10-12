@@ -13,6 +13,11 @@ export function readProfileDir(dir: string): { facts: ProfileFact[]; preferences
   };
 }
 
+/** Just preferences.yaml (the phone fetcher filters with it and has no facts). */
+export function readPreferencesFile(path: string): Preferences {
+  return readYaml(path, preferencesSchema);
+}
+
 function readYaml<S extends z.ZodTypeAny>(path: string, schema: S): z.output<S> {
   if (!existsSync(path)) throw new ConfigError(`missing ${path}`);
   let raw: unknown;
