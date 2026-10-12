@@ -121,6 +121,13 @@ export interface ApplicationResult {
 
 type Rule = [RegExp, (a: ApplicationProfile, input: ApplyInput) => string | null];
 
+/** GPA / CPI from the profile's education fact (`metrics.gpa` or `metrics.cpi`). */
+function gpaOf(i: ApplyInput): string | null {
+  const m = (i.profile.facts?.find((f) => f.kind === 'education')?.metrics ?? {}) as Record<string, unknown>;
+  const v = m.gpa ?? m.cgpa ?? m.cpi;
+  return typeof v === 'number' || typeof v === 'string' ? String(v) : null;
+}
+
 const yesNo = (b: boolean | null | undefined) => (b === null || b === undefined ? null : b ? 'Yes' : 'No');
 
 const RULES: Rule[] = [
@@ -135,6 +142,8 @@ const RULES: Rule[] = [
   [/(current|previous|present|most recent|last)\b.{0,20}\b(company|employer)|^company$|^organi[sz]ation$/i, (a) => a.current_company],
   [/(current|previous|present|most recent|last)\b.{0,20}\b(job title|title|role|position|designation)/i, (a) => a.current_title],
   [/school|university|college|institution/i, (a) => a.university],
+  // Before the degree rule: GPA questions often mention "qualifications".
+  [/\b(c?gpa|cpi|grade point)\b/i, (_a, i) => gpaOf(i)],
   [/degree|qualification/i, (a) => a.degree],
   [/graduat(ion|e) (year|date)|year of graduation|batch/i, (_a, i) => (i.profile.preferences.graduation_year ? String(i.profile.preferences.graduation_year) : null)],
   [/country.{0,30}\b(reside|live|based)|country of residence/i, (a) => a.location?.split(',').at(-1)?.trim() || null],

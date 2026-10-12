@@ -11,7 +11,11 @@ const applicant = applicationSchema.parse({
   requires_sponsorship: false,
   answers: [{ match: 'WhatsApp', answer: 'Yes' }],
 });
-const input = { applicant, profile: { preferences: { graduation_year: null } }, resume: { path: '/r.pdf', resumeVariantId: null } } as unknown as ApplyInput;
+const input = {
+  applicant,
+  profile: { preferences: { graduation_year: null }, facts: [{ id: 'edu', kind: 'education', content: 'B.Tech', metrics: { cpi: 8.17 }, tags: [] }] },
+  resume: { path: '/r.pdf', resumeVariantId: null },
+} as unknown as ApplyInput;
 const q = (label: string, o: Partial<FormQuestion> = {}): FormQuestion => ({ key: label, label, kind: 'text', required: true, selectors: [], ...o });
 const answer = (question: FormQuestion) => mapAnswers([question], input).fields[0]!.value;
 
@@ -29,6 +33,10 @@ describe('mapAnswers', () => {
     expect(answer(q('Will you require sponsorship to work in the US?', opts))).toBe('Yes, I will require visa sponsorship');
     expect(answer(q('Will you now or in the future require sponsorship?', opts))).toBe('No, I do not require visa sponsorship');
     expect(answer(q('Location and Work Authorization: Are you currently eligible to work in India?', { kind: 'select', options: ['Yes, I am eligible', 'No, I am not'] }))).toBe('Yes, I am eligible');
+  });
+
+  it('GPA questions get the education fact\'s GPA/CPI, not the degree', () => {
+    expect(answer(q('As part of our commitment to understanding candidates, share your GPA alongside your other qualifications.', { required: false }))).toBe('8.17');
   });
 
   it('custom answers win', () => {
@@ -53,7 +61,8 @@ describe('fillForm on react forms', () => {
       pages: { 'https://form': () => html },
       onClick: (sel) => {
         // Opening a combobox renders its menu.
-        if (sel === idSelector('question_1')) return { html: (html += '<div id="react-select-question_1-option-0">Yes</div><div id="react-select-question_1-option-1">No</div>') };
+        // Filtering keeps unfiltered ids: typing "No" leaves only option-1.
+        if (sel === idSelector('question_1')) return { html: (html += '<div id="react-select-question_1-option-1">No</div>') };
         if (sel === idSelector('candidate-location')) return { html: (html += '<div id="react-select-candidate-location-option-0">Bengaluru, Karnataka, India</div>') };
         return undefined;
       },
