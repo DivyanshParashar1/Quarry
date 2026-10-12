@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Quarry comparison</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1200px; height: 1200px; }
+  body {
+    font-family: -apple-system, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+    background: #0e1116;
+    color: #e8eaee;
+    padding: 72px 64px 56px;
+    display: flex; flex-direction: column;
+  }
+  .eyebrow { font-size: 22px; letter-spacing: 4px; text-transform: uppercase; color: #8b93a1; font-weight: 600; }
+  h1 { font-size: 64px; line-height: 1.08; font-weight: 800; margin-top: 18px; letter-spacing: -1.5px; }
+  h1 em { font-style: normal; color: #f5b544; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 56px; flex: 1; }
+  .card { border-radius: 28px; padding: 40px 36px; display: flex; flex-direction: column; }
+  .them { background: #171b22; border: 2px solid #262c36; }
+  .us { background: linear-gradient(160deg, #1f1a10 0%, #17140d 100%); border: 2px solid #f5b544; box-shadow: 0 0 80px rgba(245,181,68,.12); }
+  .label { font-size: 22px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .them .label { color: #8b93a1; }
+  .us .label { color: #f5b544; }
+  .flow { margin-top: 30px; display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+  .node { border-radius: 16px; padding: 20px 22px; font-size: 26px; font-weight: 600; display: flex; align-items: center; gap: 16px; }
+  .node .ic { font-size: 32px; width: 40px; text-align: center; }
+  .them .node { background: #1f242d; color: #c3c8d1; }
+  .us .node { background: #2a2314; color: #fbe7c0; }
+  .arrow { text-align: center; font-size: 30px; line-height: 44px; color: #4b5260; }
+  .us .arrow { color: #b58733; }
+  .node.bad { background: #2d1a1c; color: #f2a7ab; }
+  .node.good { background: #1a2b1f; color: #a8e3b7; }
+  .facts { margin-top: auto; padding-top: 30px; display: flex; flex-direction: column; gap: 14px; font-size: 23px; line-height: 1.3; }
+  .them .facts { color: #9aa1ad; }
+  .us .facts { color: #f1dcb2; }
+  .footer { margin-top: 36px; display: flex; justify-content: space-between; align-items: center; }
+  .brand { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; }
+  .brand span { color: #f5b544; }
+  .repo { font-size: 24px; color: #8b93a1; font-family: "SF Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+  <div class="eyebrow">Job-hunt automation</div>
+  <h1>Your data. Your machine.<br><em>Your existing AI subscription.</em></h1>
+
+  <div class="cols">
+    <div class="card them">
+      <div class="label">Other auto-apply tools</div>
+      <div class="flow">
+        <div class="node"><span class="ic">📄</span>Your resume &amp; contacts</div>
+        <div class="arrow">↓</div>
+        <div class="node"><span class="ic">☁️</span>Their servers</div>
+        <div class="arrow">↓</div>
+        <div class="node bad"><span class="ic">💸</span>Their monthly bill</div>
+      </div>
+      <div class="facts">
+        <div>✕ &nbsp;Mass-applies to random roles</div>
+        <div>✕ &nbsp;A few applications a day</div>
+        <div>✕ &nbsp;Another subscription</div>
+        <div>✕ &nbsp;No referrals</div>
+      </div>
+    </div>
+
+    <div class="card us">
+      <div class="label">Quarry</div>
+      <div class="flow">
+        <div class="node"><span class="ic">💻</span>Runs on your laptop</div>
+        <div class="arrow">+</div>
+        <div class="node"><span class="ic">🔌</span>Claude Code · Codex · Antigravity</div>
+        <div class="arrow">↓</div>
+        <div class="node good"><span class="ic">✓</span>₹0 extra per application</div>
+      </div>
+      <div class="facts">
+        <div>✓ &nbsp;Applies only to jobs that fit you</div>
+        <div>✓ &nbsp;Find → tailor → refer → apply</div>
+        <div>✓ &nbsp;Fixes itself when sites change</div>
+        <div>✓ &nbsp;Nothing sent without your OK</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="brand">⛏️ <span>Quarry</span></div>
+    <div class="repo">github.com/DivyanshParashar1/Quarry</div>
+  </div>
+</body>
+</html>
