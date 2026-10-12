@@ -32,6 +32,12 @@ export function ApplicationsPage({ onOpenJob }: { onOpenJob: (id: string) => voi
     mutationFn: () => send<{ admitted: number; steps: unknown[]; paused?: string }>('/api/autopilot/sequence', 'POST', {}),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['applications'] }),
   });
+  const applyAll = useMutation({
+    mutationFn: () => send<ApplyAllSummary>('/api/applications/apply-all', 'POST', {}),
+    onSuccess: () => {
+      for (const k of ['applications', 'review', 'pipeline']) void qc.invalidateQueries({ queryKey: [k] });
+    },
+  });
   const toggle = (s: PipelineState) => setStates((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
 
   return (
@@ -43,13 +49,25 @@ export function ApplicationsPage({ onOpenJob }: { onOpenJob: (id: string) => voi
           </button>
         ))}
         <Input className="w-48" placeholder="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
-        <Button size="sm" variant="outline" className="ml-auto" onClick={() => run.mutate()} disabled={run.isPending}>
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => run.mutate()} disabled={run.isPending || applyAll.isPending}>
           {run.isPending ? 'Running…' : 'Run sequencer now'}
+        </Button>
+        <Button
+          size="sm"
+          onClick={() =>
+            window.confirm('Apply to every ready job we can submit to? This drafts the applications, approves the ones with every required question answered, and submits them (live mode).') &&
+            applyAll.mutate()
+          }
+          disabled={applyAll.isPending || run.isPending}
+        >
+          {applyAll.isPending ? 'Applying…' : 'Apply all'}
         </Button>
       </div>
       <SweepBar />
       {run.data && <p className="text-xs text-muted-foreground">{run.data.admitted} admitted · {run.data.steps.length} steps{run.data.paused ? ` · new fan-outs paused: ${run.data.paused}` : ''}</p>}
       {run.error && <p className="text-xs text-red-600">{run.error.message}</p>}
+      {applyAll.data && <ApplyAllResult r={applyAll.data} />}
+      {applyAll.error && <p className="text-xs text-red-600">{applyAll.error.message}</p>}
       {q.error && <p className="text-sm text-red-600">Could not load: {q.error.message}</p>}
       {q.data && q.data.rows.length === 0 && <p className="text-sm text-muted-foreground">Nothing in the pipeline yet. The autopilot (strategy: referrals) admits top matches each hour, or run it now.</p>}
       <div className="flex flex-col gap-2">
@@ -58,6 +76,36 @@ export function ApplicationsPage({ onOpenJob }: { onOpenJob: (id: string) => voi
         ))}
       </div>
     </div>
+  );
+}
+
+interface ApplyAllSummary {
+  admitted: number;
+  approved: number;
+  queued: number;
+  needsAnswers: { reviewItemId: string; title: string; company: string; missing: string[] }[];
+  manual: { jobId: string; reason: string }[];
+  mode: 'live' | 'dry_run';
+}
+
+function ApplyAllResult({ r }: { r: ApplyAllSummary }) {
+  return (
+    <Card className="flex flex-col gap-1 p-3 text-sm">
+      <p>
+        {r.queued
+          ? `${r.queued} application${r.queued === 1 ? '' : 's'} ${r.mode === 'live' ? 'submitting now, one after another (refresh to watch them move to applied)' : 'filled in dry run (MODE=live submits)'}.`
+          : 'Nothing to submit right now.'}{' '}
+        <span className="text-muted-foreground">
+          {r.approved} approved this run · {r.admitted} new jobs taken on
+        </span>
+      </p>
+      {r.needsAnswers.length > 0 && (
+        <p className="text-amber-800">
+          Needs your answers on the Review tab: {r.needsAnswers.map((n) => `${n.company} (${n.missing.length} question${n.missing.length === 1 ? '' : 's'})`).join(' · ')}
+        </p>
+      )}
+      {r.manual.length > 0 && <p className="text-muted-foreground">{r.manual.length} job{r.manual.length === 1 ? '' : 's'} on a site we can't submit to: apply by hand (marked below).</p>}
+    </Card>
   );
 }
 

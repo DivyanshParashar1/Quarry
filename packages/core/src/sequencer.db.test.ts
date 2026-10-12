@@ -29,9 +29,9 @@ import tracker from '@quarry/tracker-gmail';
 import greenhouseApply, { formUrl, questionsUrl } from '@quarry/actor-apply-greenhouse';
 import { PluginRegistry } from './plugins.js';
 import { DomainRateLimiter } from './rate-limiter.js';
-import { approveReviewItem, pollTracker, runSendTick } from './outreach.js';
+import { pollTracker, runSendTick } from './outreach.js';
 import { fanOutReferrals } from './referrals.js';
-import { runApplyTick } from './apply.js';
+import { applyAll } from './apply-all.js';
 import { runSourceTarget } from './source-runner.js';
 import { loadProfileData } from './profile-loader.js';
 import { advanceJob, expireJob, runSequencer, type SequencerDeps } from './sequencer.js';
@@ -181,11 +181,17 @@ describe.skipIf(!adminUrl)('autopilot sequencer (postgres)', () => {
     const beta = (await getPipelineState(t.db, jobs.beta!))!;
     expect((beta.metadata as { applyError?: string }).applyError).toBeTruthy();
 
-    await approveReviewItem(t.db, deps.outreachPolicy, appId);
-    await runApplyTick(deps.applyDeps);
+    // "Apply all": approves the fully answered draft, submits it, and moves the job to applied.
+    const { summary, submitting } = await applyAll(deps);
+    expect(summary).toMatchObject({ approved: 1, queued: 1, needsAnswers: [], mode: 'live' });
+    expect((await submitting).filter((o) => o.ok)).toHaveLength(1);
     expect(submissions).toBe(1);
-    const s = await runSequencer(deps);
-    expect(s.steps.find((x) => x.jobId === jobs.alpha)).toMatchObject({ from: 'ready_to_apply', to: 'applied', reason: 'application_submitted' });
+    expect((await getPipelineState(t.db, jobs.alpha!))!.state).toBe('applied');
+    // Nothing left: a second press submits nothing.
+    const again = await applyAll(deps);
+    expect(again.summary).toMatchObject({ approved: 0, queued: 0 });
+    expect(await again.submitting).toHaveLength(0);
+    expect(submissions).toBe(1);
   });
 
   it('expires jobs whose posting closed, and supports manual advance/expire', async () => {

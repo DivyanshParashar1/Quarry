@@ -6,6 +6,7 @@ import {
   defineActorPlugin,
   draftConfidence,
   mapAnswers,
+  idSelector,
   runApplyFlow,
   waitForOtp,
   type ApplicationDraft,
@@ -78,8 +79,8 @@ function toQuestion(q: z.infer<typeof ghQuestion>, eeo: boolean): FormQuestion |
   const name = f.name;
   const selectors =
     kind === 'file'
-      ? [`input[type="file"]#${name}`, `#${name}`, `input[type="file"][name="${name}"]`]
-      : [`#${name}`, `[name="job_application[${name}]"]`, `[name="${name}"]`];
+      ? [`input[type="file"]${idSelector(name)}`, idSelector(name), `input[type="file"][name="${name}"]`]
+      : [idSelector(name), `[name="job_application[${name}]"]`, `[name="${name}"]`, ...(name === 'location' ? [idSelector('candidate-location')] : [])];
   return {
     key: name,
     label: q.label.trim(),

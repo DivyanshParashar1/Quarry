@@ -3,6 +3,7 @@ import type { ApplicationProfile } from '@quarry/shared';
 import type { Job, Profile } from './types.js';
 import { SessionBlockedError, type BrowserPage } from './browser.js';
 import type { OtpResult } from './otp.js';
+import { decodeEntities } from './html.js';
 
 // Phase 11: ATS auto-apply. Shared by actor-apply-greenhouse / -lever / -ashby.
 // The actor reads the form's questions (public API or page, no side effects),
@@ -273,14 +274,86 @@ export async function fillForm(page: BrowserPage, draft: ApplicationDraft, opts:
       notFound.push(f.label);
       continue;
     }
-    if (f.kind === 'select' || f.kind === 'multiselect') await page.selectOption(sel, f.value);
-    else if (f.kind === 'checkbox') {
+    if (f.kind === 'select' || f.kind === 'multiselect') {
+      if (!(await fillChoice(page, f, sel))) notFound.push(f.label);
+    } else if (f.kind === 'checkbox') {
       if (/^(yes|true)$/i.test(f.value)) await page.check(sel);
     } else if (f.kind === 'radio') await page.click(sel.includes('%s') ? sel.replace('%s', f.value) : sel);
-    else if (opts.typingDelayMs) await page.pressSequentially(sel, f.value, { delay: opts.typingDelayMs });
+    else if (await isCombobox(page, sel)) {
+      if (!(await fillCombobox(page, sel, f.value))) notFound.push(f.label);
+    } else if (opts.typingDelayMs) await page.pressSequentially(sel, f.value, { delay: opts.typingDelayMs });
     else await page.fill(sel, f.value);
   }
   return notFound;
+}
+
+/** `[id="…"]`: valid CSS for any id, including Greenhouse's `question_123[]`. */
+export const idSelector = (id: string) => `[id="${id.replace(/["\\]/g, '\\$&')}"]`;
+
+const reEscape = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const textOf = (html: string) => decodeEntities(html.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
+const attrOf = (tag: string, name: string) => new RegExp(`\\s${name}="([^"]*)"`, 'i').exec(tag)?.[1];
+
+/**
+ * A choice question, whichever markup the form uses: a native <select>; a
+ * checkbox group (each <input name=key> with its own <label for>); or a
+ * react-select combobox (Greenhouse's newer forms: open it, click the option
+ * by its position in the question's options). false = the answer couldn't be placed.
+ */
+async function fillChoice(page: BrowserPage, f: ApplicationDraft['fields'][number], sel: string): Promise<boolean> {
+  const value = f.value!;
+  const html = await page.content();
+  if (html.includes(`id="react-select-${f.key}-`)) {
+    const idx = (f.options ?? []).findIndex((o) => o.trim().toLowerCase() === value.trim().toLowerCase());
+    if (idx < 0) return false;
+    const option = idSelector(`react-select-${f.key}-option-${idx}`);
+    await page.click(sel);
+    await page.waitForSelector(option, { timeout: 5000 });
+    await page.click(option);
+    return true;
+  }
+  const boxes = [...html.matchAll(/<input\b[^>]*>/gi)].map((m) => m[0]).filter((t) => /type="checkbox"/i.test(t) && attrOf(t, 'name') === f.key);
+  if (boxes.length) {
+    const want = value.trim().toLowerCase();
+    for (const t of boxes) {
+      const id = attrOf(t, 'id');
+      const label = id && new RegExp(`<label\\b[^>]*for="${reEscape(id)}"[^>]*>([\\s\\S]*?)</label>`, 'i').exec(html)?.[1];
+      if (id && label !== undefined && textOf(label).toLowerCase() === want) {
+        await page.check(idSelector(id));
+        return true;
+      }
+    }
+    return false;
+  }
+  await page.selectOption(sel, value);
+  return true;
+}
+
+const comboId = (sel: string) => /^\[id="([^"]+)"\]$/.exec(sel)?.[1];
+
+/** A free-text answer whose input is a react-select search box (e.g. Greenhouse's Google-backed location). */
+async function isCombobox(page: BrowserPage, sel: string): Promise<boolean> {
+  const id = comboId(sel);
+  return !!id && (await page.content()).includes(`id="react-select-${id}-`);
+}
+
+/** Type the answer into the search box and take the first suggestion; "Bengaluru, India" falls back to "Bengaluru". */
+async function fillCombobox(page: BrowserPage, sel: string, value: string): Promise<boolean> {
+  const first = idSelector(`react-select-${comboId(sel)}-option-0`);
+  const queries = [...new Set([value, value.split(',')[0]!.trim()])].filter(Boolean);
+  for (const q of queries) {
+    await page.fill(sel, '');
+    await page.click(sel);
+    await page.pressSequentially(sel, q, { delay: 40 });
+    try {
+      await page.waitForSelector(first, { timeout: 8000 });
+    } catch {
+      continue;
+    }
+    await page.click(first);
+    return true;
+  }
+  return false;
 }
 
 export interface ApplyFlowOptions {

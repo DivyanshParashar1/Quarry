@@ -24,6 +24,7 @@ export * from './linkedin.js';
 export * from './linkedin-send.js';
 export * from './deadline-runner.js';
 export * from './apply.js';
+export * from './apply-all.js';
 export * from './sequencer.js';
 export * from './ats-score/index.js';
 export * from './resume-library.js';

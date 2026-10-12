@@ -112,6 +112,7 @@ describe.skipIf(!adminUrl)('API coverage (every route, postgres)', () => {
     { route: 'DELETE /api/answers/:id', url: () => `/api/answers/${NIL}`, expect: [404] },
     { route: 'POST /api/autopilot/run', url: () => '/api/autopilot/run', body: () => ({}), expect: [503] },
     { route: 'POST /api/autopilot/sequence', url: () => '/api/autopilot/sequence', body: () => ({}), expect: [503] },
+    { route: 'POST /api/applications/apply-all', url: () => '/api/applications/apply-all', body: () => ({}), expect: [503] },
     { route: 'GET /api/applications', url: () => '/api/applications', expect: [200] },
     { route: 'GET /api/applications/:id/timeline', url: () => `/api/applications/${job()}/timeline`, expect: [200] },
     { route: 'GET /api/resume', url: () => '/api/resume', expect: [200, 503] },

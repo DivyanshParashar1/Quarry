@@ -93,7 +93,7 @@ describe('actor-apply-greenhouse', () => {
     expect(d.missingRequired).toEqual(['Why do you want to work at Acme?']);
     expect(d.confidence).toBe(0.88); // 7 of 8 required answered
     expect(d.applyUrl).toBe(formUrl('acme', '4012345'));
-    expect(d.fields.find((f) => f.key === 'resume')!.selectors[0]).toBe('input[type="file"]#resume');
+    expect(d.fields.find((f) => f.key === 'resume')!.selectors[0]).toBe('input[type="file"][id="resume"]');
   });
 
   it('refuses to execute while a required answer is missing', async () => {
@@ -117,7 +117,7 @@ describe('actor-apply-greenhouse', () => {
     expect(r.screenshots).toHaveLength(1);
     expect(existsSync(r.screenshots[0]!)).toBe(true);
     expect(browser.actions.some((a) => a.type === 'click')).toBe(false);
-    expect(browser.actions.find((a) => a.type === 'upload')).toMatchObject({ selector: 'input[type="file"]#resume', value: '/tmp/resume.pdf' });
+    expect(browser.actions.find((a) => a.type === 'upload')).toMatchObject({ selector: 'input[type="file"][id="resume"]', value: '/tmp/resume.pdf' });
     expect(browser.actions.filter((a) => a.type === 'select').map((a) => a.value)).toEqual(['Yes', 'No', 'Decline To Self Identify']);
   });
 

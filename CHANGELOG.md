@@ -558,3 +558,9 @@ emails or LinkedIn actions. Those parts wait for the user (listed below).
 - Test fix: `outreach.db.test.ts` passed the real clock to approvals while the suite pins its own; the weekly company cap test broke 7 days after the pinned date.
 - `orchestrator.dailyLlmBudgetUsd: null` turns the LLM budget check off (Claude Code subscription: recorded costs are notional).
 - Review tab: Approve on an application with unsaved edits saves them first ("Save & approve"); it is blocked only while a required question is still blank, and says which.
+
+## Apply all + Greenhouse's react forms
+
+- Applications tab: **Apply all** (`POST /api/applications/apply-all`, core `applyAll`): runs the sequencer, approves every pending application with all required questions answered, then submits the approved ones back to back in the background; reports drafts that still need answers and jobs that need a manual apply.
+- Form filling (`fillForm`): choice questions work on react-select comboboxes (option clicked by position) and checkbox groups (box whose label matches), not only native `<select>`; free-text answers into a react-select search box (Greenhouse's Google-backed Location) type the value and take the first suggestion, retrying with the part before the comma.
+- Greenhouse selectors use `[id="…"]` (`idSelector`): `#question_123[]` was invalid CSS and failed every multi-select. Location also tries `candidate-location`.

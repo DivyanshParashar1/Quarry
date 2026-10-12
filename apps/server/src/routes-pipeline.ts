@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { jobTimeline, listApplications, PIPELINE_STATES, pipelineStateCounts, type DB, type PipelineState } from '@quarry/db';
-import { advanceJob, expireJob, runSequencer, type SequencerDeps } from '@quarry/core';
+import { advanceJob, applyAll, expireJob, runSequencer, type SequencerDeps } from '@quarry/core';
 
 export interface PipelineRouteOptions {
   db: DB;
@@ -49,6 +49,16 @@ export function registerPipelineRoutes(app: FastifyInstance, o: PipelineRouteOpt
     const { id } = idParams.parse(req.params);
     const b = z.object({ reason: z.string().trim().min(1).max(300) }).strict().parse(req.body ?? {});
     return expireJob(o.db, id, b.reason);
+  });
+
+  // "Apply all": draft, approve what's fully answered, and submit in the background (submissions take minutes each).
+  app.post('/api/applications/apply-all', async () => {
+    const d = await deps();
+    const { summary, submitting } = await applyAll(d);
+    void submitting
+      .then((outcomes) => d.log.info({ submitted: outcomes.filter((x) => x.ok).length, failed: outcomes.filter((x) => !x.ok).length }, 'apply all finished'))
+      .catch((err: unknown) => d.log.warn({ err: (err as Error).message }, 'apply all: submission loop failed'));
+    return summary;
   });
 
   app.post('/api/autopilot/sequence', async (req) => {
