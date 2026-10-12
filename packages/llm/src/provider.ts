@@ -27,6 +27,28 @@ export interface LLMProvider {
   readonly name: string;
   readonly defaultModel: string;
   complete(req: ProviderRequest): Promise<ProviderResponse>;
+  /**
+   * False for a model this provider can't serve (another vendor's). A config.yaml
+   * model override without a provider then falls back to `defaultModel`, so
+   * switching LLM_PROVIDER in .env doesn't send e.g. a Claude model to Codex.
+   */
+  acceptsModel?(model: string): boolean;
+}
+
+/**
+ * For CLIs without a system-prompt flag: the system prompt and the task in one
+ * message, with the instruction to answer as the schema's JSON only.
+ */
+export function inlineSystemPrompt(system: string, prompt: string): string {
+  return [
+    '<instructions>',
+    system,
+    '',
+    'Answer with a single JSON object matching the required output schema. Do not edit files or run commands.',
+    '</instructions>',
+    '',
+    prompt,
+  ].join('\n');
 }
 
 /** Thrown by adapters. `retryable` is a hint only; the client does not retry transport errors. */

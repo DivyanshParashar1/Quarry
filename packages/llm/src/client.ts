@@ -61,7 +61,9 @@ export function createLLMClient(opts: LLMClientOptions): LLMClient & { route(tas
     const name = o?.provider ?? opts.defaultProvider;
     const provider = opts.providers[name];
     if (!provider) throw new LLMError(`LLM provider "${name}" (task ${task}) is not configured`);
-    return { provider, model: o?.model ?? provider.defaultModel };
+    // A model pinned without a provider follows the default provider; drop it when that provider can't serve it.
+    const model = o?.model && (o.provider || (provider.acceptsModel?.(o.model) ?? true)) ? o.model : provider.defaultModel;
+    return { provider, model };
   };
 
   async function generate<T>(req: LLMRequest<T>): Promise<LLMResponse<T>> {

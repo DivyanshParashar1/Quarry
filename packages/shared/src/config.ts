@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LLM_PROVIDERS } from './app-config.js';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -7,7 +8,7 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   MODE: z.enum(['dev', 'live']).default('dev'),
 
-  LLM_PROVIDER: z.enum(['claude-code', 'openrouter']).default('claude-code'),
+  LLM_PROVIDER: z.enum(LLM_PROVIDERS).default('claude-code'),
 
   CLAUDE_CLI_PATH: z.string().default('claude'),
   CLAUDE_DEFAULT_MODEL: z.string().default('claude-sonnet-4-6'),
@@ -20,6 +21,18 @@ const EnvSchema = z.object({
 
   OPENROUTER_CONCURRENCY: z.coerce.number().int().positive().default(4),
   OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+
+  /** OpenAI Codex CLI (`codex exec`). Model `default` = whatever ~/.codex/config.toml picks. */
+  CODEX_CLI_PATH: z.string().default('codex'),
+  CODEX_DEFAULT_MODEL: z.string().min(1).default('default'),
+  CODEX_CONCURRENCY: z.coerce.number().int().positive().default(2),
+  CODEX_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),
+
+  /** Google Antigravity CLI (`agy -p`). Model `default` = the CLI's own pick (`agy models` lists slugs). */
+  ANTIGRAVITY_CLI_PATH: z.string().default('agy'),
+  ANTIGRAVITY_DEFAULT_MODEL: z.string().min(1).default('default'),
+  ANTIGRAVITY_CONCURRENCY: z.coerce.number().int().positive().default(2),
+  ANTIGRAVITY_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),
 
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),

@@ -1,10 +1,12 @@
 // Manual smoke test against a REAL provider. Never run in CI; costs a little.
 //   pnpm --filter @quarry/llm smoke -- --provider claude-code [--model haiku]
 //   pnpm --filter @quarry/llm smoke -- --provider openrouter [--model openai/gpt-4o-mini]
+//   pnpm --filter @quarry/llm smoke -- --provider codex [--model gpt-5-codex]
+//   pnpm --filter @quarry/llm smoke -- --provider antigravity [--model <slug from `agy models`>]
 import { parseArgs } from 'node:util';
 import { z } from 'zod';
 import { createLogger, loadEnv, LLM_PROVIDERS, parseAppConfig, type LLMProviderName } from '@quarry/shared';
-import { checkClaudeCli, createLLMFromConfig } from '../src/index.js';
+import { checkAntigravityCli, checkClaudeCli, checkCodexCli, createLLMFromConfig } from '../src/index.js';
 
 const { values } = parseArgs({
   args: process.argv.slice(2).filter((a) => a !== '--'),
@@ -14,15 +16,20 @@ const env = loadEnv();
 const provider = (values.provider ?? env.LLM_PROVIDER) as LLMProviderName;
 if (!LLM_PROVIDERS.includes(provider)) throw new Error(`--provider must be one of ${LLM_PROVIDERS.join(', ')}`);
 
-if (provider === 'claude-code') {
-  const status = await checkClaudeCli(env.CLAUDE_CLI_PATH);
-  console.log('claude CLI:', status);
+const cliCheck = {
+  'claude-code': () => checkClaudeCli(env.CLAUDE_CLI_PATH),
+  codex: () => checkCodexCli(env.CODEX_CLI_PATH),
+  antigravity: () => checkAntigravityCli(env.ANTIGRAVITY_CLI_PATH),
+}[provider as string];
+if (cliCheck) {
+  const status = await cliCheck();
+  console.log(`${provider} CLI:`, status);
   if (!status.ok) process.exit(1);
 }
 
 const client = createLLMFromConfig(
   { ...env, LLM_PROVIDER: provider },
-  parseAppConfig({ llm: { tasks: values.model ? { extract: { model: values.model } } : {} } }),
+  parseAppConfig({ llm: { tasks: values.model ? { extract: { provider, model: values.model } } : {} } }),
   { log: createLogger({ level: 'debug' }), onCall: (rec) => console.log('llm_calls row:', rec) },
 );
 

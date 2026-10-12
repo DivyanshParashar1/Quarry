@@ -7,7 +7,7 @@ import { ConfigError } from './errors.js';
 // Optional config.yaml at the repo root: per-task LLM routing and per-plugin
 // config. Secrets never go here; they stay in .env.
 
-export const LLM_PROVIDERS = ['claude-code', 'openrouter'] as const;
+export const LLM_PROVIDERS = ['claude-code', 'openrouter', 'codex', 'antigravity'] as const;
 export type LLMProviderName = (typeof LLM_PROVIDERS)[number];
 
 const routeSchema = z

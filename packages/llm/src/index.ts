@@ -4,5 +4,8 @@ export * from './json-schema.js';
 export * from './client.js';
 export * from './claude-code.js';
 export * from './openrouter.js';
+export * from './codex.js';
+export * from './antigravity.js';
+export * from './strict-schema.js';
 export * from './factory.js';
 export { createFakeProvider, type FakeProvider } from './fake.js';

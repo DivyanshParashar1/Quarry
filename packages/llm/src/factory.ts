@@ -1,6 +1,8 @@
 import type { AppConfig, Env, LLMProviderName, Logger } from '@quarry/shared';
+import { createAntigravityProvider } from './antigravity.js';
 import { createClaudeCodeProvider } from './claude-code.js';
 import { createLLMClient, type LLMCallRecord } from './client.js';
+import { createCodexProvider } from './codex.js';
 import { createOpenRouterProvider } from './openrouter.js';
 import type { LLMProvider } from './provider.js';
 
@@ -33,6 +35,22 @@ export function createLLMFromConfig(
       defaultModel: env.OPENROUTER_DEFAULT_MODEL,
       concurrency: env.OPENROUTER_CONCURRENCY,
       timeoutMs: env.OPENROUTER_TIMEOUT_MS,
+    });
+  }
+  if (needed.has('codex')) {
+    providers.codex = createCodexProvider({
+      cliPath: env.CODEX_CLI_PATH,
+      defaultModel: env.CODEX_DEFAULT_MODEL,
+      concurrency: env.CODEX_CONCURRENCY,
+      timeoutMs: env.CODEX_TIMEOUT_MS,
+    });
+  }
+  if (needed.has('antigravity')) {
+    providers.antigravity = createAntigravityProvider({
+      cliPath: env.ANTIGRAVITY_CLI_PATH,
+      defaultModel: env.ANTIGRAVITY_DEFAULT_MODEL,
+      concurrency: env.ANTIGRAVITY_CONCURRENCY,
+      timeoutMs: env.ANTIGRAVITY_TIMEOUT_MS,
     });
   }
   return createLLMClient({

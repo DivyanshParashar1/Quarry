@@ -53,7 +53,7 @@ import {
   waitForJobs,
   type SourceRunSummary,
 } from '@quarry/core';
-import { checkClaudeCli } from '@quarry/llm';
+import { checkAntigravityCli, checkClaudeCli, checkCodexCli } from '@quarry/llm';
 import { importCompanies, parseCompaniesCsv } from './companies.js';
 import { fmtDate, table } from './format.js';
 import { createRegistry } from '@quarry/plugins';
@@ -541,6 +541,16 @@ async function llmCheck(env: Env, config: AppConfig, db: Db, log: Log): Promise<
   if (used.has('claude-code')) {
     const s = await checkClaudeCli(env.CLAUDE_CLI_PATH);
     console.log(`\nclaude-code: ${s.ok ? `ok (${s.version}${s.loggedIn ? ', logged in' : ''})` : `PROBLEM: ${s.problem}`}`);
+    ok &&= s.ok;
+  }
+  if (used.has('codex')) {
+    const s = await checkCodexCli(env.CODEX_CLI_PATH);
+    console.log(`\ncodex: ${s.ok ? `ok (${s.version}${s.loggedIn ? ', logged in' : ''})` : `PROBLEM: ${s.problem}`}`);
+    ok &&= s.ok;
+  }
+  if (used.has('antigravity')) {
+    const s = await checkAntigravityCli(env.ANTIGRAVITY_CLI_PATH);
+    console.log(`\nantigravity: ${s.ok ? `ok (${s.version}; login is checked on the first call)` : `PROBLEM: ${s.problem}`}`);
     ok &&= s.ok;
   }
   if (used.has('openrouter')) console.log(`\nopenrouter: API key ${env.OPENROUTER_API_KEY ? 'set' : 'MISSING'}`);

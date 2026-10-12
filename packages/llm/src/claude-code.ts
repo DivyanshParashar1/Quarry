@@ -26,7 +26,15 @@ export interface CliResult {
 export type CliRunner = (
   cliPath: string,
   args: string[],
-  opts: { stdin?: string; cwd: string; timeoutMs: number; signal?: AbortSignal },
+  opts: {
+    stdin?: string;
+    cwd: string;
+    timeoutMs: number;
+    signal?: AbortSignal;
+    /** For error messages: the provider name and the .env var holding the CLI path (defaults: claude). */
+    provider?: string;
+    pathEnv?: string;
+  },
 ) => Promise<CliResult>;
 
 /** The subset of `--output-format json` we read. Everything else passes through. */
@@ -142,6 +150,8 @@ export function parseClaudeResult(res: CliResult, requestedModel: string): Provi
 
 export const spawnCli: CliRunner = (cliPath, args, opts) =>
   new Promise((resolve, reject) => {
+    const provider = opts.provider ?? 'claude-code';
+    const label = provider === 'claude-code' ? 'claude' : provider;
     const child = spawn(cliPath, args, { cwd: opts.cwd, stdio: ['pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
@@ -155,11 +165,11 @@ export const spawnCli: CliRunner = (cliPath, args, opts) =>
     };
     const timer = setTimeout(() => {
       child.kill('SIGTERM');
-      finish(() => reject(new ProviderError(`claude timed out after ${opts.timeoutMs}ms`, 'claude-code', true)));
+      finish(() => reject(new ProviderError(`${label} timed out after ${opts.timeoutMs}ms`, provider, true)));
     }, opts.timeoutMs);
     const onAbort = () => {
       child.kill('SIGTERM');
-      finish(() => reject(new ProviderError('claude call aborted', 'claude-code')));
+      finish(() => reject(new ProviderError(`${label} call aborted`, provider)));
     };
     opts.signal?.addEventListener('abort', onAbort, { once: true });
 
@@ -169,7 +179,7 @@ export const spawnCli: CliRunner = (cliPath, args, opts) =>
       finish(() =>
         reject(
           err.code === 'ENOENT'
-            ? new ProviderError(`claude CLI not found at "${cliPath}" (set CLAUDE_CLI_PATH)`, 'claude-code')
+            ? new ProviderError(`${label} CLI not found at "${cliPath}" (set ${opts.pathEnv ?? 'CLAUDE_CLI_PATH'})`, provider)
             : err,
         ),
       ),

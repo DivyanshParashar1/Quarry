@@ -16,7 +16,7 @@ The schemas are `packages/shared/src/config.ts` (env) and `packages/shared/src/a
 | `PORT` | `3000` | server port |
 | `LOG_LEVEL` | `info` | pino level |
 | `MODE` | `dev` | `dev` = every actor is a dry run; `live` = actors may act on **approved** items |
-| `LLM_PROVIDER` | `claude-code` | `claude-code` or `openrouter` |
+| `LLM_PROVIDER` | `claude-code` | `claude-code`, `openrouter`, `codex` or `antigravity` |
 | `CLAUDE_CLI_PATH` | `claude` | path to the Claude Code CLI |
 | `CLAUDE_DEFAULT_MODEL` | `claude-sonnet-4-6` | default model for the claude-code adapter |
 | `CLAUDE_CONCURRENCY` / `CLAUDE_TIMEOUT_MS` | `2` / `120000` | parallel CLI calls / per-call timeout |
@@ -24,6 +24,12 @@ The schemas are `packages/shared/src/config.ts` (env) and `packages/shared/src/a
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | |
 | `OPENROUTER_DEFAULT_MODEL` | `anthropic/claude-sonnet-4` | |
 | `OPENROUTER_CONCURRENCY` / `OPENROUTER_TIMEOUT_MS` | `4` / `120000` | |
+| `CODEX_CLI_PATH` / `CODEX_DEFAULT_MODEL` | `codex` / `default` | OpenAI Codex CLI; `default` = the model in `~/.codex/config.toml` |
+| `CODEX_CONCURRENCY` / `CODEX_TIMEOUT_MS` | `2` / `180000` | |
+| `ANTIGRAVITY_CLI_PATH` / `ANTIGRAVITY_DEFAULT_MODEL` | `agy` / `default` | Google Antigravity CLI; `agy models` lists slugs |
+| `ANTIGRAVITY_CONCURRENCY` / `ANTIGRAVITY_TIMEOUT_MS` | `2` / `180000` | |
+| `LATEX_BIN` | `latexmk` | LaTeX build command for resume PDFs |
+| `BROWSER_EXECUTABLE_PATH` | Playwright's Chromium | use an installed Chrome instead |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | — | Desktop OAuth client ([outreach.md](outreach.md)) |
 | `GMAIL_REDIRECT_URI` | `http://127.0.0.1:53682/oauth2callback` | |
 | `GMAIL_REFRESH_TOKEN` | — | written by `quarry gmail auth` |
@@ -32,12 +38,18 @@ The schemas are `packages/shared/src/config.ts` (env) and `packages/shared/src/a
 | `QUARRY_SESSION_KEY` | — | optional 32+ char key for session encryption (else OS keychain) |
 | `NTFY_URL` | — | push notifications for incidents that need you (ntfy topic URL) |
 | `BROWSER_HEADLESS` | `true` | `false` to watch Playwright runs |
+| `QUARRY_REQUIRE_DB` | — | `1` = DB tests fail instead of skipping when Postgres is down |
+| `QUARRY_API_URL` | `http://127.0.0.1:<PORT>` | where the MCP server finds the API (set in `.mcp.json`) |
 
 ### LLM provider
 
 - **claude-code** needs the `claude` CLI installed and logged in; it uses your Claude subscription. Run
   `pnpm quarry llm check` to confirm.
 - **openrouter** needs `OPENROUTER_API_KEY` and is billed per token.
+- **codex** needs the OpenAI Codex CLI (`npm i -g @openai/codex`, then `codex login`).
+- **antigravity** needs the Google Antigravity CLI (`agy`), logged in once interactively.
+
+`.env.example` has a commented block per provider; uncomment only the one you use.
 
 Per-task routing goes in `config.yaml`:
 

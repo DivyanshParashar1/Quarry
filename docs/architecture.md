@@ -116,12 +116,22 @@ extraction — is deterministic. All LLM output is structured, zod-validated (on
 
 ### Providers
 
-`packages/llm` has two adapters behind one interface:
+`packages/llm` has four adapters behind one interface:
 
 - **claude-code** — spawns your logged-in `claude` CLI in non-interactive JSON-schema mode from an empty temp
   directory (no project config leaks in). Uses your Claude subscription. Concurrency 2, 120 s timeout by default.
 - **openrouter** — OpenAI-compatible API with `OPENROUTER_API_KEY`; JSON-schema responses where the model
   supports them.
+- **codex** — spawns your logged-in OpenAI `codex exec` (read-only sandbox, `--ephemeral`, prompt on stdin) from an
+  empty temp directory. The schema is converted to OpenAI's strict form (optional keys → nullable, nulls stripped
+  back out); schemas strict mode can't express (records) fall back to prompting plus the repair retry.
+- **antigravity** — spawns Google's `agy -p --output-format json --json-schema` from an empty temp directory. Tools
+  are never pre-approved, so a run that wants one ends `WAITING` and fails. It can't force a web search, so
+  `research` calls report `webSearch.used = false` (lower confidence).
+
+Neither CLI has a system-prompt flag, so the system prompt is inlined ahead of the task. A `config.yaml` model pin
+without a `provider` that names another vendor's model (e.g. `claude-sonnet-4-6` while `LLM_PROVIDER=codex`) is
+ignored in favour of `CODEX_DEFAULT_MODEL` / `ANTIGRAVITY_DEFAULT_MODEL`, so switching `.env` alone is enough.
 
 `LLM_PROVIDER` picks the default; `config.yaml` `llm.tasks.<task>` can route a task (`match`, `tailor`,
 `outreach`, `extract`, `research`, `orchestrator`) to another provider or model.
