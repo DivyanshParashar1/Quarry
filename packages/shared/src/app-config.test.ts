@@ -22,7 +22,7 @@ describe('config.yaml', () => {
       autopilot: {
         enabled: false,
         minMatchScore: 70,
-        confidenceFloor: { match: 0.75, tailor: 0.75, outreach: 0.8 },
+        confidenceFloor: { match: 0.75, tailor: 0.75, outreach: 0.8, answers: 0.85 },
         minEmailConfidence: 0.6,
         maxAutoApprovesPerDay: 10,
         candidateBatch: 20,
@@ -46,7 +46,7 @@ describe('config.yaml', () => {
         profilesPerCompany: 15,
       },
       discovery: { minConfidence: 0.5, lists: {}, alertThreshold: 40, recheckDays: 30, nightly: true },
-      sweeper: { fetchEveryHours: 6, runOnStart: true, matchLimit: 150 },
+      sweeper: { intervalMinutes: 60, fetchEveryHours: 6, runOnStart: true, matchLimit: 150 },
       resumes: {
         projectsPerResume: 3,
         selector: { similarityWeight: 0.4, similarityLow: 0.5, similarityHigh: 0.9, threshold: 75, tieMargin: 1 },
@@ -83,6 +83,14 @@ describe('config.yaml', () => {
     const c = loadAppConfig(fileURLToPath(new URL('../../../config.example.yaml', import.meta.url)));
     expect(c.llm.tasks.match).toEqual({ model: 'claude-haiku-4-5' });
     expect(c.plugins['matcher-default']).toMatchObject({ llmTopK: 150 });
+  });
+
+  it('sweep interval must be 60 or divide 60', () => {
+    expect(parseAppConfig({}).sweeper.intervalMinutes).toBe(60);
+    expect(parseAppConfig({ sweeper: { intervalMinutes: 15 } }).sweeper.intervalMinutes).toBe(15);
+    expect(() => parseAppConfig({ sweeper: { intervalMinutes: 25 } })).toThrow(/divide 60/);
+    expect(parseAppConfig({}).autopilot.confidenceFloor.answers).toBe(0.85);
+    expect(parseAppConfig({ orchestrator: { dailyLlmBudgetUsd: null } }).orchestrator.dailyLlmBudgetUsd).toBeNull();
   });
 
   it('rejects unknown providers and keys', () => {

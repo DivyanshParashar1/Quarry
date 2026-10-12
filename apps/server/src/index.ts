@@ -155,7 +155,8 @@ export async function bootstrap() {
   };
   if (!(await boss.getQueue('sweeper.hourly').catch(() => null))) await boss.createQueue('sweeper.hourly', { retryLimit: 0, expireInSeconds: 2 * 60 * 60 });
   await boss.unschedule('autopilot.hourly').catch(() => {});
-  await boss.schedule('sweeper.hourly', '7 * * * *');
+  const every = config.sweeper.intervalMinutes;
+  await boss.schedule('sweeper.hourly', every === 60 ? '7 * * * *' : `*/${every} * * * *`);
   await boss.work('sweeper.hourly', { localConcurrency: 1, batchSize: 1 }, async () => {
     const r = await runSweep(sweepDeps);
     log.info({ sweep: r.skipped ?? r.steps.map((s) => `${s.name}:${s.skipped ? 'skip' : s.ok ? 'ok' : 'FAIL'}`).join(' ') }, 'sweeper ran');

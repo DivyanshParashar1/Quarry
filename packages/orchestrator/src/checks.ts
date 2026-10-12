@@ -119,7 +119,7 @@ const llmBudget: Check = async ({ db, config, now }) => {
   const midnight = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const [r] = await db.execute<{ usd: number | null; last_at: string | null; calls: number }>(sql`
     select coalesce(sum(cost_usd), 0)::float as usd, max(created_at) as last_at, count(*)::int as calls from llm_calls where created_at >= ${midnight}::timestamptz`);
-  if (!r || (r.usd ?? 0) <= config.dailyLlmBudgetUsd) return [];
+  if (config.dailyLlmBudgetUsd === null || !r || (r.usd ?? 0) <= config.dailyLlmBudgetUsd) return [];
   return [
     {
       checkId: 'llm_budget',

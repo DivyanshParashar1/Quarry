@@ -46,14 +46,21 @@ export function ApplicationCard({ item }: { item: ReviewItemAny }) {
     for (const k of ['review', 'applications', 'pipeline']) void qc.invalidateQueries({ queryKey: [k] });
   };
   const onError = (e: Error) => setError(e.message);
-  const save = useMutation({
-    mutationFn: () => send(`/api/review/${item.id}`, 'PATCH', { fields: Object.entries(edits).map(([key, value]) => ({ key, value: value.trim() || null })) }),
+  const saveEdits = () => send(`/api/review/${item.id}`, 'PATCH', { fields: Object.entries(edits).map(([key, value]) => ({ key, value: value.trim() || null })) });
+  const save = useMutation({ mutationFn: saveEdits, onSuccess: refresh, onError });
+  // Unsaved edits are saved first, so one click both records the answers and approves.
+  const approve = useMutation({
+    mutationFn: async () => {
+      if (Object.keys(edits).length) await saveEdits();
+      return send(`/api/review/${item.id}/approve`, 'POST', {});
+    },
     onSuccess: refresh,
     onError,
   });
-  const approve = useMutation({ mutationFn: () => send(`/api/review/${item.id}/approve`, 'POST', {}), onSuccess: refresh, onError });
   const reject = useMutation({ mutationFn: () => send(`/api/review/${item.id}/reject`, 'POST', {}), onSuccess: refresh, onError });
   const dirty = Object.keys(edits).length > 0;
+  // Required questions still blank once the unsaved edits are counted.
+  const stillMissing = d.fields.filter((f) => f.required && !(f.key in edits ? edits[f.key]!.trim() : f.value)).map((f) => f.label);
 
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -142,11 +149,11 @@ export function ApplicationCard({ item }: { item: ReviewItemAny }) {
       {pending && (
         <div className="flex flex-wrap gap-2">
           <Button
-            disabled={dirty || d.missingRequired.length > 0 || approve.isPending}
-            title={dirty ? 'Save your answers first' : d.missingRequired.length ? 'Answer the required questions first' : undefined}
+            disabled={stillMissing.length > 0 || approve.isPending || save.isPending}
+            title={stillMissing.length ? `Answer the required questions first: ${stillMissing.join(' · ')}` : undefined}
             onClick={() => window.confirm(`Submit this application to ${d.company} (${d.ats})? It is filled and submitted from a browser once approved (live mode only).`) && approve.mutate()}
           >
-            <Check className="h-4 w-4" /> Approve
+            <Check className="h-4 w-4" /> {dirty ? 'Save & approve' : 'Approve'}
           </Button>
           <Button variant="outline" disabled={!dirty || save.isPending} onClick={() => save.mutate()}>
             <Pencil className="h-4 w-4" /> Save answers

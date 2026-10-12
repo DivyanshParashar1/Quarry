@@ -549,3 +549,12 @@ emails or LinkedIn actions. Those parts wait for the user (listed below).
 - Preferences `keywords.title_any` / `keywords.description_any`: new hard filters (whole-word, case-insensitive) in both modes.
 - Sweeper runs the match step without `autopilot.enabled` when the matcher is in keyword mode (it costs nothing).
 - Location filter: a remote job no longer bypasses `locations` when it names another place ("Remote, US"); placeless locations ("Remote", "Worldwide") still pass.
+
+## Full automation
+
+- `sweeper.intervalMinutes` (60, or a divisor of 60): the sweep's cron. `autopilot.confidenceFloor.answers` (0.85): the bar every LLM-written application answer must clear for auto-approval (was a constant).
+- Application form mapping: "current or previous employer / job title", "country where you reside" (from `location`), and sponsorship answered per country from `work_authorization` (a country you're authorized in → no sponsorship), falling back to `requires_sponsorship`.
+- `quarry profile load` now refreshes the snapshot's preferences when the version is unchanged (applicant details are outside the version hash, so edits to them were silently dropped).
+- Test fix: `outreach.db.test.ts` passed the real clock to approvals while the suite pins its own; the weekly company cap test broke 7 days after the pinned date.
+- `orchestrator.dailyLlmBudgetUsd: null` turns the LLM budget check off (Claude Code subscription: recorded costs are notional).
+- Review tab: Approve on an application with unsaved edits saves them first ("Save & approve"); it is blocked only while a required question is still blank, and says which.

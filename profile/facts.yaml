@@ -18,4 +18,274 @@
 #     kind: skill
 #     content: Go (3 years, production services)
 #     tags: [go]
-facts: []
+facts:
+- id: edu-rgipt-csd
+  kind: education
+  content: Pursuing B.Tech in Computer Science and Design at Rajiv Gandhi Institute of Petroleum Technology, graduating May 2027.
+  metrics:
+    cpi: 8.17
+    end_year: 2027
+    start_year: 2023
+  tags:
+  - computer science
+  - design
+  - B.Tech
+  - RGIPT
+- id: exp-screenify-founding-engineer
+  kind: experience
+  content: Founding Engineer Intern at Screenify Technologies building a DOOH advertising platform with multi-agent AI and cloud infrastructure.
+  metrics:
+    end: Present
+    start: April 2026
+  tags:
+  - founding engineer
+  - internship
+  - AI
+  - DOOH
+  - Google Cloud
+- id: exp-screenify-agent-latency
+  kind: achievement
+  content: Cut AI agent response time from ~15s to 2–3s by re-architecting multi-agent system to run asynchronously with Firestore persistence.
+  metrics:
+    latency_after_s: 2.5
+    latency_before_s: 15
+  tags:
+  - multi-agent
+  - async
+  - Firestore
+  - performance
+  - AI
+- id: exp-screenify-backend-arch
+  kind: achievement
+  content: Architected backend and hierarchical multi-agent system with Vertex AI Imagen integration, JWT auth, and RBAC-secured APIs.
+  tags:
+  - backend
+  - Vertex AI
+  - JWT
+  - RBAC
+  - multi-agent
+  - Imagen
+- id: exp-screenify-cloud-deploy
+  kind: achievement
+  content: Deployed Dockerized services on Google Cloud Run and contributed to Vue 3 frontend to ship full advertiser/vendor platform.
+  tags:
+  - Docker
+  - Cloud Run
+  - Vue 3
+  - frontend
+  - deployment
+- id: exp-orangecat-swe-intern
+  kind: experience
+  content: Software Engineering Intern at Orangecat Technologies building backend and frontend for Chanakya, an autonomous data-science agent.
+  metrics:
+    end: July 2025
+    start: May 2025
+  tags:
+  - internship
+  - backend
+  - agent
+  - data science
+- id: exp-orangecat-rest-apis
+  kind: achievement
+  content: Built 10+ REST APIs and core backend modules including a Tree-sitter SQL validation layer to sanitize model-generated queries.
+  metrics:
+    apis_built: 10
+  tags:
+  - REST API
+  - Tree-sitter
+  - SQL
+  - backend
+  - validation
+- id: exp-orangecat-react-streaming
+  kind: achievement
+  content: Built React streaming frontend rendering real-time LLM responses and interactive charts for a multi-agent data-science platform.
+  tags:
+  - React
+  - streaming
+  - LLM
+  - frontend
+  - charts
+- id: proj-flashseat
+  kind: project
+  content: 'FlashSeat: high-concurrency seat-booking API in TypeScript/Fastify sustaining zero double-bookings at ~450 RPS under 500 VUs.'
+  metrics:
+    rps: 450
+    vus: 500
+    p95_latency_ms: 180
+    double_bookings: 0
+  tags:
+  - TypeScript
+  - Fastify
+  - PostgreSQL
+  - Redis
+  - Docker
+  - k6
+  - concurrency
+- id: proj-flashseat-concurrency
+  kind: achievement
+  content: Engineered dual concurrency strategies (pessimistic SELECT FOR UPDATE and optimistic version-column locking) benchmarked with k6.
+  metrics:
+    rps: 450
+    vus: 500
+    p95_latency_ms: 180
+    contention_ratio: '10:1'
+  tags:
+  - concurrency
+  - locking
+  - PostgreSQL
+  - k6
+  - benchmarking
+- id: proj-flashseat-payments
+  kind: achievement
+  content: Hardened Razorpay payment flow with HMAC-verified webhooks and idempotency, verified across 1,000+ replayed webhook deliveries.
+  metrics:
+    webhooks_replayed: 1000
+  tags:
+  - Razorpay
+  - HMAC
+  - webhooks
+  - idempotency
+  - payments
+- id: proj-flashseat-queue
+  kind: achievement
+  content: Built Redis-backed waiting-room queue and SSE seat-update channel admitting ~200 users/sec with <100ms fan-out latency.
+  metrics:
+    fanout_latency_ms: 100
+    throughput_users_per_sec: 200
+  tags:
+  - Redis
+  - SSE
+  - queue
+  - real-time
+  - Cloud Run
+- id: proj-crdt-editor
+  kind: project
+  content: 'CRDT Collaborative Editor: real-time multi-user text sync using RGA algorithm with Lamport clocks and WebSockets in TypeScript.'
+  metrics:
+    latency_ms: 100
+    concurrent_editors: 50
+  tags:
+  - CRDT
+  - WebSockets
+  - TypeScript
+  - real-time
+  - distributed systems
+- id: proj-crdt-engine
+  kind: achievement
+  content: Implemented CRDT text engine from scratch (RGA + Lamport clocks + tombstone deletion) yielding convergent, server-free conflict resolution.
+  metrics:
+    e2e_latency_ms: 100
+    concurrent_editors: 50
+  tags:
+  - CRDT
+  - RGA
+  - Lamport clocks
+  - distributed
+  - conflict-free
+- id: proj-crdt-transport
+  kind: achievement
+  content: Designed transport-agnostic TypeScript architecture with discriminated unions and runtime type guards validating 100% of deserialization paths.
+  metrics:
+    deserialization_coverage_pct: 100
+  tags:
+  - TypeScript
+  - architecture
+  - type safety
+  - WebSockets
+  - protocol
+- id: proj-drillmirror
+  kind: project
+  content: 'DrillMirror: ontology-driven digital twin for offshore oil rigs detecting 8 undesirable event types with 85% precision via Isolation Forest.'
+  metrics:
+    precision_pct: 85
+    event_types_detected: 8
+  tags:
+  - Python
+  - OWL
+  - Scikit-learn
+  - Groq
+  - digital twin
+  - anomaly detection
+- id: proj-drillmirror-ontology
+  kind: achievement
+  content: Modeled oil-rig equipment in an OWL knowledge graph and built a Groq-powered agent translating sensor data to maintenance insights.
+  tags:
+  - OWL
+  - knowledge graph
+  - Groq
+  - agent
+  - sensors
+- id: proj-drillmirror-personas
+  kind: achievement
+  content: Implemented dual-persona agent modes (Engineer for technical resolution, Manager for safety/downtime analysis) for stakeholder-tailored insights.
+  metrics:
+    persona_modes: 2
+  tags:
+  - multi-agent
+  - personas
+  - LLM
+  - stakeholder
+  - oil & gas
+- id: skill-languages
+  kind: skill
+  content: Proficient in JavaScript, TypeScript, Python, Java, and SQL for full-stack and systems development.
+  tags:
+  - JavaScript
+  - TypeScript
+  - Python
+  - Java
+  - SQL
+- id: skill-frameworks
+  kind: skill
+  content: Experienced with React, Vue 3, Node.js, Express.js, Fastify, FastAPI, WebSockets, and Server-Sent Events.
+  tags:
+  - React
+  - Vue 3
+  - Node.js
+  - Express
+  - Fastify
+  - FastAPI
+  - WebSockets
+  - SSE
+- id: skill-ai-ml
+  kind: skill
+  content: Hands-on experience with LLMs, multi-agent systems, Vertex AI, and Scikit-learn for production AI/ML workloads.
+  tags:
+  - LLMs
+  - multi-agent
+  - Vertex AI
+  - Scikit-learn
+  - AI
+  - ML
+- id: skill-databases-cloud
+  kind: skill
+  content: Proficient with PostgreSQL, Redis, MongoDB, Firestore, SQLite, Google Cloud Run, and AWS for data and cloud infrastructure.
+  tags:
+  - PostgreSQL
+  - Redis
+  - MongoDB
+  - Firestore
+  - Google Cloud
+  - AWS
+- id: skill-devtools
+  kind: skill
+  content: Proficient with Git, Docker, k6 load testing, REST APIs, JWT Auth, and Postman for developer tooling and workflows.
+  tags:
+  - Git
+  - Docker
+  - k6
+  - REST
+  - JWT
+  - Postman
+- id: exp-rgipt-tnp-coordinator
+  kind: experience
+  content: '**Training & Placement Student Coordinator** | RGIPT | 2024–Present
+
+    - Support campus recruitment and placement activities, coordinating between students and recruiters'
+  metrics:
+    start_year: 2024
+  tags:
+  - coordination
+  - placement
+  - extracurricular
+  - RGIPT

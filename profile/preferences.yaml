@@ -103,10 +103,25 @@ application:
   current_title: Founding Engineer Intern
   university: Rajiv Gandhi Institute of Petroleum Technology
   degree: B.Tech, Computer Science and Design
-  work_authorization: {}
-  requires_sponsorship: null
+  # Eligible to work only in India (user, 2026-10-12): elsewhere needs sponsorship.
+  work_authorization:
+    India: yes
+    US: no
+    United States: no
+    UK: no
+    United Kingdom: no
+    Canada: no
+    Singapore: no
+    Germany: no
+    Ireland: no
+    Netherlands: no
+    Australia: no
+    UAE: no
+  requires_sponsorship: false   # for questions that name no country (target roles are in India)
   notice_period_days: null
-  answers: []
+  answers:
+    - { match: WhatsApp, answer: "Yes" }
+    - { match: cohort dates, answer: January to June (6 months) }
   eeo:
     gender: null
     race: null

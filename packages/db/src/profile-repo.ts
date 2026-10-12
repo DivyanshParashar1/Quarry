@@ -87,7 +87,8 @@ export async function syncProfile(db: DB, input: ProfileSyncInput): Promise<Prof
     const [snap] = await tx
       .insert(profileSnapshots)
       .values({ version: input.version, preferences: input.preferences, factIds: ids, summary: input.summary })
-      .onConflictDoUpdate({ target: profileSnapshots.version, set: { loadedAt: new Date() } })
+      // Same version = same matching inputs; applicant details (left out of the version) may still have changed.
+      .onConflictDoUpdate({ target: profileSnapshots.version, set: { loadedAt: new Date(), preferences: input.preferences } })
       .returning({ created: sql<boolean>`(xmax = 0)` });
     res.snapshotCreated = snap!.created;
     return res;

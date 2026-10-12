@@ -75,8 +75,8 @@ export const orchestratorConfigSchema = z
     enabled: z.boolean().default(true),
     /** Run a monitor pass this often (plus on failure events). */
     intervalMinutes: z.number().int().min(1).max(240).default(15),
-    /** LLM spend per calendar day (UTC); above it LLM steps pause until tomorrow and experts stop. */
-    dailyLlmBudgetUsd: z.number().min(0).default(5),
+    /** LLM spend per calendar day (UTC); above it LLM steps pause until tomorrow and experts stop. null = no budget (e.g. a Claude Code subscription). */
+    dailyLlmBudgetUsd: z.number().min(0).nullable().default(5),
     /** Gated code fixes (Claude Code in a worktree; typecheck + lint + tests; protected paths refused). */
     autoFix: z.boolean().default(true),
     maxCodeFixesPerDay: z.number().int().min(0).max(20).default(3),
@@ -217,6 +217,8 @@ export const appConfigSchema = z
             match: z.number().min(0).max(1).default(0.75),
             tailor: z.number().min(0).max(1).default(0.75),
             outreach: z.number().min(0).max(1).default(0.8),
+            /** LLM-written application answers: every one must clear this for the application to auto-approve. */
+            answers: z.number().min(0).max(1).default(0.85),
           })
           .strict()
           .default({}),
@@ -330,6 +332,12 @@ export const appConfigSchema = z
      */
     sweeper: z
       .object({
+        /** Run the sweep every this many minutes (a divisor of 60, or 60). */
+        intervalMinutes: z
+          .number()
+          .int()
+          .refine((n) => n === 60 || (n > 0 && n < 60 && 60 % n === 0), 'must be 60 or divide 60 (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30)')
+          .default(60),
         /** Re-fetch a board when its last fetch is older than this. */
         fetchEveryHours: z.number().positive().max(168).default(6),
         /** Run one sweep as soon as the server starts (catch-up after downtime). */

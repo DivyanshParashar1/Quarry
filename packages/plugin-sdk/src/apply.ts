@@ -131,21 +131,32 @@ const RULES: Rule[] = [
   [/linkedin/i, (a) => a.linkedin_url],
   [/github/i, (a) => a.github_url],
   [/website|portfolio|personal (site|url)/i, (a) => a.website_url],
-  [/current (company|employer)|^company$|^organi[sz]ation$/i, (a) => a.current_company],
-  [/current (title|role|position)/i, (a) => a.current_title],
+  [/(current|previous|present|most recent|last)\b.{0,20}\b(company|employer)|^company$|^organi[sz]ation$/i, (a) => a.current_company],
+  [/(current|previous|present|most recent|last)\b.{0,20}\b(job title|title|role|position|designation)/i, (a) => a.current_title],
   [/school|university|college|institution/i, (a) => a.university],
   [/degree|qualification/i, (a) => a.degree],
   [/graduat(ion|e) (year|date)|year of graduation|batch/i, (_a, i) => (i.profile.preferences.graduation_year ? String(i.profile.preferences.graduation_year) : null)],
+  [/country.{0,30}\b(reside|live|based)|country of residence/i, (a) => a.location?.split(',').at(-1)?.trim() || null],
   [/(current )?location|city|where are you based/i, (a) => a.location],
   [/notice period/i, (a) => (a.notice_period_days === null ? null : a.notice_period_days === 0 ? 'Immediately' : `${a.notice_period_days} days`)],
-  [/sponsor/i, (a) => yesNo(a.requires_sponsorship)],
 ];
+
+const named = (country: string, label: string) => new RegExp(`\\b${country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(label);
+
+/** Sponsorship: a country named in the label → its work_authorization answer (authorized = no sponsorship); else requires_sponsorship. */
+function sponsorship(label: string, a: ApplicationProfile): string | null {
+  if (!/sponsor/i.test(label)) return null;
+  for (const [country, ans] of Object.entries(a.work_authorization)) {
+    if (named(country, label)) return ans === 'yes' ? 'No' : 'Yes';
+  }
+  return yesNo(a.requires_sponsorship);
+}
 
 /** Work-authorization questions: "Are you legally authorized to work in India?" → the India answer. */
 function workAuth(label: string, a: ApplicationProfile): string | null {
   if (!/authori[sz]ed|work permit|eligible to work|right to work|legally (able|allowed)/i.test(label)) return null;
   for (const [country, ans] of Object.entries(a.work_authorization)) {
-    if (new RegExp(`\\b${country.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(label)) return ans === 'yes' ? 'Yes' : 'No';
+    if (named(country, label)) return ans === 'yes' ? 'Yes' : 'No';
   }
   return null;
 }
@@ -192,7 +203,7 @@ export function mapAnswers(questions: FormQuestion[], input: ApplyInput): { fiel
         value = custom.answer;
         source = 'answers';
       } else {
-        value = workAuth(q.label, a);
+        value = workAuth(q.label, a) ?? sponsorship(q.label, a);
         if (value === null) {
           for (const [re, get] of RULES) {
             if (re.test(q.label)) {

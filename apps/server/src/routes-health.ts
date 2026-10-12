@@ -11,7 +11,7 @@ export interface HealthRouteOptions {
   db: DB;
   /** Run one orchestrator pass now. */
   runOrchestrator?: () => Promise<TickResult>;
-  budgetUsd?: number;
+  budgetUsd?: number | null;
 }
 
 const STATUSES = ['open', 'acting', 'verifying', 'resolved', 'escalated'] as const;

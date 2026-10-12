@@ -146,7 +146,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
   });
 
   it('dry run shows what would be sent and keeps the item approved', async () => {
-    await approveReviewItem(t.db, deps.policy, ids.rajItem!);
+    await approveReviewItem(t.db, deps.policy, ids.rajItem!, { now: clock });
     await expect(editDraft(t.db, ids.rajItem!, { subject: 'late' })).rejects.toMatchObject({ code: 'invalid_state' });
     const r = await runSendTick(deps);
     expect(r.mode).toBe('dry_run');
@@ -173,7 +173,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     // A second approved email must wait for the randomized gap.
     const jane = await draftOutreach(deps, { contactId: ids.jane!, jobId: ids.job! });
     ids.janeItem = jane.id;
-    await approveReviewItem(t.db, deps.policy, jane.id);
+    await approveReviewItem(t.db, deps.policy, jane.id, { now: clock });
     const waiting = await runSendTick(deps);
     expect(waiting.waitingUntil?.getTime()).toBe(clock.getTime() + 5 * 60_000);
     expect(gmail.sent()).toHaveLength(1);
@@ -185,8 +185,8 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
   it('enforces 2 people per company per week unless explicitly overridden', async () => {
     const sam = await draftOutreach(deps, { contactId: ids.sam! });
     ids.samItem = sam.id;
-    await expect(approveReviewItem(t.db, deps.policy, sam.id)).rejects.toMatchObject({ code: 'company_cap' });
-    const ok = await approveReviewItem(t.db, deps.policy, sam.id, { overrideCompanyCap: true });
+    await expect(approveReviewItem(t.db, deps.policy, sam.id, { now: clock })).rejects.toMatchObject({ code: 'company_cap' });
+    const ok = await approveReviewItem(t.db, deps.policy, sam.id, { overrideCompanyCap: true, now: clock });
     expect(ok.overrideCompanyCap).toBe(true);
   });
 
@@ -215,7 +215,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     clock = new Date(clock.getTime() + 6 * 60_000);
     const { contact } = await upsertContact(t.db, { companyId: ids.company!, name: 'Dee Kay', email: 'dee@acme.com' });
     const item = await draftOutreach(deps, { contactId: contact.id });
-    await approveReviewItem(t.db, deps.policy, item.id, { overrideCompanyCap: true });
+    await approveReviewItem(t.db, deps.policy, item.id, { overrideCompanyCap: true, now: clock });
     const r = await runSendTick(deps);
     expect(r).toMatchObject({ dailyCapReached: true, sentLast24h: 3, outcomes: [] });
     ids.deeItem = item.id;
@@ -242,7 +242,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     expect(emailDraftSchema.parse(fu!.draft)).toMatchObject({ subject: 'Re: Your payments ledger team', to: 'rpatel@acme.com' });
     expect((await draftDueFollowups(deps)).drafted).toBe(0); // not drafted twice
 
-    await approveReviewItem(t.db, deps.policy, fu!.id);
+    await approveReviewItem(t.db, deps.policy, fu!.id, { now: clock });
     const before = gmail.sent().length;
     const r = await runSendTick(deps);
     expect(r.outcomes[0]!.ok).toBe(true);
@@ -299,7 +299,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
       ],
     });
     const item = await draftOutreach(deps, { contactId: contact.id });
-    await approveReviewItem(t.db, deps.policy, item.id, { overrideCompanyCap: true });
+    await approveReviewItem(t.db, deps.policy, item.id, { overrideCompanyCap: true, now: clock });
     expect((await runSendTick(deps)).outcomes[0]).toMatchObject({ ok: true });
     const sent = gmail.sent().at(-1)!;
     expect(sent.headers.to).toContain('kng@acme.com');
@@ -324,7 +324,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     // The ask never arrived, so the cooldown doesn't block asking at the new address.
     const again = await draftOutreach(deps, { contactId: contact.id });
     expect(emailDraftSchema.parse(again.draft).to).toBe('kim.ng@acme.com');
-    await expect(approveReviewItem(t.db, deps.policy, again.id, { overrideCompanyCap: true })).resolves.toMatchObject({ status: 'approved' });
+    await expect(approveReviewItem(t.db, deps.policy, again.id, { overrideCompanyCap: true, now: clock })).resolves.toMatchObject({ status: 'approved' });
 
     // Out of candidates: the contact is bounced for good.
     expect(await recordEmailBounce(t.db, contact.id, 'kim.ng@acme.com')).toEqual({ nextEmail: null });
@@ -335,7 +335,7 @@ describe.skipIf(!adminUrl)('outreach engine (postgres)', () => {
     const { contact } = await upsertContact(t.db, { companyId: ids.company!, name: 'Ola N', email: 'ola@acme.com' });
     const item = await draftOutreach(deps, { contactId: contact.id });
     await rejectReviewItem(t.db, item.id, 'not now');
-    await expect(approveReviewItem(t.db, deps.policy, item.id)).rejects.toMatchObject({ code: 'invalid_state' });
+    await expect(approveReviewItem(t.db, deps.policy, item.id, { now: clock })).rejects.toMatchObject({ code: 'invalid_state' });
     expect((await listContacts(t.db, { company: 'acme' })).length).toBe(6);
   });
 });

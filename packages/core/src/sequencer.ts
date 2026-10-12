@@ -205,7 +205,7 @@ async function queueApplications(deps: SequencerDeps, steps: SequencerStep[], on
       await updatePipelineMetadata(deps.db, row.jobId, { applyReviewItemId: item.id, applyError: null });
       const draft = applicationDraftSchema.parse(item.draft);
       // Phase 19: a draft with LLM-written answers only when every one of them is confident enough.
-      if (deps.policy.autoApproveApplications && !draft.missingRequired.length && llmAnswersConfident(draft)) {
+      if (deps.policy.autoApproveApplications && !draft.missingRequired.length && llmAnswersConfident(draft, deps.policy.confidenceFloor.answers)) {
         await approveReviewItem(deps.db, deps.outreachPolicy, item.id, { note: 'autopilot', rememberAnswers: false });
         await transitionReviewItem(deps.db, item.id, ['approved'], 'approved', { decidedBy: 'autopilot' });
       }
