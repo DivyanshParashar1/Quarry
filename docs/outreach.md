@@ -63,10 +63,13 @@ With `MODE=live` the server's send loop does this every minute. Limits (in
 
 | rule | default |
 |---|---|
-| real emails per rolling 24h (incl. follow-ups) | 20 |
-| distinct people per company per 7 days | 2 (per-item override when approving) |
-| random gap between sends | 4–11 minutes |
-| follow-ups per thread | 1, after 24 h (Phase 18; `outreach.followupDays` / `maxFollowups`) |
+| a person is asked at most once per | 30 days, any job or channel (`perContactCooldownDays`) |
+| referral asks per job | 10 (`perJobReferralCap`) |
+| Gmail sender limit (technical) | 400 per rolling 24 h (`senderDailyLimit`) |
+| random gap between sends | 4–11 minutes (`spacingMinutes`) |
+| follow-ups per thread | 1, after 24 h (`followupDays` / `maxFollowups`) |
+| real emails per rolling 24 h | no cap (opt in with `dailyCap`) |
+| distinct people per company per 7 days | no cap (opt in with `perCompanyPerWeek`; `--override-company-cap` when approving) |
 
 Each send has a Message-ID derived from its idempotency key; a retry first
 searches Sent for it, so an email is never sent twice.
