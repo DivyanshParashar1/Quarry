@@ -85,6 +85,8 @@ export interface ApiOptions {
   deadlineDeps?: () => Promise<DeadlineDeps>;
   applyDeps?: () => Promise<ApplyDeps>;
   sequencerDeps?: () => Promise<SequencerDeps>;
+  /** "Open prefilled form": a headed browser window on this machine. */
+  openVisibleBrowser?: () => Promise<{ newPage(): Promise<import('@quarry/plugin-sdk').BrowserPage> }>;
   /** Where browser screenshots live (served read-only). */
   screenshotRoot?: string;
   /** Failed apply steps captured by the wizard actors (Phase 21; served read-only on attention items). */
@@ -257,7 +259,7 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
     linkedinEnabled: !!opts.linkedinEnabled,
   });
 
-  registerPipelineRoutes(app, { db, ...(opts.sequencerDeps ? { sequencerDeps: opts.sequencerDeps } : {}) });
+  registerPipelineRoutes(app, { db, ...(opts.sequencerDeps ? { sequencerDeps: opts.sequencerDeps } : {}), ...(opts.openVisibleBrowser ? { openVisibleBrowser: opts.openVisibleBrowser } : {}) });
 
   registerApplyRoutes(app, {
     db,

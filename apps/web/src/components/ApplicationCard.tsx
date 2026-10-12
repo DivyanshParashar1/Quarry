@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, FileText, Pencil, X } from 'lucide-react';
+import { Check, ExternalLink, FileText, Pencil, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -31,6 +31,27 @@ interface AppDraft {
   fields: Field[];
   missingRequired: string[];
   previewScreenshots: string[];
+}
+
+/**
+ * Opens the real application form in a browser window on the computer running Quarry, every answer
+ * filled in, stopped before Submit (for captchas: you solve it and submit).
+ */
+export function PrefillButton({ reviewItemId }: { reviewItemId: string }) {
+  const open = useMutation({ mutationFn: () => send<{ url: string; notFound: string[] }>(`/api/review/${reviewItemId}/prefill`, 'POST', {}) });
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <Button variant="outline" onClick={() => open.mutate()} disabled={open.isPending} title="Opens a browser window on this computer with every answer filled in; nothing is submitted">
+        <ExternalLink className="h-4 w-4" /> {open.isPending ? 'Opening…' : 'Open prefilled form'}
+      </Button>
+      {open.data && (
+        <span className="text-xs text-muted-foreground">
+          {open.data.notFound.length ? `Opened; fill these yourself: ${open.data.notFound.join(' · ')}` : 'Opened in a new browser window: check it, solve any captcha, then Submit.'}
+        </span>
+      )}
+      {open.error && <span className="text-xs text-red-600">{open.error.message}</span>}
+    </span>
+  );
 }
 
 /** Phase 11: an application draft — every answer visible and editable, nothing invented. */
@@ -161,8 +182,10 @@ export function ApplicationCard({ item }: { item: ReviewItemAny }) {
           <Button variant="ghost" onClick={() => reject.mutate()}>
             <X className="h-4 w-4" /> Reject
           </Button>
+          <PrefillButton reviewItemId={item.id} />
         </div>
       )}
+      {(item.status === 'approved' || item.status === 'failed') && <PrefillButton reviewItemId={item.id} />}
     </Card>
   );
 }

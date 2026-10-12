@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { ReviewCard } from '@/components/ReviewCard';
-import { ApplicationCard } from '@/components/ApplicationCard';
+import { ApplicationCard, PrefillButton } from '@/components/ApplicationCard';
 import { LinkedInManualCard } from '@/components/LinkedInManualCard';
 import { send, isEmailDraft, isLinkedInDraft, isLinkedInManualDraft, type AttentionDraft, type LinkedInNoteDraft, type ReviewItem, type ReviewItemAny } from '@/lib/api';
 import { relativeDate } from '@/lib/format';
@@ -126,10 +126,11 @@ function AttentionCard({ item }: { item: ReviewItemAny }) {
       ))}
       {error && <div className="text-sm text-red-600">{error}</div>}
       {item.status === 'pending' && (
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={() => a.approve.mutate()} disabled={a.approve.isPending}>
-            <Check className="h-4 w-4" /> Fixed — resume
+            <Check className="h-4 w-4" /> {d.applicationItemId ? 'Done — I applied' : 'Fixed — resume'}
           </Button>
+          {d.applicationItemId && <PrefillButton reviewItemId={item.id} />}
         </div>
       )}
     </Card>

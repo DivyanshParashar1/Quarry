@@ -226,6 +226,7 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
           title: `Apply to ${draft.company} by hand (unrecognised ${draft.ats} page)`,
           message: `The ${draft.ats} application reached a page Quarry doesn't recognise${err.step ? ` (after "${err.step}")` : ''}, so it stopped instead of guessing. Nothing was submitted. The screenshots show where it stopped; finish at the link, then approve this item. A selector/step override for this employer lets the next application get past it.`,
           reason: 'unknown_layout',
+          applicationItemId: item.id,
           url: err.url || draft.applyUrl,
           screenshots: err.screenshots,
         },
@@ -247,13 +248,28 @@ async function applyOne(deps: ApplyDeps, item: ReviewItemRow, now: Date) {
             title: `Finish the application to ${draft.company} by hand`,
             message: `The form asked for an emailed verification code after submitting, and no email from ${err.fromDomains.join(', ')} arrived within ${Math.round(err.waitedMs / 60_000)} minutes. Open the form, enter the code from your inbox, and confirm. Approve this item when done.`,
             reason: 'otp_timeout',
+            applicationItemId: item.id,
             url: draft.applyUrl,
           },
         });
         await appendEvent(db, { kind: 'application.otp_timeout', subjectType: 'review_item', subjectId: item.id, payload: { fromDomains: err.fromDomains } });
       } else if (err instanceof SessionBlockedError) {
-        // No captcha solving: hand it to the human.
+        // No captcha solving: hand it to the human, with the form ready to open prefilled.
         await transitionReviewItem(db, item.id, ['approved'], 'failed', { error: `needs a manual application: ${err.message}` });
+        await createReviewItem(db, {
+          kind: 'attention',
+          pluginId: item.pluginId,
+          jobId: item.jobId,
+          contactId: null,
+          companyId: item.companyId,
+          draft: {
+            title: `Finish the application to ${draft.company} (${err.reason === 'captcha' ? 'captcha' : 'blocked'})`,
+            message: `${draft.company}'s form ${err.reason === 'captcha' ? 'asked for a captcha' : `was blocked (${err.message})`}, which Quarry never solves. Nothing was submitted. "Open prefilled form" opens it in a browser window on this computer with every answer filled in: solve the captcha, click Submit, then approve this item to mark the job applied.`,
+            reason: err.reason,
+            applicationItemId: item.id,
+            url: draft.applyUrl,
+          },
+        });
         await appendEvent(db, { kind: 'application.blocked', subjectType: 'review_item', subjectId: item.id, payload: { reason: err.reason } });
       } else {
         await appendEvent(db, { kind: 'application.failed', subjectType: 'review_item', subjectId: item.id, payload: { error } });

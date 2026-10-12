@@ -138,6 +138,8 @@ export interface AttentionDraft {
   url: string | null;
   /** Phase 21: where an apply actor stopped (unrecognised page). */
   screenshots?: string[];
+  /** The application this item hands over to you (captcha, unknown page, missing code). */
+  applicationItemId?: string;
 }
 
 /** Phase 17: a LinkedIn message (to a connection) or connection note the user sends by hand. */

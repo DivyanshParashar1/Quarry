@@ -250,6 +250,8 @@ export async function bootstrap() {
     deadlineDeps,
     applyDeps,
     sequencerDeps,
+    // A new visible window per click, so closing one never breaks the next.
+    openVisibleBrowser: () => launchBrowser({ headless: false }),
     screenshotRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'screenshots'),
     failureRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'apply-failures'),
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),

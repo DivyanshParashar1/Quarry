@@ -1,11 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { jobTimeline, listApplications, PIPELINE_STATES, pipelineStateCounts, type DB, type PipelineState } from '@quarry/db';
-import { advanceJob, applyAll, expireJob, runSequencer, type SequencerDeps } from '@quarry/core';
+import { advanceJob, applyAll, expireJob, openPrefilledForm, runSequencer, type PrefillDeps, type SequencerDeps } from '@quarry/core';
 
 export interface PipelineRouteOptions {
   db: DB;
   sequencerDeps?: () => Promise<SequencerDeps>;
+  /** A visible browser on the machine the server runs on ("Open prefilled form"). */
+  openVisibleBrowser?: PrefillDeps['openVisibleBrowser'];
 }
 
 const idParams = z.object({ id: z.string().uuid() });
@@ -49,6 +51,13 @@ export function registerPipelineRoutes(app: FastifyInstance, o: PipelineRouteOpt
     const { id } = idParams.parse(req.params);
     const b = z.object({ reason: z.string().trim().min(1).max(300) }).strict().parse(req.body ?? {});
     return expireJob(o.db, id, b.reason);
+  });
+
+ // Open an application (or the attention item handing one over) prefilled in a visible browser window; never submits.
+  app.post('/api/review/:id/prefill', async (req) => {
+    const { id } = idParams.parse(req.params);
+    if (!o.openVisibleBrowser) throw Object.assign(new Error('no browser available on this server'), { statusCode: 503 });
+    return openPrefilledForm({ db: o.db, openVisibleBrowser: o.openVisibleBrowser }, id);
   });
 
   // "Apply all": draft, approve what's fully answered, and submit in the background (submissions take minutes each).

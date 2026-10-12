@@ -62,6 +62,7 @@ import {
   type DB,
   type ReviewItemRow,
   type ThreadRow,
+  transitionPipeline,
 } from '@quarry/db';
 import { requireGmail } from './capabilities.js';
 import { loadCompanyRef } from './contacts-runner.js';
@@ -295,6 +296,10 @@ export async function approveReviewItem(
     const ok = await transitionReviewItem(db, id, ['pending'], 'approved', { decided: true, decisionNote: opts.note ?? 'resolved' });
     if (!ok) throw new OutreachError('item changed state while approving', 'invalid_state');
     await appendEvent(db, { kind: 'review.approved', subjectType: 'review_item', subjectId: id, payload: { kind: 'attention' } });
+    // An application handed over to you (captcha, unrecognised page, missing code): approving = you applied by hand.
+    if (item.jobId && (item.draft as { applicationItemId?: string }).applicationItemId) {
+      await transitionPipeline(db, item.jobId, ['ready_to_apply', 'failed'], 'applied', 'applied_manually');
+    }
     return ok;
   }
   const parsedDraft = parseDraftFor(item.pluginId, item.draft);
