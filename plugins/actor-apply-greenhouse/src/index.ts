@@ -15,6 +15,9 @@ import {
   type FieldKind,
   type FormQuestion,
 } from '@quarry/plugin-sdk';
+import { educationFields } from './education.js';
+
+export * from './education.js';
 
 export const PLUGIN_ID = 'actor-apply-greenhouse';
 
@@ -130,10 +133,13 @@ export default defineActorPlugin<GreenhouseApplyConfig, ApplyInput, ApplicationD
     sideEffects: 'external',
   },
 
-  // No side effects: one GET for the form's questions, then deterministic mapping.
+  // No side effects: GETs for the form's questions (and the Education block's choices), then deterministic mapping.
   async prepare(ctx, input) {
-    const questions = parseQuestions(await ctx.http.getJson(questionsUrl(input.boardToken, input.postingId)));
-    const { fields, missingRequired } = mapAnswers(questions, input);
+    const body = await ctx.http.getJson(questionsUrl(input.boardToken, input.postingId));
+    const mapped = mapAnswers(parseQuestions(body), input);
+    const education = await educationFields((u) => ctx.http.getJson(u), input.boardToken, (body as { education?: string | null }).education, input);
+    const fields = [...mapped.fields, ...education];
+    const missingRequired = [...mapped.missingRequired, ...education.filter((f) => f.required && !f.value).map((f) => f.label)];
     return applicationDraftSchema.parse({
       channel: 'apply',
       ats: 'greenhouse',

@@ -304,12 +304,22 @@ async function fillChoice(page: BrowserPage, f: ApplicationDraft['fields'][numbe
   const value = f.value!;
   const html = await page.content();
   if (html.includes(`id="react-select-${f.key}-`)) {
-    const idx = (f.options ?? []).findIndex((o) => o.trim().toLowerCase() === value.trim().toLowerCase());
-    if (idx < 0) return false;
-    const option = idSelector(`react-select-${f.key}-option-${idx}`);
+    // Type to filter (searchable lists like schools load only matches), then click the option whose text is the answer.
+    // Option ids keep their unfiltered position ("May" stays option-4), so wait for any option, not option-0.
     await page.click(sel);
-    await page.waitForSelector(option, { timeout: 5000 });
-    await page.click(option);
+    await page.pressSequentially(sel, value, { delay: 20 });
+    try {
+      await page.waitForSelector(`[id^="react-select-${f.key}-option-"]`, { timeout: 8000 });
+    } catch {
+      return false;
+    }
+    const want = value.trim().toLowerCase();
+    const shown = [...(await page.content()).matchAll(new RegExp(`<div\\b[^>]*id="react-select-${reEscape(f.key)}-option-(\\d+)"[^>]*>([\\s\\S]*?)</div>`, 'g'))].map(
+      (m) => ({ n: m[1]!, text: textOf(m[2]!).toLowerCase() }),
+    );
+    const hit = shown.find((o) => o.text === want) ?? shown.find((o) => o.text.startsWith(want));
+    if (!hit) return false;
+    await page.click(idSelector(`react-select-${f.key}-option-${hit.n}`));
     return true;
   }
   const boxes = [...html.matchAll(/<input\b[^>]*>/gi)].map((m) => m[0]).filter((t) => /type="checkbox"/i.test(t) && attrOf(t, 'name') === f.key);
