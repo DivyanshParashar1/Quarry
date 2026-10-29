@@ -141,6 +141,13 @@
       "when": 1791749103246,
       "tag": "0019_narrow_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793273976070,
+      "tag": "0020_open_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

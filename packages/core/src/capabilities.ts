@@ -45,6 +45,10 @@ export function scopeGmail(full: GmailHandle | undefined, manifest: PluginManife
     h.getMessage = full.getMessage.bind(full);
     if (full.getMessageBody) h.getMessageBody = full.getMessageBody.bind(full);
   }
+  if (scopes.includes('drafts')) {
+    if (!full.createDraft) throw new PluginError('Gmail client cannot create drafts');
+    h.createDraft = full.createDraft.bind(full);
+  }
   return Object.freeze(h);
 }
 

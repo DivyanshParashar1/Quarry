@@ -139,7 +139,40 @@ export function fakeGmail(address = 'me@example.com') {
     /** Simulate someone writing into a thread (a reply or a bounce). */
     receive(m: { threadId: string; from: string; subject: string; body?: string; html?: string; headers?: Record<string, string>; at?: Date }): FakeMessage;
     failNextSend?: Error | undefined;
+    /** Phase 24: saved drafts by draft id. */
+    drafts: Map<string, FakeMessage>;
+    /** Simulate the Apps Script (or the user) sending a draft. */
+    sendDraft(draftId: string, at?: Date): FakeMessage;
   } = {
+    drafts: new Map(),
+    async createDraft(raw, threadId) {
+      const text = Buffer.from(raw, 'base64url').toString('utf8');
+      const { headers, body } = parseRfc822(text);
+      const m = add({ threadId: threadId ?? `t${seq + 1}`, labelIds: ['DRAFT'], raw, headers, body });
+      const draftId = `d${m.id}`;
+      handle.drafts.set(draftId, m);
+      return { draftId, id: m.id, threadId: m.threadId };
+    },
+    async draftExists(draftId) {
+      return handle.drafts.has(draftId);
+    },
+    async deleteDraft(draftId) {
+      const m = handle.drafts.get(draftId);
+      handle.drafts.delete(draftId);
+      if (m) messages.splice(messages.indexOf(m), 1);
+    },
+    async sentMessageInThread(threadId) {
+      const m = messages.filter((x) => x.threadId === threadId && x.labelIds.includes('SENT')).at(-1);
+      return m ? { id: m.id, threadId, at: m.internalDate } : null;
+    },
+    sendDraft(draftId, at) {
+      const m = handle.drafts.get(draftId);
+      if (!m) throw new Error(`no draft ${draftId}`);
+      handle.drafts.delete(draftId);
+      m.labelIds = ['SENT'];
+      if (at) m.internalDate = at;
+      return m;
+    },
     address,
     messages,
     sent: () => messages.filter((m) => m.labelIds.includes('SENT')),

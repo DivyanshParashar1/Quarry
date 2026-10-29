@@ -39,7 +39,7 @@ const outreachActor = defineActorPlugin<OutreachConfig, OutreachActionInput, Ema
     stage: 'actor',
     description: 'Drafts a job-specific email with the LLM; after approval, sends it from your Gmail (once).',
     configSchema,
-    permissions: { domains: [], llm: true, gmail: ['send', 'read'] },
+    permissions: { domains: [], llm: true, gmail: ['send', 'read', 'drafts'] },
     sideEffects: 'external',
   },
 
@@ -84,19 +84,61 @@ const outreachActor = defineActorPlugin<OutreachConfig, OutreachActionInput, Ema
     const sentAt = new Date();
     const attachments = await loadAttachments(draft.attachments);
 
+    const scheduled = draft.sendAt !== null;
+
     if (ctx.dryRun) {
       ctx.log.info(
-        { to: draft.to, subject: draft.subject, messageId, attachments: attachments.map((a) => a.filename) },
-        'DRY RUN: would send email',
+        { to: draft.to, subject: draft.subject, messageId, attachments: attachments.map((a) => a.filename), sendAt: draft.sendAt },
+        scheduled ? 'DRY RUN: would save a scheduled draft' : 'DRY RUN: would send email',
       );
-      return { dryRun: true, messageId, gmailId: null, gmailThreadId: draft.gmailThreadId, sentAt: sentAt.toISOString(), deduplicated: false };
+      return {
+        dryRun: true,
+        messageId,
+        gmailId: null,
+        gmailThreadId: draft.gmailThreadId,
+        sentAt: sentAt.toISOString(),
+        deduplicated: false,
+        from: gmail.address,
+        ...(scheduled ? { scheduled: true, gmailDraftId: null } : {}),
+      };
+    }
+
+    // Scheduled send (Phase 24): Gmail's API can't schedule, so save a draft the user's
+    // Apps Script sends at X-Quarry-Send-At. The core never retries a draft creation.
+    if (scheduled) {
+      if (!gmail.createDraft) throw new Error('Gmail drafts are not available to this actor');
+      const raw = buildMime({
+        from: { name: ctx.config.senderName, address: gmail.address },
+        to: { name: draft.toName, address: draft.to },
+        subject: draft.subject,
+        body: draft.body,
+        messageId,
+        inReplyTo: draft.inReplyTo,
+        references: draft.references,
+        date: sentAt,
+        attachments,
+        extraHeaders: { 'X-Quarry-Send-At': new Date(draft.sendAt!).toISOString() },
+      });
+      const d = await gmail.createDraft(toBase64Url(raw), draft.gmailThreadId ?? undefined);
+      ctx.log.info({ to: draft.to, draftId: d.draftId, sendAt: draft.sendAt }, 'scheduled draft saved');
+      return {
+        dryRun: false,
+        messageId,
+        gmailId: d.id,
+        gmailThreadId: d.threadId,
+        sentAt: sentAt.toISOString(),
+        deduplicated: false,
+        scheduled: true,
+        gmailDraftId: d.draftId,
+        from: gmail.address,
+      };
     }
 
     // A retry after a crash mid-send must not send twice: look for our Message-ID first.
     const existing = await gmail.search!(`rfc822msgid:${messageId}`, 1);
     if (existing[0]) {
       ctx.log.warn({ messageId }, 'message already sent; not sending again');
-      return { dryRun: false, messageId, gmailId: existing[0].id, gmailThreadId: existing[0].threadId, sentAt: sentAt.toISOString(), deduplicated: true };
+      return { dryRun: false, messageId, gmailId: existing[0].id, gmailThreadId: existing[0].threadId, sentAt: sentAt.toISOString(), deduplicated: true, from: gmail.address };
     }
 
     const raw = buildMime({
@@ -112,7 +154,7 @@ const outreachActor = defineActorPlugin<OutreachConfig, OutreachActionInput, Ema
     });
     const sent = await gmail.send!(toBase64Url(raw), draft.gmailThreadId ?? undefined);
     ctx.log.info({ to: draft.to, gmailId: sent.id, attachments: attachments.length }, 'email sent');
-    return { dryRun: false, messageId, gmailId: sent.id, gmailThreadId: sent.threadId, sentAt: sentAt.toISOString(), deduplicated: false };
+    return { dryRun: false, messageId, gmailId: sent.id, gmailThreadId: sent.threadId, sentAt: sentAt.toISOString(), deduplicated: false, from: gmail.address };
   },
 });
 

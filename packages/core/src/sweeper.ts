@@ -4,6 +4,7 @@ import type { AppConfig, Logger } from '@quarry/shared';
 import { runApplyTick, type ApplyDeps } from './apply.js';
 import { expireDeadlines, runDeadlines, type DeadlineDeps } from './deadline-runner.js';
 import { draftDueFollowups, pollTracker, type OutreachDeps } from './outreach.js';
+import { reconcileScheduled } from './compose.js';
 import { advancePipelineJob, autoApproveFollowups, runSequencer, type SequencerDeps } from './sequencer.js';
 import type { StageEvent } from './triggers.js';
 
@@ -91,6 +92,8 @@ export async function runSweep(deps: SweepDeps, opts: { reason?: string } = {}):
     });
     await run('alerts', deps.gmailConnected && deps.alerts ? null : 'Gmail not connected', () => deps.alerts!());
     await run('track', deps.gmailConnected && deps.outreach ? null : 'Gmail not connected', async () => pollTracker(await deps.outreach!()));
+    // Phase 24: scheduled compose mails the Apps Script sent (or the user deleted) while Quarry was off.
+    await run('scheduled', deps.gmailConnected && deps.outreach ? null : 'Gmail not connected', async () => reconcileScheduled(await deps.outreach!()));
 
     // --- LLM: autopilot only ----------------------------------------------------
     await run('deadlines', null, async () => {

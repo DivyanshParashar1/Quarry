@@ -21,6 +21,8 @@ export interface MimeInput {
   references?: string[];
   date?: Date;
   attachments?: MimeAttachment[];
+  /** Extra `X-` headers (e.g. X-Quarry-Send-At for scheduled drafts). Other names are refused. */
+  extraHeaders?: Record<string, string>;
 }
 
 const clean = (s: string) => s.replace(/[\r\n]+/g, ' ').trim();
@@ -49,6 +51,10 @@ export function buildMime(m: MimeInput): string {
     `Message-ID: ${clean(m.messageId)}`,
     ...(m.inReplyTo ? [`In-Reply-To: ${clean(m.inReplyTo)}`] : []),
     ...(m.references?.length ? [`References: ${m.references.map(clean).join(' ')}`] : []),
+    ...Object.entries(m.extraHeaders ?? {}).map(([k, v]) => {
+      if (!/^X-[A-Za-z0-9-]+$/.test(k)) throw new Error(`refusing non-X- header: ${k}`);
+      return `${k}: ${clean(v)}`;
+    }),
     'MIME-Version: 1.0',
   ];
   const textPart = `Content-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n${wrap76(

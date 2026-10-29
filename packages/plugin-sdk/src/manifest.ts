@@ -38,7 +38,7 @@ export const pluginManifestSchema = z
       /** MX lookups (no SMTP). */
       dns: z.boolean().optional(),
       browser: z.boolean().optional(),
-      gmail: z.array(z.enum(['read', 'send'])).optional(),
+      gmail: z.array(z.enum(['read', 'send', 'drafts'])).optional(),
       /** Phase 20: per-account passwords the plugin generates, kept in the OS keychain. */
       credentials: z.boolean().optional(),
     }),

@@ -254,6 +254,8 @@ export async function bootstrap() {
     openVisibleBrowser: () => launchBrowser({ headless: false }),
     screenshotRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'screenshots'),
     failureRoot: join(ws ? dirname(ws) : process.cwd(), 'data', 'apply-failures'),
+    composeAttachmentsDir: join(ws ? dirname(ws) : process.cwd(), 'data', 'compose-attachments'),
+    live: env.MODE === 'live',
     enqueueFetch: (ids) => enqueueSourceFetches(boss, ids),
     config,
     pages: () => createPageFetcher({ limiter }),

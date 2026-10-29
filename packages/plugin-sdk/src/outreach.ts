@@ -136,6 +136,13 @@ export const emailDraftSchema = z
     gmailThreadId: z.string().nullable().default(null),
     inReplyTo: z.string().nullable().default(null),
     references: z.array(z.string()).default([]),
+    /** Phase 24 compose: what the mail is for (referral | intro | followup | thanks | chat); asks count toward the cooldown. */
+    purpose: z.string().max(40).nullable().default(null),
+    /**
+     * Phase 24 scheduled send (ISO time): the actor saves a Gmail draft with an
+     * `X-Quarry-Send-At` header instead of sending; the user's Apps Script sends it.
+     */
+    sendAt: z.string().datetime({ offset: true }).nullable().default(null),
   })
   .strict();
 export type EmailDraft = z.infer<typeof emailDraftSchema>;
@@ -163,6 +170,11 @@ export interface EmailSendResult {
   sentAt: string;
   /** True when a retry found the message already in Sent instead of sending again. */
   deduplicated: boolean;
+  /** Phase 24: saved as a Gmail draft for the Apps Script to send at `sendAt`. */
+  scheduled?: boolean;
+  gmailDraftId?: string | null;
+  /** The From address used. */
+  from?: string;
 }
 
 export type TrackEventKind = 'reply' | 'bounce';

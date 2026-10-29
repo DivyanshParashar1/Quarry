@@ -747,3 +747,98 @@ export interface BankAnswer {
   createdAt: string;
   updatedAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 24: Compose + the sent-mail log
+// ---------------------------------------------------------------------------
+
+export type ComposePurpose = 'referral' | 'intro' | 'followup' | 'thanks' | 'chat';
+
+export interface ComposeContext {
+  mode: 'live' | 'dry_run';
+  gmail: { connected: boolean; address: string | null };
+  signature: string;
+  purposes: ComposePurpose[];
+  projects: Array<{ id: string; content: string; tags: string[] }>;
+  cooldownDays: number;
+}
+
+export interface ComposeForm {
+  purpose: ComposePurpose;
+  about: string;
+  projectIds: string[];
+  projectNotes: string;
+  tone: 'formal' | 'neutral' | 'casual';
+  length: 'short' | 'medium' | 'full';
+}
+
+export interface ComposeVariant {
+  angle: string;
+  subject: string;
+  body: string;
+}
+
+export interface ComposeUpload {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  sha256: string;
+}
+
+export type ComposeSendStatus = 'sent' | 'dry_run' | 'scheduled' | 'blocked' | 'warnings' | 'failed';
+
+export interface ComposeSendResponse {
+  batchKey: string;
+  mode: 'live' | 'dry_run';
+  results: Array<{ to: string; status: ComposeSendStatus; blocking: string[]; warnings: string[]; reviewItemId?: string; sentEmailId?: string; error?: string }>;
+}
+
+export type SentEmailStatus = 'queued' | 'sent' | 'dry_run' | 'scheduled' | 'cancelled' | 'failed';
+
+export interface SentEmail {
+  id: string;
+  reviewItemId: string | null;
+  source: string;
+  status: SentEmailStatus;
+  fromAddress: string | null;
+  toAddress: string;
+  toName: string | null;
+  subject: string;
+  body: string;
+  attachments: Array<{ filename: string; contentType: string; size?: number; sha256?: string; path?: string }>;
+  messageId: string | null;
+  gmailId: string | null;
+  gmailThreadId: string | null;
+  gmailDraftId: string | null;
+  scheduledFor: string | null;
+  contactId: string | null;
+  companyId: string | null;
+  jobId: string | null;
+  threadId: string | null;
+  batchKey: string | null;
+  input: {
+    form?: ComposeForm;
+    recipient?: { toName: string; company: string; receiverInfo: string; notes: string };
+    variants?: ComposeVariant[];
+    chosenVariant?: number | null;
+    editedAfterPick?: boolean | null;
+    recipientsInBatch?: number;
+    [k: string]: unknown;
+  };
+  original: { subject?: string; body?: string; angle?: string } | null;
+  dryRun: boolean;
+  error: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  contactName: string | null;
+  companyName: string | null;
+  threadState: string | null;
+  repliedAt: string | null;
+}
+
+export interface SentEmailsPage {
+  items: SentEmail[];
+  counts: Record<SentEmailStatus, number>;
+}

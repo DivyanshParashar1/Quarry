@@ -402,8 +402,11 @@ export const contactImports = pgTable('contact_imports', {
   committedAt: timestamp('committed_at', { withTimezone: true }),
 });
 
-/** attention (Phase 9): a human must fix something (e.g. a LinkedIn checkpoint) before a paused loop resumes. */
-export const reviewKindEnum = pgEnum('review_kind', ['application', 'outreach', 'followup', 'referral_ask', 'attention']);
+/**
+ * attention (Phase 9): a human must fix something (e.g. a LinkedIn checkpoint) before a paused loop resumes.
+ * compose (Phase 24): a mail the user wrote on the Compose page; created already approved by their Send click.
+ */
+export const reviewKindEnum = pgEnum('review_kind', ['application', 'outreach', 'followup', 'referral_ask', 'attention', 'compose']);
 
 export const batchStatusEnum = pgEnum('referral_batch_status', ['drafting', 'pending_review', 'sending', 'sent', 'replied', 'closed']);
 
@@ -798,5 +801,62 @@ export const chatMessages = pgTable(
   },
   (t) => ({
     sessionIdx: index('chat_messages_session_idx').on(t.sessionId, t.createdAt),
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Phase 24: the sent-mail log
+// ---------------------------------------------------------------------------
+
+export const sentEmailStatusEnum = pgEnum('sent_email_status', ['queued', 'sent', 'dry_run', 'scheduled', 'cancelled', 'failed']);
+
+/**
+ * Every email Quarry sends (compose, outreach, referral asks, follow-ups), with
+ * what went out and, for compose mails, everything the user put in. One row per
+ * review item; a scheduled mail moves scheduled -> sent | cancelled.
+ */
+export const sentEmails = pgTable(
+  'sent_emails',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    reviewItemId: uuid('review_item_id').references(() => reviewItems.id, { onDelete: 'set null' }),
+    /** The review kind that produced it: compose | outreach | referral_ask | followup. */
+    source: text('source').notNull(),
+    status: sentEmailStatusEnum('status').notNull(),
+    fromAddress: text('from_address'),
+    toAddress: text('to_address').notNull(),
+    toName: text('to_name'),
+    subject: text('subject').notNull(),
+    body: text('body').notNull(),
+    /** [{ filename, contentType, size, sha256, path }] — `path` is the kept copy. */
+    attachments: jsonb('attachments').notNull().default(sql`'[]'::jsonb`),
+    /** RFC 5322 Message-ID we set. */
+    messageId: text('message_id'),
+    gmailId: text('gmail_id'),
+    gmailThreadId: text('gmail_thread_id'),
+    /** Scheduled mails: the Gmail draft the Apps Script sends. */
+    gmailDraftId: text('gmail_draft_id'),
+    scheduledFor: timestamp('scheduled_for', { withTimezone: true }),
+    contactId: uuid('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
+    companyId: uuid('company_id').references(() => companies.id, { onDelete: 'set null' }),
+    jobId: uuid('job_id').references(() => jobs.id, { onDelete: 'set null' }),
+    threadId: uuid('thread_id').references(() => outreachThreads.id, { onDelete: 'set null' }),
+    /** Compose: one id per Send click, shared by every recipient of a batch. */
+    batchKey: uuid('batch_key'),
+    /** What the user gave: the compose form, notes, both variants, the pick. Outreach: the draft's grounding. */
+    input: jsonb('input').notNull().default(sql`'{}'::jsonb`),
+    /** The draft as generated, before the user's edits. */
+    original: jsonb('original'),
+    dryRun: boolean('dry_run').notNull().default(false),
+    error: text('error'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    reviewUniq: uniqueIndex('sent_emails_review_item_uniq').on(t.reviewItemId),
+    createdIdx: index('sent_emails_created_idx').on(t.createdAt),
+    toIdx: index('sent_emails_to_idx').on(sql`lower(${t.toAddress})`),
+    statusIdx: index('sent_emails_status_idx').on(t.status),
   }),
 );

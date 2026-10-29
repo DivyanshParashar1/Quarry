@@ -10,6 +10,7 @@ Start with the [project README](../README.md) for what Quarry is and a quick sta
 4. [Matching](matching.md) — how jobs are scored and how to tune it
 5. [Resumes](resumes.md) — the library, per-job selection, ATS score, one-page fit
 6. [Outreach](outreach.md) — Gmail, contacts, drafts, sending, replies and follow-ups
+   - [Compose & Sent log](compose.md) — write a personal mail with two generated drafts, batch, schedule (Apps Script), and the log of every mail sent
 7. [LinkedIn](linkedin.md) — the manual referral flow (and the dormant automation)
 8. [Applications](applications.md) — auto-apply per ATS, answers, accounts, OTP
 9. [Autopilot](autopilot.md) — the per-job state machine, sweeper, deadlines

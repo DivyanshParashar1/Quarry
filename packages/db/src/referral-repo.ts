@@ -6,6 +6,9 @@ export type ReferralBatchRow = typeof jobReferralBatches.$inferSelect;
 
 /** First-contact kinds: what the per-contact cooldown counts. Follow-ups don't. */
 export const FIRST_CONTACT_KINDS = ['outreach', 'referral_ask'] as const;
+/** Phase 24: compose purposes that ask the person for something (count toward the cooldown; thank-yous don't). */
+export const ASKING_COMPOSE_PURPOSES = ['referral', 'intro'] as const;
+const isFirstContact = sql`(${reviewItems.kind} in ('outreach', 'referral_ask') or (${reviewItems.kind} = 'compose' and ${reviewItems.draft}->>'purpose' in ('referral', 'intro')))`;
 
 export async function getBatchForJob(db: DB, jobId: string): Promise<ReferralBatchRow | null> {
   const [r] = await db.select().from(jobReferralBatches).where(eq(jobReferralBatches.jobId, jobId));
@@ -118,7 +121,7 @@ export async function lastAskedAt(db: DB, contactId: string, excludeItemId?: str
     .where(
       and(
         eq(reviewItems.contactId, contactId),
-        inArray(reviewItems.kind, [...FIRST_CONTACT_KINDS]),
+        isFirstContact,
         inArray(reviewItems.status, ['pending', 'approved', 'executed']),
         excludeItemId ? ne(reviewItems.id, excludeItemId) : undefined,
         notBounced,
@@ -138,7 +141,7 @@ export async function contactsAskedSince(db: DB, contactIds: string[], since: Da
     .where(
       and(
         inArray(reviewItems.contactId, contactIds),
-        inArray(reviewItems.kind, [...FIRST_CONTACT_KINDS]),
+        isFirstContact,
         inArray(reviewItems.status, ['pending', 'approved', 'executed']),
         // Parenthesised: drizzle's and() doesn't wrap raw SQL, and a bare `or` would escape the other filters.
         sql`(${reviewItems.createdAt} >= ${since.toISOString()}::timestamptz or ${reviewItems.status} in ('pending', 'approved'))`,

@@ -27,6 +27,7 @@ import { registerPipelineRoutes } from './routes-pipeline.js';
 import { registerHealthRoutes } from './routes-health.js';
 import { registerManualJobRoutes } from './routes-jobs-manual.js';
 import { registerChatRoutes } from './chat-routes.js';
+import { registerComposeRoutes } from './routes-compose.js';
 import type { ChatRunner } from './chat-runner.js';
 import type { TickResult } from '@quarry/orchestrator';
 
@@ -95,6 +96,10 @@ export interface ApiOptions {
   runOrchestrator?: () => Promise<TickResult>;
   /** The chatbot (absent = chat API answers 503). */
   chat?: ChatRunner;
+  /** Phase 24: where Compose uploads are kept (default data/compose-attachments). */
+  composeAttachmentsDir?: string;
+  /** MODE=live (the Compose page shows "Dry run" otherwise). */
+  live?: boolean;
 }
 
 const OUTREACH_STATUS: Record<OutreachErrorCode, number> = {
@@ -236,6 +241,15 @@ export async function buildApi(opts: ApiOptions): Promise<FastifyInstance> {
   });
 
   registerLibraryRoutes(app, { db, ...(opts.tailorDeps ? { tailorDeps: opts.tailorDeps } : {}) });
+
+  registerComposeRoutes(app, {
+    db,
+    config: opts.config ?? parseAppConfig({}),
+    ...(opts.outreachDeps ? { outreachDeps: opts.outreachDeps } : {}),
+    ...(opts.llm ? { llm: opts.llm } : {}),
+    attachmentsDir: opts.composeAttachmentsDir ?? 'data/compose-attachments',
+    live: !!opts.live,
+  });
 
   registerContactRoutes(app, {
     db,

@@ -12,6 +12,8 @@ import { ContactsPage } from '@/components/ContactsPage';
 import { ReviewQueue } from '@/components/ReviewQueue';
 import { HealthPage } from '@/components/HealthPage';
 import { ChatPage } from '@/components/ChatPage';
+import { ComposePage } from '@/components/ComposePage';
+import { SentPage } from '@/components/SentPage';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatsBar } from '@/components/StatsBar';
 import { getJson, type JobsPage, type Pipeline, type Stats } from '@/lib/api';
@@ -32,6 +34,8 @@ function useDebounced<T>(value: T, ms: number): T {
 type Tab =
   | 'jobs'
   | 'review'
+  | 'compose'
+  | 'sent'
   | 'applications'
   | 'companies'
   | 'contacts'
@@ -52,6 +56,8 @@ export function App() {
     if (window.location.pathname === '/companies') return 'companies';
     if (window.location.pathname === '/health') return 'health';
     if (window.location.pathname === '/chat') return 'chat';
+    if (window.location.pathname === '/compose') return 'compose';
+    if (window.location.pathname === '/sent') return 'sent';
     return 'jobs';
   });
   const pipeline = useQuery({
@@ -80,7 +86,9 @@ export function App() {
                 tab === 'resumes' ||
                 tab === 'contacts' ||
                 tab === 'health' ||
-                tab === 'chat'
+                tab === 'chat' ||
+                tab === 'compose' ||
+                tab === 'sent'
               ? `/${tab}`
               : `/${filtersToSearch(filters, selected)}`;
     window.history.replaceState(null, '', path);
@@ -115,6 +123,8 @@ export function App() {
               [
                 'jobs',
                 'review',
+                'compose',
+                'sent',
                 'applications',
                 'companies',
                 'contacts',
@@ -159,7 +169,15 @@ export function App() {
         </div>
       )}
       <ErrorBoundary resetKey={tab}>
-        {tab === 'chat' ? (
+        {tab === 'compose' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <ComposePage />
+          </main>
+        ) : tab === 'sent' ? (
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            <SentPage />
+          </main>
+        ) : tab === 'chat' ? (
           <main className="min-h-0 flex-1">
             <ChatPage />
           </main>

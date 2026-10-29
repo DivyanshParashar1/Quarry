@@ -35,3 +35,4 @@ export * from './linkedin-manual.js';
 export * from './triggers.js';
 export * from './sweeper.js';
 export * from './answers.js';
+export * from './compose.js';

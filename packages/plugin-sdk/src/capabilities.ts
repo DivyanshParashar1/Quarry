@@ -48,6 +48,14 @@ export interface GmailHandle {
   getMessage?(id: string): Promise<GmailMessageMeta>;
   /** Full decoded body (read scope). Used by the job-alert source to parse alert emails. */
   getMessageBody?(id: string): Promise<GmailMessageBody>;
+  /** Phase 24 (gmail: ['drafts']): save a base64url RFC 5322 message as a draft. */
+  createDraft?(raw: string, threadId?: string): Promise<GmailMessageRef & { draftId: string }>;
+  // Core-only (never handed to plugins): reconcile and cancel scheduled drafts.
+  /** False once the draft was sent or deleted. */
+  draftExists?(draftId: string): Promise<boolean>;
+  deleteDraft?(draftId: string): Promise<void>;
+  /** The newest sent (non-draft) message in a thread, or null. */
+  sentMessageInThread?(threadId: string): Promise<(GmailMessageRef & { at: Date }) | null>;
 }
 
 /**

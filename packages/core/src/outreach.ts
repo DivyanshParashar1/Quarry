@@ -1,4 +1,5 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { QuarryError, type AppConfig, type Logger } from '@quarry/shared';
 import {
   emailDraftPatchSchema,
@@ -52,6 +53,7 @@ import {
   releaseLease,
   restartAction,
   recordEmailBounce,
+  recordSentEmail,
   setState,
   threadsByGmailIds,
   threadsDueForFollowup,
@@ -63,6 +65,9 @@ import {
   type ReviewItemRow,
   type ThreadRow,
   transitionPipeline,
+  ASKING_COMPOSE_PURPOSES,
+  type SentEmailAttachment,
+  type SentEmailStatus,
 } from '@quarry/db';
 import { requireGmail } from './capabilities.js';
 import { loadCompanyRef } from './contacts-runner.js';
@@ -339,7 +344,7 @@ export async function approveReviewItem(
  * any channel), and a job never gets more than its batch's referral cap.
  */
 export async function referralLimitProblem(db: DB, policy: OutreachPolicy, item: ReviewItemRow, now: Date): Promise<{ code: 'cooldown' | 'job_cap'; message: string } | null> {
-  if (item.kind !== 'outreach' && item.kind !== 'referral_ask') return null;
+  if (item.kind !== 'outreach' && item.kind !== 'referral_ask' && !isAskingCompose(item)) return null;
   if (item.contactId && policy.perContactCooldownDays > 0) {
     const last = await lastAskedAt(db, item.contactId, item.id);
     const until = last ? new Date(last.at.getTime() + policy.perContactCooldownDays * DAY) : null;
@@ -361,6 +366,12 @@ export async function referralLimitProblem(db: DB, policy: OutreachPolicy, item:
     if (committed >= cap) return { code: 'job_cap', message: `${committed} referral asks for this job are already approved or sent (cap ${cap})` };
   }
   return null;
+}
+
+/** Phase 24: a compose mail that asks for something (referral / intro) is a first contact. */
+export function isAskingCompose(item: Pick<ReviewItemRow, 'kind' | 'draft'>): boolean {
+  const purpose = (item.draft as { purpose?: unknown } | null)?.purpose;
+  return item.kind === 'compose' && typeof purpose === 'string' && (ASKING_COMPOSE_PURPOSES as readonly string[]).includes(purpose);
 }
 
 async function assertReferralLimits(db: DB, policy: OutreachPolicy, item: ReviewItemRow, now: Date): Promise<void> {
@@ -492,6 +503,11 @@ async function executeOne(deps: OutreachDeps, item: ReviewItemRow, dryRun: boole
     await finishAction(db, claim.action.id, { status: 'succeeded', result, at: now });
     if (dryRun) {
       await appendEvent(db, { kind: 'outreach.dry_run', subjectType: 'review_item', subjectId: item.id, payload: { to: base.to, subject: base.subject } });
+      // The send tick dry-runs every approved item each pass; only a compose Send click is worth a log row.
+      if (item.kind === 'compose') {
+        await logSend(db, item, 'dry_run', { result, at: now });
+        await transitionReviewItem(db, item.id, ['approved'], 'executed', { error: null });
+      }
     } else {
       await finalizeSent(deps, item, result, now);
     }
@@ -502,10 +518,16 @@ async function executeOne(deps: OutreachDeps, item: ReviewItemRow, dryRun: boole
     if (!dryRun) {
       await appendEvent(db, { kind: 'outreach.send.failed', subjectType: 'review_item', subjectId: item.id, payload: { error } });
       const attempts = await countEvents(db, 'outreach.send.failed', item.id);
-      const final = attempts >= MAX_SEND_ATTEMPTS;
+      // A compose mail fails for good: the user is looking at the page and resends; the tick must not send it later.
+      const final = attempts >= MAX_SEND_ATTEMPTS || item.kind === 'compose';
       await transitionReviewItem(db, item.id, ['approved'], final ? 'failed' : 'approved', {
         error: final ? `gave up after ${attempts} attempts: ${error}` : `attempt ${attempts} failed: ${error}`,
       });
+      if (final) await logSend(db, item, 'failed', { at: now, error });
+    } else if (item.kind === 'compose') {
+      // Never leave a compose item approved after a failed dry run: a later live tick would send it.
+      await transitionReviewItem(db, item.id, ['approved'], 'failed', { error });
+      await logSend(db, item, 'failed', { at: now, error });
     }
     log.warn({ err: error }, 'send failed');
     return { ...base, ok: false, error };
@@ -518,33 +540,137 @@ async function finalizeSent(deps: OutreachDeps, item: ReviewItemRow, r: EmailSen
   const { db, policy } = deps;
   const done = await transitionReviewItem(db, item.id, ['approved'], 'executed', { error: null });
   if (!done) return; // already recorded
+  if (r.scheduled) {
+    // Saved as a Gmail draft; the user's Apps Script sends it. reconcileScheduled() finishes the bookkeeping.
+    await logSend(db, item, 'scheduled', { result: r, at: sentAt });
+    await appendEvent(db, { kind: 'outreach.scheduled', subjectType: 'review_item', subjectId: item.id, payload: { to: (item.draft as EmailDraft).to, sendAt: (item.draft as EmailDraft).sendAt } });
+    return;
+  }
   const followupAt = (n: number) =>
     n < Math.min(policy.maxFollowups, policy.followupDays.length) ? new Date(sentAt.getTime() + policy.followupDays[n]! * DAY) : null;
   let threadId: string | null = item.threadId;
-  if (item.kind === 'outreach' || item.kind === 'referral_ask') {
-    const t = await createThread(db, {
-      contactId: item.contactId!,
-      companyId: item.companyId,
-      jobId: item.jobId,
-      reviewItemId: item.id,
-      gmailThreadId: r.gmailThreadId!,
-      subject: (item.draft as EmailDraft).subject,
-      messageId: r.messageId,
-      sentAt,
-      nextFollowupAt: followupAt(0),
-    });
+  if (item.kind === 'compose') {
+    // Compose mails get reply tracking when the recipient is a known contact; follow-ups stay manual.
+    if (item.contactId) threadId = (await openThreadForSend(db, item, r, sentAt, null)).id;
+  } else if (item.kind === 'outreach' || item.kind === 'referral_ask') {
+    const t = await openThreadForSend(db, item, r, sentAt, followupAt(0));
     threadId = t.id;
     if (item.batchId) await noteBatchSent(db, item.batchId, sentAt);
   } else if (item.threadId) {
     const t = await getThread(db, item.threadId);
     if (t) await recordFollowupSent(db, t.id, r.messageId, sentAt, followupAt(t.followupsSent + 1));
   }
+  await logSend(db, item, 'sent', { result: r, at: sentAt, threadId });
   await appendEvent(db, {
     kind: 'outreach.sent',
     subjectType: 'review_item',
     subjectId: item.id,
     payload: { kind: item.kind, to: (item.draft as EmailDraft).to, threadId, gmailId: r.gmailId, deduplicated: r.deduplicated },
   });
+}
+
+/** Open (or find) the outreach thread for a first email that went out. */
+export async function openThreadForSend(db: DB, item: ReviewItemRow, r: Pick<EmailSendResult, 'gmailThreadId' | 'messageId'>, sentAt: Date, nextFollowupAt: Date | null): Promise<ThreadRow> {
+  return createThread(db, {
+    contactId: item.contactId!,
+    companyId: item.companyId,
+    jobId: item.jobId,
+    reviewItemId: item.id,
+    gmailThreadId: r.gmailThreadId!,
+    subject: (item.draft as EmailDraft).subject,
+    messageId: r.messageId,
+    sentAt,
+    nextFollowupAt,
+  });
+}
+
+/**
+ * Phase 24: write the sent-mail log row for a review item. Called on every send
+ * outcome; a compose mail's input was saved when it was queued and is kept.
+ */
+export async function logSend(
+  db: DB,
+  item: ReviewItemRow,
+  status: SentEmailStatus,
+  o: { result?: EmailSendResult; at: Date; threadId?: string | null; error?: string; input?: Record<string, unknown>; batchKey?: string },
+): Promise<void> {
+  const d = item.draft as EmailDraft;
+  const r = o.result;
+  try {
+    await recordSentEmail(db, {
+      reviewItemId: item.id,
+      source: item.kind,
+      status,
+      toAddress: d.to,
+      toName: d.toName || null,
+      subject: d.subject,
+      body: d.body,
+      attachments: await describeAttachments(d.attachments ?? []),
+      contactId: item.contactId,
+      companyId: item.companyId,
+      jobId: item.jobId,
+      dryRun: status === 'dry_run',
+      error: o.error ?? null,
+      scheduledFor: d.sendAt ? new Date(d.sendAt) : null,
+      ...(r?.from ? { fromAddress: r.from } : {}),
+      ...(r ? { messageId: r.messageId, gmailId: r.scheduled ? null : r.gmailId, gmailThreadId: r.gmailThreadId, gmailDraftId: r.gmailDraftId ?? null } : {}),
+      ...(status === 'sent' ? { sentAt: o.at } : {}),
+      ...(o.threadId !== undefined ? { threadId: o.threadId } : {}),
+      ...(o.batchKey ? { batchKey: o.batchKey } : {}),
+      ...(o.input ? { input: o.input } : item.kind !== 'compose' ? { input: draftGrounding(item) } : {}),
+      original: item.originalDraft,
+    });
+  } catch (err) {
+    // The log must never undo a send that happened; the event trail still has it.
+    await appendEvent(db, { kind: 'sent_email.log_failed', subjectType: 'review_item', subjectId: item.id, payload: { error: (err as Error).message } });
+  }
+}
+
+function draftGrounding(item: ReviewItemRow): Record<string, unknown> {
+  const d = item.draft as Partial<EmailDraft>;
+  return {
+    factIds: d.factIds ?? [],
+    confidence: d.confidence ?? null,
+    resumeBulletId: d.resumeBulletId ?? null,
+    decidedBy: item.decidedBy,
+    edited: !!item.editedAt,
+  };
+}
+
+async function describeAttachments(list: EmailAttachment[]): Promise<SentEmailAttachment[]> {
+  const out: SentEmailAttachment[] = [];
+  for (const a of list) {
+    const row: SentEmailAttachment = { filename: a.filename, contentType: a.contentType, path: a.path };
+    try {
+      const buf = await readFile(a.path);
+      row.size = buf.length;
+      row.sha256 = createHash('sha256').update(buf).digest('hex');
+    } catch {
+      // A missing file is still worth recording by name.
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * Phase 24: send one approved item now (the Compose page's Send button), under
+ * the same lease as the send tick so the two never race on one item.
+ */
+export async function sendApprovedNow(deps: OutreachDeps, itemId: string): Promise<SendOutcome> {
+  const owner = randomUUID();
+  for (let i = 0; !(await tryLease(deps.db, 'outreach.send', owner, 10 * 60_000)); i++) {
+    if (i >= 20) throw new OutreachError('another send is in progress; try again in a minute', 'invalid_state');
+    await new Promise((res) => setTimeout(res, 500));
+  }
+  try {
+    const item = await getReviewItem(deps.db, itemId);
+    if (!item || item.status !== 'approved') throw new OutreachError(`review item ${itemId} is ${item?.status ?? 'missing'}, not approved`, 'invalid_state');
+    if (!deps.dryRun) requireGmail(deps.gmail);
+    return await executeOne(deps, item, deps.dryRun, deps.now?.() ?? new Date());
+  } finally {
+    await releaseLease(deps.db, 'outreach.send', owner);
+  }
 }
 
 /** A referral ask went out: bump the batch counts and move it to sending/sent. */

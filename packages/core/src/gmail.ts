@@ -5,7 +5,12 @@ import type { DomainRateLimiter } from './rate-limiter.js';
 // The user's own Gmail via OAuth (PLAN.md §2). Only the core holds the
 // credentials; plugins get a scoped GmailHandle (see scopeGmail).
 
-export const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.readonly'];
+// gmail.compose (Phase 24): drafts for scheduled sends. Older refresh tokens lack it; `quarry gmail auth` again.
+export const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose',
+];
 const GMAIL_HOST = 'gmail.googleapis.com';
 
 export interface GmailCredentials {
@@ -82,6 +87,44 @@ export async function createGmailClient(
       const res = await limited(() => api.users.messages.get({ userId: 'me', id, format: 'full' }));
       return extractBodies(res.data.payload ?? undefined);
     },
+    async createDraft(raw, threadId) {
+      try {
+        const res = await limited(() =>
+          api.users.drafts.create({ userId: 'me', requestBody: { message: { raw, ...(threadId ? { threadId } : {}) } } }),
+        );
+        return { draftId: res.data.id!, id: res.data.message!.id!, threadId: res.data.message!.threadId! };
+      } catch (err) {
+        if (httpStatus(err) === 403) throw new Error('Gmail login lacks the drafts permission; run `quarry gmail auth` again');
+        throw err;
+      }
+    },
+    async draftExists(draftId) {
+      try {
+        await limited(() => api.users.drafts.get({ userId: 'me', id: draftId, format: 'minimal' }));
+        return true;
+      } catch (err) {
+        if (httpStatus(err) === 404) return false;
+        throw err;
+      }
+    },
+    async deleteDraft(draftId) {
+      try {
+        await limited(() => api.users.drafts.delete({ userId: 'me', id: draftId }));
+      } catch (err) {
+        if (httpStatus(err) !== 404) throw err;
+      }
+    },
+    async sentMessageInThread(threadId) {
+      try {
+        const res = await limited(() => api.users.threads.get({ userId: 'me', id: threadId, format: 'minimal' }));
+        const sent = (res.data.messages ?? []).filter((m) => m.labelIds?.includes('SENT') && !m.labelIds.includes('DRAFT'));
+        const last = sent.at(-1);
+        return last ? { id: last.id!, threadId, at: new Date(Number(last.internalDate ?? 0)) } : null;
+      } catch (err) {
+        if (httpStatus(err) === 404) return null;
+        throw err;
+      }
+    },
   };
 }
 
@@ -107,4 +150,10 @@ export function extractBodies(payload: GmailPart | undefined): { html: string | 
   };
   walk(payload);
   return { html, text };
+}
+
+function httpStatus(err: unknown): number | undefined {
+  const e = err as { code?: unknown; status?: unknown; response?: { status?: unknown } };
+  const n = Number(e?.response?.status ?? e?.status ?? e?.code);
+  return Number.isFinite(n) ? n : undefined;
 }

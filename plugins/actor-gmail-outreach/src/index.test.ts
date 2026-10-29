@@ -91,9 +91,9 @@ describe('mime', () => {
 });
 
 describe('actor-gmail-outreach', () => {
-  it('declares an external side effect, the LLM, and Gmail send+read', () => {
+  it('declares an external side effect, the LLM, and Gmail send+read+drafts', () => {
     expect(pluginManifestSchema.safeParse(plugin.manifest).success).toBe(true);
-    expect(plugin.manifest).toMatchObject({ sideEffects: 'external', permissions: { llm: true, gmail: ['send', 'read'] } });
+    expect(plugin.manifest).toMatchObject({ sideEffects: 'external', permissions: { llm: true, gmail: ['send', 'read', 'drafts'] } });
   });
 
   it('prepare drafts a grounded email; placeholders trigger the repair retry; unknown fact ids are dropped', async () => {
@@ -182,7 +182,19 @@ describe('actor-gmail-outreach', () => {
     gmailThreadId: null,
     inReplyTo: null,
     references: [],
+    purpose: null,
+    sendAt: null,
   };
+
+  it('a scheduled draft is saved to Gmail drafts with X-Quarry-Send-At, never sent', async () => {
+    const gmail = fakeGmail('asha@gmail.com');
+    const res = await plugin.execute(testContext(cfg, undefined, { gmail, dryRun: false }), approve({ ...draft, sendAt: '2026-11-02T09:30:00+05:30' }), 'outreach:r2');
+    expect(res).toMatchObject({ scheduled: true, gmailDraftId: 'dm1', dryRun: false });
+    expect(gmail.sent()).toHaveLength(0);
+    const saved = gmail.drafts.get('dm1')!;
+    expect(saved.headers['x-quarry-send-at']).toBe('2026-11-02T04:00:00.000Z');
+    expect(saved.headers.to).toBe('"Jane Doe" <jdoe@acme.com>');
+  });
 
   it('dry run never touches Gmail', async () => {
     const gmail = fakeGmail('asha@gmail.com');
