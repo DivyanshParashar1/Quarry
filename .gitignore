@@ -14,9 +14,9 @@ data/resumes/
 config.yaml
 my_resume.tex
 # Phase 8+: encrypted LinkedIn session and browser screenshots (never commit)
-data/linkedin/
-data/screenshots/
-data/apply-failures/
+**/data/linkedin/
+**/data/screenshots/
+**/data/apply-failures/
 .chat-scratch/
 
 # Your personal profile (resume, contact details, preferences). Start from profile.example/.

@@ -1,0 +1,10 @@
+[mcp_servers.quarry]
+command = "node"
+args = [
+    "--import",
+    "tsx/esm",
+    "apps/mcp/src/index.ts",
+]
+
+[mcp_servers.quarry.env]
+QUARRY_API_URL = "http://127.0.0.1:3000"
